@@ -1,0 +1,45 @@
+# Minimal sample profile for ProxyCat. Drop in via Profiles → Import,
+# or copy and paste into Profiles → Paste YAML. The TUN inbound's
+# file-descriptor is filled in at runtime by the Network Extension.
+
+mode: rule
+log-level: info
+ipv6: true
+allow-lan: false
+mixed-port: 7890
+external-controller: 127.0.0.1:9090
+
+tun:
+  enable: true
+  stack: gvisor
+  dns-hijack:
+    - any:53
+  auto-route: true
+  auto-detect-interface: true
+  mtu: 1500
+
+dns:
+  enable: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 1.1.1.1
+    - 8.8.8.8
+  nameserver:
+    - https://1.1.1.1/dns-query
+    - https://8.8.8.8/dns-query
+
+proxies:
+  - { name: "DIRECT", type: direct }
+
+proxy-groups:
+  - name: "Proxy"
+    type: select
+    proxies:
+      - DIRECT
+
+rules:
+  - DOMAIN-SUFFIX,local,DIRECT
+  - GEOIP,LAN,DIRECT
+  - GEOIP,CN,DIRECT
+  - MATCH,Proxy
