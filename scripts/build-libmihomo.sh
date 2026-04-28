@@ -29,12 +29,17 @@ if [[ "${1-}" == "sim" ]]; then
   TARGETS="iossimulator"
 fi
 
-# Tags chosen to keep the binary small for the NE 15MB jetsam ceiling:
-#   no_gvisor      — drops gvisor netstack (we use sing-tun's gvisor wrapper instead)
-#                    NOTE: do NOT pass this if the user picks gvisor stack at runtime.
-#   with_gvisor    — keep gvisor (default)
-# Default to "with_gvisor" since iOS users will want it for stack stability.
-BUILD_TAGS="with_gvisor"
+# Tags chosen to keep the binary small for the NE jetsam ceiling
+# (~15MB historical, ~50MB on recent iOS):
+#   with_gvisor      — keep the gvisor netstack. Required: iOS NE can't use
+#                      sing-tun's "system" stack (sandbox blocks the kernel
+#                      socket calls), see binding.go.
+#   with_low_memory  — halve mihomo's per-connection relay buffers
+#                      (TCP 32→16KB, UDP 16→8KB) and flip
+#                      features.WithLowMemory true. Matches sing-box-for-apple's
+#                      iOS build. Saves ~24KB per active connection
+#                      (≈2.4MB at 100 concurrent connections).
+BUILD_TAGS="with_gvisor with_low_memory"
 
 # Inject mihomo + wrapper build identifiers so the iOS Settings →
 # Diagnostics screen can show real values instead of "unknown time".

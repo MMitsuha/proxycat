@@ -106,7 +106,7 @@ private struct LogViewBody: View {
                 }
             }
             .listStyle(.plain)
-            .onChange(of: model.visible.last?.id) { _, newID in
+            .onChange(of: model.visible.last?.id) { newID in
                 guard let id = newID, !model.isPaused else { return }
                 withAnimation(.linear(duration: 0.1)) {
                     proxy.scrollTo(id, anchor: .bottom)
