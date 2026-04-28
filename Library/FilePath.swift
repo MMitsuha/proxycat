@@ -1,13 +1,30 @@
 import Foundation
+import os
 
 public enum FilePath {
+    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "FilePath")
+    private static var fallbackWarned = false
+
     /// Container shared between the host app and the Network Extension.
+    /// On a properly-signed device this is the App-Group container. On
+    /// the simulator (or any build without the entitlement) we fall back
+    /// to the app's own Documents so the UI still works for testing —
+    /// the extension's IPC won't function across processes in that case
+    /// and a warning is logged once.
     public static var sharedDirectory: URL {
-        guard let url = FileManager.default.containerURL(
+        if let url = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: AppConfiguration.appGroupID
-        ) else {
-            preconditionFailure("App group container missing — check entitlements")
+        ) {
+            return url
         }
+        if !fallbackWarned {
+            fallbackWarned = true
+            logger.warning("App group container unavailable for \(AppConfiguration.appGroupID, privacy: .public); falling back to per-process Documents — IPC across host/extension will not work in this build")
+        }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let url = docs.appendingPathComponent("FallbackAppGroup", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }
 

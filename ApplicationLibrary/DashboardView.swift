@@ -13,36 +13,17 @@ public struct DashboardView: View {
     public init() {}
 
     public var body: some View {
-        List {
-            Section {
-                statusCard
-            }
-            Section("Traffic") {
-                TrafficRow(label: "Up", value: ByteFormatter.rate(commandClient.traffic.up))
-                TrafficRow(label: "Down", value: ByteFormatter.rate(commandClient.traffic.down))
-                TrafficRow(label: "Up total", value: ByteFormatter.string(commandClient.traffic.upTotal))
-                TrafficRow(label: "Down total", value: ByteFormatter.string(commandClient.traffic.downTotal))
-                TrafficRow(label: "Connections", value: "\(commandClient.traffic.connections)")
-            }
-            Section {
-                MemoryGauge(memory: commandClient.memory, isConnected: profile.isConnected)
-            } header: {
-                Text("Extension Memory")
-            } footer: {
-                Text("Sampled inside the Network Extension. iOS jetsam compares the resident value against an undocumented per-process limit (~15–50 MB depending on iOS version and device).")
-                    .font(.caption2)
-            }
-            Section("Profile") {
-                if let active = profileStore.active {
-                    Text(active.name)
-                } else {
-                    Text("No profile selected")
-                        .foregroundStyle(.secondary)
-                }
-                NavigationLink("Manage Profiles") { ProfileListView() }
-            }
+        VStack(spacing: 14) {
+            statusCard
+            trafficGrid
+            bottomCard
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("ProxyCat")
+        .navigationBarTitleDisplayMode(.large)
         .alert("Cannot connect", isPresented: .constant(connectError != nil)) {
             Button("OK") { connectError = nil }
         } message: {
@@ -50,123 +31,257 @@ public struct DashboardView: View {
         }
     }
 
+    // MARK: - Status
+
     private var statusCard: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Circle()
-                    .fill(profile.isConnected ? Color.green : Color.gray.opacity(0.4))
-                    .frame(width: 10, height: 10)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                StatusDot(color: statusColor, pulsing: profile.status == .connecting)
                 Text(statusText)
-                    .font(.headline)
+                    .font(.title3.weight(.semibold))
                 Spacer()
+                profilePill
             }
+
             Button(action: toggle) {
-                Text(profile.isConnected ? "Disconnect" : "Connect")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                HStack(spacing: 8) {
+                    Image(systemName: profile.isConnected ? "stop.fill" : "play.fill")
+                    Text(profile.isConnected ? "Disconnect" : "Connect")
+                        .font(.body.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .tint(profile.isConnected ? .red : .accentColor)
             .disabled(profileStore.active == nil)
+        }
+        .card()
+    }
+
+    @ViewBuilder
+    private var profilePill: some View {
+        if let active = profileStore.active {
+            Label(active.name, systemImage: "doc.text")
+                .labelStyle(.titleAndIcon)
+                .font(.caption.weight(.medium))
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.accentColor.opacity(0.12), in: Capsule())
+                .foregroundStyle(.tint)
+        } else {
+            Label("No profile", systemImage: "doc.text")
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.gray.opacity(0.18), in: Capsule())
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var statusColor: Color {
+        switch profile.status {
+        case .connected: return .green
+        case .connecting, .reasserting: return .orange
+        case .disconnecting: return .yellow
+        case .disconnected, .invalid: return .gray
+        @unknown default: return .gray
         }
     }
 
     private var statusText: String {
         switch profile.status {
         case .connected: return "Connected"
-        case .connecting: return "Connecting…"
-        case .disconnecting: return "Disconnecting…"
+        case .connecting: return "Connecting"
+        case .disconnecting: return "Disconnecting"
         case .disconnected: return "Disconnected"
-        case .reasserting: return "Reasserting…"
+        case .reasserting: return "Reasserting"
         case .invalid: return "Not configured"
         @unknown default: return "Unknown"
         }
     }
+
+    // MARK: - Traffic
+
+    private var trafficGrid: some View {
+        HStack(spacing: 12) {
+            TrafficCard(
+                title: "Upload",
+                symbol: "arrow.up.circle.fill",
+                color: .blue,
+                rate: commandClient.traffic.up,
+                total: commandClient.traffic.upTotal,
+                live: profile.isConnected
+            )
+            TrafficCard(
+                title: "Download",
+                symbol: "arrow.down.circle.fill",
+                color: .green,
+                rate: commandClient.traffic.down,
+                total: commandClient.traffic.downTotal,
+                live: profile.isConnected
+            )
+        }
+    }
+
+    // MARK: - Memory + connections
+
+    private var bottomCard: some View {
+        HStack(spacing: 12) {
+            MemoryBar(memory: commandClient.memory, live: profile.isConnected)
+            Divider().frame(height: 36)
+            VStack(spacing: 2) {
+                Text("\(commandClient.traffic.connections)")
+                    .font(.title3.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(profile.isConnected ? Color.primary : .secondary)
+                Text("active")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 56)
+        }
+        .card()
+    }
+
+    // MARK: - Actions
 
     private func toggle() {
         if profile.isConnected {
             profile.stop()
             return
         }
-        guard let active = profileStore.active else {
+        guard profileStore.active != nil else {
             connectError = "Pick a profile first."
             return
         }
         do {
             let yaml = try profileStore.loadActiveContent()
             try profile.start(configContent: yaml)
-            _ = active // silence unused
         } catch {
             connectError = error.localizedDescription
         }
     }
 }
 
-private struct TrafficRow: View {
-    let label: String
-    let value: String
+// MARK: - Components
+
+private struct TrafficCard: View {
+    let title: String
+    let symbol: String
+    let color: Color
+    let rate: Int64
+    let total: Int64
+    let live: Bool
+
     var body: some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer()
-            Text(value).font(.system(.body, design: .monospaced))
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.subheadline)
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            Text(ByteFormatter.rate(rate))
+                .font(.system(size: 22, weight: .semibold, design: .rounded).monospacedDigit())
+                .foregroundStyle(live ? Color.primary : .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(ByteFormatter.string(total))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
     }
 }
 
-private struct MemoryGauge: View {
+private struct MemoryBar: View {
     let memory: MemoryStats
-    let isConnected: Bool
+    let live: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !isConnected || memory.estimatedLimit == 0 {
-                HStack {
-                    Image(systemName: "memorychip")
-                        .foregroundStyle(.secondary)
-                    Text(isConnected ? "Waiting for first sample…" : "Extension not running")
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 6)
-            } else {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Resident")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(ByteFormatter.string(Int64(memory.resident)))
-                        .font(.system(.body, design: .monospaced).weight(.semibold))
-                        .foregroundStyle(tint)
-                }
-                ProgressView(value: memory.fraction)
-                    .tint(tint)
-                HStack {
-                    Text("Available").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(ByteFormatter.string(Int64(memory.available)))
-                        .font(.system(.caption, design: .monospaced))
-                }
-                HStack {
-                    Text("Budget (resident + available)")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(ByteFormatter.string(Int64(memory.estimatedLimit)))
-                        .font(.system(.caption, design: .monospaced))
-                }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "memorychip")
+                    .font(.subheadline)
+                    .foregroundStyle(tint)
+                Text("Memory")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(displayValue)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(live ? .primary : .secondary)
             }
+            ProgressView(value: live ? memory.fraction : 0)
+                .progressViewStyle(.linear)
+                .tint(tint)
         }
-        .padding(.vertical, 4)
+    }
+
+    private var displayValue: String {
+        guard live, memory.estimatedLimit > 0 else { return "—" }
+        let used = ByteFormatter.string(Int64(memory.resident))
+        let total = ByteFormatter.string(Int64(memory.estimatedLimit))
+        return "\(used) / \(total)"
     }
 
     private var tint: Color {
-        // <3 MB available → critical; <6 MB → warning. Same thresholds the
-        // PacketTunnelProvider uses to trigger pressure responses.
-        if memory.available > 0, memory.available < 3 * 1024 * 1024 {
-            return .red
-        }
-        if memory.available > 0, memory.available < 6 * 1024 * 1024 {
-            return .orange
-        }
+        guard memory.available > 0 else { return .accentColor }
+        if memory.available < 3 * 1024 * 1024 { return .red }
+        if memory.available < 6 * 1024 * 1024 { return .orange }
         return .accentColor
     }
+}
+
+/// Pulsing dot for the status header.
+private struct StatusDot: View {
+    let color: Color
+    let pulsing: Bool
+
+    @State private var scale: CGFloat = 1
+
+    var body: some View {
+        ZStack {
+            if pulsing {
+                Circle()
+                    .fill(color.opacity(0.35))
+                    .frame(width: 18, height: 18)
+                    .scaleEffect(scale)
+                    .opacity(2 - scale)
+                    .animation(
+                        .easeOut(duration: 1.0).repeatForever(autoreverses: false),
+                        value: scale
+                    )
+                    .onAppear { scale = 1.6 }
+                    .onDisappear { scale = 1 }
+            }
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+        }
+        .frame(width: 18, height: 18)
+    }
+}
+
+// MARK: - Card modifier
+
+private struct Card: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+            )
+    }
+}
+
+private extension View {
+    func card() -> some View { modifier(Card()) }
 }
