@@ -2,6 +2,13 @@
 
 [mihomo](https://github.com/MetaCubeX/mihomo) 的原生 iOS 客户端。架构参考 [sing-box-for-apple](https://github.com/SagerNet/sing-box-for-apple)：SwiftUI 宿主 App 通过 `NEPacketTunnelProvider` 扩展承载网络隧道，扩展内嵌一份由 `gomobile` 生成的 mihomo XCFramework。
 
+## 截图
+
+| Dashboard | Profiles | Logs | Settings |
+|:---:|:---:|:---:|:---:|
+| <img src="asserts/IMG_2721.png" width="200"> | <img src="asserts/IMG_2722.png" width="200"> | <img src="asserts/IMG_2723.png" width="200"> | <img src="asserts/IMG_2725.png" width="200"> |
+| 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | mihomo 版本与诊断信息 |
+
 ## 目录结构
 
 ```
