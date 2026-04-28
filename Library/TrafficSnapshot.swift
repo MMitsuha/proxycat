@@ -57,6 +57,8 @@ public enum ByteFormatter {
         let f = ByteCountFormatter()
         f.allowedUnits = [.useKB, .useMB, .useGB, .useTB]
         f.countStyle = .binary
+        // The default "Zero KB" is ugly in compact gauges.
+        f.allowsNonnumericFormatting = false
         return f
     }()
 
