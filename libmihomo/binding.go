@@ -93,6 +93,7 @@ func Start(yamlConfig []byte) error {
 
 	cfg.DNS.Enable = true
 	cfg.Controller.ExternalController = "127.0.0.1:9090"
+	cfg.Controller.Secret = ""
 	cfg.Controller.ExternalUI = "metacubexd"
 	cfg.General.GeodataLoader = "memconservative"
 	cfg.Profile.StoreSelected = false
