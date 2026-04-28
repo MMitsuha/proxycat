@@ -36,6 +36,16 @@ targets:
     platform: iOS
     sources:
       - path: Library
+      # Folder reference (preserves directory structure inside the
+      # framework bundle). Drop geoip.dat / geosite.dat / *.mmdb under
+      # BundledAssets/geo/ and an external-ui directory at
+      # BundledAssets/ui/ to embed them at compile time. They'll be
+      # copied to the App Group working directory on first run and
+      # are excluded from the Settings → Clear Cache action.
+      - path: BundledAssets
+        type: folder
+        buildPhase: resources
+        optional: true
     dependencies:
       - framework: Frameworks/Libmihomo.xcframework
         embed: false

@@ -72,8 +72,12 @@ public enum FilePath {
     /// Total bytes consumed by mihomo's home directory — the rule-provider
     /// cache.db, the GeoIP / GeoSite / ASN databases, and the downloaded
     /// external UI bundle. Returns 0 on enumeration errors. Profile YAMLs
-    /// live in a sibling directory and are not counted.
+    /// live in a sibling directory and are not counted. Compile-time
+    /// bundled assets (see BundledAssets) are also excluded since they
+    /// don't represent reclaimable space.
     public static func cacheSize() -> Int64 {
+        let protected = BundledAssets.protectedTopLevelNames
+        let workingPath = workingDirectory.standardizedFileURL.path
         let keys: [URLResourceKey] = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
         guard let enumerator = FileManager.default.enumerator(
             at: workingDirectory,
@@ -83,6 +87,9 @@ public enum FilePath {
         ) else { return 0 }
         var total: Int64 = 0
         for case let url as URL in enumerator {
+            if isUnderProtectedTopLevel(url: url, workingPath: workingPath, protected: protected) {
+                continue
+            }
             guard let values = try? url.resourceValues(forKeys: Set(keys)),
                   values.isRegularFile == true
             else { continue }
@@ -92,7 +99,10 @@ public enum FilePath {
     }
 
     /// Removes everything inside `workingDirectory` so mihomo will
-    /// re-fetch its caches on the next start. Profiles are untouched.
+    /// re-fetch its caches on the next start. Profiles are untouched,
+    /// and any compile-time bundled assets (see BundledAssets) are
+    /// preserved so the user doesn't lose embedded geo databases /
+    /// external UI to a Clear Cache tap.
     ///
     /// Safe to call while the tunnel is running, with one caveat: bbolt
     /// keeps writing to the cache.db inode it has already opened (Unix
@@ -100,9 +110,27 @@ public enum FilePath {
     /// reclaimed disk space won't actually free.
     public static func clearCache() throws {
         let fm = FileManager.default
+        let protected = BundledAssets.protectedTopLevelNames
         let entries = try fm.contentsOfDirectory(at: workingDirectory, includingPropertiesForKeys: nil)
         for entry in entries {
+            if protected.contains(entry.lastPathComponent) { continue }
             try fm.removeItem(at: entry)
         }
+    }
+
+    private static func isUnderProtectedTopLevel(
+        url: URL,
+        workingPath: String,
+        protected: Set<String>
+    ) -> Bool {
+        guard !protected.isEmpty else { return false }
+        let entryPath = url.standardizedFileURL.path
+        guard entryPath.hasPrefix(workingPath) else { return false }
+        var relative = String(entryPath.dropFirst(workingPath.count))
+        while relative.hasPrefix("/") { relative.removeFirst() }
+        guard let firstComponent = relative.split(separator: "/").first.map(String.init) else {
+            return false
+        }
+        return protected.contains(firstComponent)
     }
 }

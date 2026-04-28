@@ -50,6 +50,8 @@ public struct SettingsView: View {
                 copyableRow("Wrapper built", value: v.wrapperBuildTime, mono: true)
             }
 
+            bundledAssetsSection
+
             Section {
                 LabeledContent("Cache size") {
                     Text(Self.byteFormatter.string(fromByteCount: cacheBytes))
@@ -65,7 +67,7 @@ public struct SettingsView: View {
             } header: {
                 Text("Storage")
             } footer: {
-                Text("Removes the rule-provider cache, GeoIP / GeoSite databases, and the downloaded external UI. mihomo re-fetches them on next start.")
+                Text("Removes the rule-provider cache, downloaded GeoIP / GeoSite databases, and the downloaded external UI. mihomo re-fetches them on next start. Bundled assets above are preserved.")
             }
 
             Section("About") {
@@ -107,6 +109,49 @@ public struct SettingsView: View {
             Task { await refreshCacheSize() }
         } catch {
             clearError = error.localizedDescription
+        }
+    }
+
+    @ViewBuilder
+    private var bundledAssetsSection: some View {
+        let assets = BundledAssets.all
+        Section {
+            if assets.isEmpty {
+                Text("No assets bundled with this build.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(assets) { asset in
+                    LabeledContent(asset.displayName) {
+                        HStack(spacing: 6) {
+                            Text(label(for: asset.kind))
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.secondary.opacity(0.15), in: Capsule())
+                                .foregroundStyle(.secondary)
+                            Text(Self.byteFormatter.string(fromByteCount: asset.bundledSize))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Bundled Assets")
+        } footer: {
+            if assets.isEmpty {
+                Text("Drop GeoIP / GeoSite / MMDB files into BundledAssets/geo/ and an external-ui directory at BundledAssets/ui/, then re-run xcodegen and rebuild to embed them at compile time.")
+            } else {
+                Text("Embedded in the app at compile time and copied to the working directory on first run. They survive Clear Cache and are not re-downloaded by mihomo.")
+            }
+        }
+    }
+
+    private func label(for kind: BundledAsset.Kind) -> String {
+        switch kind {
+        case .geo: return "GEO"
+        case .externalUI: return "UI"
         }
     }
 

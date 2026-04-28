@@ -94,7 +94,7 @@ func Start(yamlConfig []byte) error {
 	cfg.DNS.Enable = true
 	cfg.Controller.ExternalController = "127.0.0.1:9090"
 	cfg.Controller.Secret = ""
-	cfg.Controller.ExternalUI = "metacubexd"
+	cfg.Controller.ExternalUI = "ui"
 	cfg.Controller.ExternalUIURL = "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip"
 	cfg.General.GeodataLoader = "memconservative"
 	cfg.Profile.StoreSelected = false
