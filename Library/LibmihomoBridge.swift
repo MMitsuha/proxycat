@@ -30,6 +30,10 @@ public enum LibmihomoBridge {
         LibmihomoSetLogLevel(level)
     }
 
+    public static func setHomeDir(_ path: String) {
+        LibmihomoSetHomeDir(path)
+    }
+
     public static func subscribeLogs(_ delegate: LibmihomoLogDelegateProtocol) -> Int64 {
         LibmihomoSubscribeLogs(delegate)
     }

@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Library
 import Libmihomo
@@ -29,13 +30,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         try await configureNetworkSettings()
 
         // 2. Acquire file descriptor for the packet flow. NEPacketTunnelFlow
-        //    doesn't expose this publicly; use KVC. Same approach used by
-        //    sing-box-for-apple, Clash, Stash, Quantumult.
+        //    doesn't expose this publicly; we try several KVC paths used by
+        //    different iOS versions, then fall back to enumerating the
+        //    process's file descriptors and picking out the utun control
+        //    socket — the same trick libbox uses for sing-box.
         let fd = packetFlowFileDescriptor()
         guard fd > 0 else {
-            throw PTPError("could not obtain TUN file descriptor")
+            throw PTPError("could not obtain TUN file descriptor — likely running on simulator (no real utun) or KVC path changed in this iOS version")
         }
-        Self.logger.info("packet flow fd = \(fd)")
+        Self.logger.info("packet flow fd = \(fd, privacy: .public)")
 
         // 3. Wire memory monitor *before* loading mihomo so we can already
         //    react if the bind itself spikes memory.
@@ -52,8 +55,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         }
         logSubID = LibmihomoBridge.subscribeLogs(bridge)
 
-        // 6. Push the iOS fd into mihomo before starting so the parsed YAML's
-        //    TUN inbound binds to the kernel-supplied fd.
+        // 6a. Tell mihomo to keep its mutable state (cache.db, downloaded
+        //     providers, external-ui) inside the App Group container. The
+        //     default ~/.config/mihomo path is unwritable in the iOS
+        //     Network Extension sandbox.
+        LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
+
+        // 6b. Push the iOS fd into mihomo before starting so the parsed
+        //     YAML's TUN inbound binds to the kernel-supplied fd and we
+        //     overwrite address fields that don't apply on iOS.
         try LibmihomoBridge.setTunFd(Int(fd))
 
         // 7. Start mihomo with the YAML.
@@ -136,16 +146,84 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         try await setTunnelNetworkSettings(settings)
     }
 
+    /// Find the file descriptor backing the iOS packet flow.
+    ///
+    /// Strategies, in order:
+    ///   1. KVC against several historically-known key paths.
+    ///   2. Enumerate process FDs and pick the one whose peer is an
+    ///      `AF_SYSTEM` control socket (utun). This is what libbox does
+    ///      when KVC fails on newer iOS.
+    ///
+    /// Returns `-1` on simulator (no real utun is created) or when the
+    /// extension was launched without `setTunnelNetworkSettings` having
+    /// completed.
     private func packetFlowFileDescriptor() -> Int32 {
-        // NEPacketTunnelFlow has a private socket.fileDescriptor key. This
-        // is the standard cross-vendor approach for fd-based TUN integration.
-        if let fd = packetFlow.value(forKeyPath: "socket.fileDescriptor") as? Int32 {
+        // 1) Try KVC paths.
+        let candidates = [
+            "socket.fileDescriptor",
+            "_socket.fileDescriptor",
+            "socket._fileDescriptor",
+            "_socket._fileDescriptor",
+        ]
+        for keyPath in candidates {
+            if let n = packetFlow.value(forKeyPath: keyPath) as? NSNumber {
+                let fd = n.int32Value
+                if fd > 0 {
+                    Self.logger.info("found tun fd via KVC \(keyPath, privacy: .public) = \(fd, privacy: .public)")
+                    return fd
+                }
+            }
+            if let fd = packetFlow.value(forKeyPath: keyPath) as? Int32, fd > 0 {
+                Self.logger.info("found tun fd via KVC \(keyPath, privacy: .public) = \(fd, privacy: .public)")
+                return fd
+            }
+        }
+
+        // 2) Walk the FD table looking for the utun control socket.
+        if let fd = findUtunFD() {
+            Self.logger.info("found tun fd by enumeration = \(fd, privacy: .public)")
             return fd
         }
-        if let n = packetFlow.value(forKeyPath: "socket.fileDescriptor") as? NSNumber {
-            return n.int32Value
-        }
+
+        let className = String(describing: type(of: self.packetFlow))
+        Self.logger.error("KVC and FD enumeration both failed; packetFlow class=\(className, privacy: .public)")
         return -1
+    }
+
+    /// Returns the fd of the utun control socket created by
+    /// `setTunnelNetworkSettings`, or nil if none is found.
+    ///
+    /// We manually decode `sockaddr_ctl` because `<sys/kern_control.h>`
+    /// isn't part of Swift's Darwin module on iOS. utun sockets are
+    /// `AF_SYSTEM`/`AF_SYS_CONTROL`, both defined in `<sys/socket.h>` /
+    /// `<sys/kern_control.h>` as constants we hardcode below.
+    private func findUtunFD() -> Int32? {
+        // sys/socket.h: AF_SYSTEM = 32
+        let kAF_SYSTEM: UInt8 = 32
+        // sys/kern_control.h: AF_SYS_CONTROL = 2
+        let kAF_SYS_CONTROL: UInt16 = 2
+        let limit = Int32(getdtablesize())
+        var storage = sockaddr_storage()
+        for fd in 0 ..< limit {
+            var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
+            let result = withUnsafeMutablePointer(to: &storage) { ptr -> Int32 in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { saPtr in
+                    getpeername(fd, saPtr, &len)
+                }
+            }
+            guard result == 0 else { continue }
+            // sockaddr_ctl layout: { u8 sc_len; u8 sc_family; u16 ss_sysaddr; ...}
+            // ss_family alone (sockaddr_storage) is u8 at offset 1 on Darwin.
+            let scFamily: UInt8 = withUnsafeBytes(of: storage) { raw in raw[1] }
+            guard scFamily == kAF_SYSTEM else { continue }
+            let ssSysaddr: UInt16 = withUnsafeBytes(of: storage) { raw in
+                raw.load(fromByteOffset: 2, as: UInt16.self)
+            }
+            if ssSysaddr == kAF_SYS_CONTROL {
+                return fd
+            }
+        }
+        return nil
     }
 
     // MARK: - Memory pressure
