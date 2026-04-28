@@ -87,19 +87,33 @@ public final class ProfileStore: ObservableObject {
     }
 
     @discardableResult
-    public func importYAML(_ content: String, name: String) throws -> Profile {
+    public func importYAML(_ content: String, name: String, remoteURL: URL? = nil) throws -> Profile {
         let id = UUID()
         let fileName = id.uuidString + ".yaml"
         let url = FilePath.profilesDirectory.appendingPathComponent(fileName)
         try content.write(to: url, atomically: true, encoding: .utf8)
 
-        let profile = Profile(id: id, name: name, fileName: fileName)
+        let profile = Profile(
+            id: id,
+            name: name,
+            fileName: fileName,
+            remoteURL: remoteURL,
+            lastUpdated: remoteURL != nil ? .init() : nil
+        )
         profiles.append(profile)
         try persist()
         if activeProfileID == nil {
             try setActive(profile)
         }
         return profile
+    }
+
+    /// Re-downloads `profile.remoteURL`, overwrites the on-disk YAML, and
+    /// bumps `lastUpdated`. Throws if the profile has no remote URL.
+    public func refreshRemote(_ profile: Profile) async throws {
+        guard let url = profile.remoteURL else { throw ProfileError.notRemote }
+        let content = try await RemoteProfileFetcher.fetch(url)
+        try updateContent(of: profile, yaml: content)
     }
 
     /// Updates the in-memory profile and persists the index. Caller is
@@ -133,9 +147,38 @@ public final class ProfileStore: ObservableObject {
 
 public enum ProfileError: LocalizedError {
     case noProfileSelected
+    case notRemote
+    case invalidURL
+    case httpStatus(Int)
+    case emptyResponse
+
     public var errorDescription: String? {
         switch self {
         case .noProfileSelected: return "No profile selected"
+        case .notRemote: return "Profile has no remote URL"
+        case .invalidURL: return "URL is not valid"
+        case let .httpStatus(code): return "Server returned HTTP \(code)"
+        case .emptyResponse: return "Server returned an empty body"
         }
+    }
+}
+
+/// Fetches subscription YAML from a remote URL.
+///
+/// Sets a `clash.meta` User-Agent because most subscription providers
+/// branch on UA to emit Clash/Mihomo-flavored configs (vs. v2ray, etc.).
+public enum RemoteProfileFetcher {
+    public static func fetch(_ url: URL) async throws -> String {
+        var request = URLRequest(url: url)
+        request.setValue("clash.meta", forHTTPHeaderField: "User-Agent")
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        request.timeoutInterval = 30
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw ProfileError.httpStatus(http.statusCode)
+        }
+        guard !data.isEmpty else { throw ProfileError.emptyResponse }
+        return String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
     }
 }
