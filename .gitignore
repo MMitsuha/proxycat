@@ -1,0 +1,29 @@
+# Xcode
+xcuserdata/
+*.xcworkspace/xcuserdata
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# XcodeGen output (regenerable from project.yml)
+ProxyCat.xcodeproj/
+
+# gomobile output (regenerable from libmihomo/ via scripts/build-libmihomo.sh)
+Frameworks/
+
+# Go module download cache
+libmihomo/vendor/
+
+# Go build artifacts
+*.test
+*.out
+coverage.txt
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
