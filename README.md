@@ -6,7 +6,7 @@
 
 | Dashboard | Profiles | Logs | Settings |
 |:---:|:---:|:---:|:---:|
-| <img src="asserts/IMG_2721.png" width="200"> | <img src="asserts/IMG_2722.png" width="200"> | <img src="asserts/IMG_2723.png" width="200"> | <img src="asserts/IMG_2725.png" width="200"> |
+| <img src="assets/IMG_2721.png" width="200"> | <img src="assets/IMG_2722.png" width="200"> | <img src="assets/IMG_2723.png" width="200"> | <img src="assets/IMG_2725.png" width="200"> |
 | 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | mihomo 版本与诊断信息 |
 
 ## 目录结构
