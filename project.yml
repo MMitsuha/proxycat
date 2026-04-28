@@ -68,6 +68,7 @@ targets:
     platform: iOS
     sources:
       - path: ApplicationLibrary
+      - path: Localizable.xcstrings
     dependencies:
       - target: Library
         embed: false
@@ -83,6 +84,7 @@ targets:
     platform: iOS
     sources:
       - path: Pcat
+      - path: Localizable.xcstrings
     dependencies:
       - target: Library
         embed: true

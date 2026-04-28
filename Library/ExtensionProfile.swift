@@ -89,7 +89,7 @@ public enum ExtensionProfileError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .notLoaded: return "VPN configuration not loaded"
+        case .notLoaded: return String(localized: "VPN configuration not loaded", bundle: .main)
         }
     }
 }

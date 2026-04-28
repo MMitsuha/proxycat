@@ -130,7 +130,7 @@ private struct LogViewBody: View {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
-            Text(model.isConnected ? "No matching logs" : "Service not started")
+            Text(model.isConnected ? String(localized: "No matching logs") : String(localized: "Service not started"))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

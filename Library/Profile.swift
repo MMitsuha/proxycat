@@ -154,11 +154,11 @@ public enum ProfileError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .noProfileSelected: return "No profile selected"
-        case .notRemote: return "Profile has no remote URL"
-        case .invalidURL: return "URL is not valid"
-        case let .httpStatus(code): return "Server returned HTTP \(code)"
-        case .emptyResponse: return "Server returned an empty body"
+        case .noProfileSelected: return String(localized: "No profile selected", bundle: .main)
+        case .notRemote: return String(localized: "Profile has no remote URL", bundle: .main)
+        case .invalidURL: return String(localized: "URL is not valid", bundle: .main)
+        case let .httpStatus(code): return String(localized: "Server returned HTTP \(code)", bundle: .main)
+        case .emptyResponse: return String(localized: "Server returned an empty body", bundle: .main)
         }
     }
 }
