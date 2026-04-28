@@ -7,6 +7,7 @@ package libmihomo
 
 import (
 	"fmt"
+	"net/netip"
 	"sync"
 	"sync/atomic"
 
@@ -14,6 +15,14 @@ import (
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
 	"github.com/metacubex/mihomo/log"
+)
+
+// Virtual TUN addresses installed in fd-mode. They MUST match the
+// NEPacketTunnelNetworkSettings configured by PacketTunnelProvider so
+// gvisor's netstack recognises incoming packets as locally addressed.
+var (
+	tunInet4 = netip.MustParsePrefix("198.18.0.1/16")
+	tunInet6 = netip.MustParsePrefix("fd00:7f::1/64")
 )
 
 var (
@@ -64,25 +73,32 @@ func Start(yamlConfig []byte) error {
 	}
 
 	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
-		// Inject the fd and strip fields that conflict with iOS NE.
+		// Inject the fd. Force the TUN to look the way iOS expects.
 		cfg.General.Tun.Enable = true
 		cfg.General.Tun.FileDescriptor = int(fd)
-		cfg.General.Tun.Device = ""
+		cfg.General.Tun.Device = "" // don't try to open by name
+		// Routing is owned by NEPacketTunnelNetworkSettings on iOS.
 		cfg.General.Tun.AutoRoute = false
 		cfg.General.Tun.AutoDetectInterface = false
 		cfg.General.Tun.AutoRedirect = false
-		// Host-side network settings (set by NEPacketTunnelNetworkSettings)
-		// own the address space. Clearing these prevents sing-tun from
-		// trying to bind to an address that doesn't exist on the host.
-		cfg.General.Tun.Inet4Address = nil
-		cfg.General.Tun.Inet6Address = nil
+		cfg.General.Tun.StrictRoute = false
+		// Provide a deterministic virtual address pair so sing-tun's
+		// gvisor netstack accepts packets. Must match what
+		// PacketTunnelProvider.configureNetworkSettings installs on the
+		// host side; otherwise the kernel's utun delivers packets the
+		// virtual stack rejects.
+		cfg.General.Tun.Inet4Address = []netip.Prefix{tunInet4}
+		cfg.General.Tun.Inet6Address = []netip.Prefix{tunInet6}
+		// User-supplied route filters from the YAML are usually about
+		// kernel routing on Linux/macOS — irrelevant in fd-mode.
 		cfg.General.Tun.Inet4RouteAddress = nil
 		cfg.General.Tun.Inet6RouteAddress = nil
+		cfg.General.Tun.Inet4RouteExcludeAddress = nil
+		cfg.General.Tun.Inet6RouteExcludeAddress = nil
 		cfg.General.Tun.RouteAddress = nil
 		cfg.General.Tun.RouteAddressSet = nil
 		cfg.General.Tun.RouteExcludeAddress = nil
 		cfg.General.Tun.RouteExcludeAddressSet = nil
-		cfg.General.Tun.StrictRoute = false
 	}
 
 	hub.ApplyConfig(cfg)
