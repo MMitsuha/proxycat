@@ -46,7 +46,7 @@ public struct DashboardView: View {
             Button(action: toggle) {
                 HStack(spacing: 8) {
                     Image(systemName: profile.isConnected ? "stop.fill" : "play.fill")
-                    Text(profile.isConnected ? "Disconnect" : "Connect")
+                    Text(profile.isConnected ? String(localized: "Disconnect") : String(localized: "Connect"))
                         .font(.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
@@ -93,13 +93,13 @@ public struct DashboardView: View {
 
     private var statusText: String {
         switch profile.status {
-        case .connected: return "Connected"
-        case .connecting: return "Connecting"
-        case .disconnecting: return "Disconnecting"
-        case .disconnected: return "Disconnected"
-        case .reasserting: return "Reasserting"
-        case .invalid: return "Not configured"
-        @unknown default: return "Unknown"
+        case .connected: return String(localized: "Connected")
+        case .connecting: return String(localized: "Connecting")
+        case .disconnecting: return String(localized: "Disconnecting")
+        case .disconnected: return String(localized: "Disconnected")
+        case .reasserting: return String(localized: "Reasserting")
+        case .invalid: return String(localized: "Not configured")
+        @unknown default: return String(localized: "Unknown")
         }
     }
 
@@ -153,7 +153,7 @@ public struct DashboardView: View {
             return
         }
         guard let active = profileStore.active else {
-            connectError = "Pick a profile first."
+            connectError = String(localized: "Pick a profile first.")
             return
         }
         // Read the YAML off-main (could be tens of KB on cold storage)
@@ -176,7 +176,7 @@ public struct DashboardView: View {
 // MARK: - Components
 
 private struct TrafficCard: View {
-    let title: String
+    let title: LocalizedStringKey
     let symbol: String
     let color: Color
     let rate: Int64

@@ -12,11 +12,11 @@ public enum LogLevel: Int, CaseIterable, Identifiable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .debug: return "Debug"
-        case .info: return "Info"
-        case .warning: return "Warning"
-        case .error: return "Error"
-        case .silent: return "Silent"
+        case .debug: return String(localized: "Debug", bundle: .main)
+        case .info: return String(localized: "Info", bundle: .main)
+        case .warning: return String(localized: "Warning", bundle: .main)
+        case .error: return String(localized: "Error", bundle: .main)
+        case .silent: return String(localized: "Silent", bundle: .main)
         }
     }
 

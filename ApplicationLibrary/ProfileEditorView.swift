@@ -120,8 +120,8 @@ public struct ProfileEditorView: View {
 
     private var title: String {
         switch mode {
-        case .create: return "New Profile"
-        case .edit: return "Edit Profile"
+        case .create: return String(localized: "New Profile")
+        case .edit: return String(localized: "Edit Profile")
         }
     }
 
