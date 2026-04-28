@@ -195,7 +195,8 @@ final class LogViewModel: ObservableObject {
         searchText = environment.logSearchText
 
         guard let client = commandClient else { return }
-        client.connect()
+        // The gRPC connection is owned by ExtensionEnvironment now —
+        // no per-view connect() needed.
 
         let debouncedSearch = $searchText
             .debounce(for: .milliseconds(250), scheduler: RunLoop.main)

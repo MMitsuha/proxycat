@@ -8,6 +8,7 @@ package libmihomo
 import (
 	"fmt"
 	"net/netip"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -32,7 +33,25 @@ var (
 
 	homeDirMu sync.Mutex
 	homeDir   string
+
+	socketPathMu sync.Mutex
+	socketPath   string
 )
+
+// SetCommandSocketPath chooses where the gRPC command server listens.
+// Must point at a path inside an App Group container so the host app
+// can connect. Pass "" to disable the server. Call before Start.
+func SetCommandSocketPath(path string) {
+	socketPathMu.Lock()
+	socketPath = path
+	socketPathMu.Unlock()
+}
+
+func commandSocketPath() string {
+	socketPathMu.Lock()
+	defer socketPathMu.Unlock()
+	return socketPath
+}
 
 // SetHomeDir tells mihomo where to keep cache.db, downloaded providers, the
 // external UI, etc. On iOS the only writable path for the Network Extension
@@ -116,6 +135,11 @@ func Start(yamlConfig []byte) error {
 
 	hub.ApplyConfig(cfg)
 	startOOMKiller()
+	if path := commandSocketPath(); path != "" {
+		if err := StartCommandServer(path); err != nil {
+			log.Warnln("[command] start server: %v", err)
+		}
+	}
 	started.Store(true)
 	return nil
 }
@@ -128,6 +152,7 @@ func Stop() {
 	if !started.Load() {
 		return
 	}
+	StopCommandServer()
 	stopOOMKiller()
 	executor.Shutdown()
 	started.Store(false)
@@ -176,4 +201,52 @@ func SetLogLevel(level int) {
 // LogLevel returns the current log level.
 func LogLevel() int {
 	return int(log.Level())
+}
+
+// Wrapper-level build identifiers. Populated by `go build -ldflags -X` at
+// xcframework build time (see scripts/build-libmihomo.sh). Empty when
+// running tests / `go run` without the script.
+var (
+	wrapperBuildTime = "unknown"
+	wrapperBuildTag  = "with_gvisor"
+	mihomoCommit     = "unknown"
+)
+
+// VersionInfo holds build-time identifying information about the embedded
+// mihomo core and its Go runtime. Reported on the Settings → Diagnostics
+// screen so users can attach it to bug reports.
+type VersionInfo struct {
+	// Mihomo's semantic version (constant.Version, e.g. "1.10.0").
+	Mihomo string
+	// constant.BuildTime — set by the mihomo build, "unknown time"
+	// when built from a plain `go build`.
+	MihomoBuildTime string
+	// Mihomo upstream commit hash, captured by the build script from
+	// the local mihomo checkout.
+	MihomoCommit string
+	// Time the xcframework itself was assembled.
+	WrapperBuildTime string
+	// Build tags used when compiling (e.g. "with_gvisor").
+	BuildTags string
+	// Go runtime / compiler version, e.g. "go1.26.2".
+	Go string
+	// GOOS/GOARCH the Go runtime was built for.
+	Platform string
+	// Whether mihomo's "Meta" extensions (constant.Meta) are compiled
+	// in. Always true for our builds; surfaced for completeness.
+	Meta bool
+}
+
+// Version returns build identification for the embedded core.
+func Version() *VersionInfo {
+	return &VersionInfo{
+		Mihomo:           C.Version,
+		MihomoBuildTime:  C.BuildTime,
+		MihomoCommit:     mihomoCommit,
+		WrapperBuildTime: wrapperBuildTime,
+		BuildTags:        wrapperBuildTag,
+		Go:               runtime.Version(),
+		Platform:         runtime.GOOS + "/" + runtime.GOARCH,
+		Meta:             C.Meta,
+	}
 }

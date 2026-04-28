@@ -2,122 +2,196 @@ import Combine
 import Foundation
 import Libmihomo
 
-/// Runs *inside the host app* and brokers data from the Network Extension.
+/// Host-app-side counterpart to the gRPC command server running inside
+/// the Network Extension. Subscribes to `Status` (traffic + memory) and
+/// `Log` streams over a Unix-domain socket in the App Group container.
 ///
-/// In the sing-box-for-apple architecture this is a Unix-socket / XPC client
-/// to a long-running command server inside the extension. For the mihomo
-/// port we take a simpler route appropriate to mihomo's design:
-///
-/// • The extension talks directly to mihomo via the gomobile binding.
-/// • Logs and traffic produced *inside the extension* don't traverse a
-///   socket; they're written into the shared app-group container as a
-///   ring file (`Cache/ne.log`) plus a small `Cache/traffic.json` snapshot
-///   that the extension refreshes on a 1s timer.
-/// • The host app polls/reads those files. This avoids a custom IPC
-///   protocol while still staying within the NE memory budget.
-///
-/// The CommandClient hides the file-watching detail behind @Published
-/// signals identical to sing-box's CommandClient API.
+/// The actual gRPC speaking is done in Go (`Libmihomo.CommandClient`),
+/// matching sing-box's libbox approach. Swift only implements a delegate
+/// protocol the Go runtime calls back into; this keeps the dependency
+/// footprint on the Swift side at zero (no grpc-swift).
 @MainActor
 public final class CommandClient: ObservableObject {
     @Published public private(set) var isConnected: Bool = false
     @Published public private(set) var logs: [LogEntry] = []
     @Published public private(set) var traffic: TrafficSnapshot = .zero
-    /// Memory used by the *extension* process, sampled at the same cadence
-    /// as `traffic`. Reading the host app's process memory would be
-    /// misleading because the two have separate jetsam budgets.
+    /// Memory used by the *extension* process. Reported by the server in
+    /// every Status frame so the host always reads the right process'
+    /// usage (the host app has a separate, much larger jetsam budget).
     @Published public private(set) var memory: MemoryStats = .zero
-    /// Currently effective log level. Mirrors mihomo's runtime filter so the
-    /// log view's "Default" option matches what the extension is producing.
     @Published public var defaultLogLevel: LogLevel = .info
 
     public static let maxLogBuffer = 1500
 
-    private var trafficTimer: Timer?
-    private var logTimer: Timer?
-    private var lastLogOffset: UInt64 = 0
-    private let logURL = FilePath.cacheDirectory.appendingPathComponent("ne.log")
-    private let trafficURL = FilePath.cacheDirectory.appendingPathComponent("traffic.json")
+    private var goClient: LibmihomoCommandClient?
+    private var bridge: ClientBridge?
+
+    // Reconnect bookkeeping. The extension may not be up the moment the
+    // host app first calls connect(); a simple capped backoff handles
+    // the racing-startup case as well as transient drops.
+    private var reconnectTask: Task<Void, Never>?
+    private var shouldRun: Bool = false
 
     public init() {}
 
     public func connect() {
-        isConnected = true
-        startTrafficPoll()
-        startLogPoll()
+        guard !shouldRun else { return }
+        shouldRun = true
+        startReconnectLoop()
     }
 
     public func disconnect() {
-        trafficTimer?.invalidate()
-        trafficTimer = nil
-        logTimer?.invalidate()
-        logTimer = nil
+        shouldRun = false
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        goClient?.disconnect()
+        goClient = nil
+        bridge = nil
         isConnected = false
     }
 
     public func clearLogs() {
         logs.removeAll(keepingCapacity: false)
-        try? Data().write(to: logURL, options: .atomic)
-        lastLogOffset = 0
     }
 
-    private func startTrafficPoll() {
-        trafficTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refreshTraffic() }
+    // MARK: - Reconnect loop
+
+    private func startReconnectLoop() {
+        reconnectTask?.cancel()
+        reconnectTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var backoffMs: UInt64 = 200
+            while !Task.isCancelled, self.shouldRun {
+                let connected = await self.attemptConnect()
+                if connected {
+                    backoffMs = 200
+                    // Wait until the bridge signals disconnection.
+                    await self.waitForDisconnect()
+                    if !self.shouldRun { return }
+                }
+                try? await Task.sleep(nanoseconds: backoffMs * NSEC_PER_MSEC)
+                backoffMs = min(backoffMs * 2, 5_000)
+            }
         }
     }
 
-    private func startLogPoll() {
-        logTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tailLog() }
+    private func attemptConnect() async -> Bool {
+        let options = LibmihomoCommandClientOptions()
+        options.subscribeStatus = true
+        options.subscribeLogs = true
+        options.statusIntervalMs = 1_000
+
+        let bridge = ClientBridge(owner: self)
+        guard let client = LibmihomoNewCommandClient(bridge, options) else {
+            return false
+        }
+        self.bridge = bridge
+        self.goClient = client
+        do {
+            try client.connect(FilePath.commandSocketPath)
+            return true
+        } catch {
+            self.goClient = nil
+            self.bridge = nil
+            return false
         }
     }
 
-    private func refreshTraffic() {
-        guard let data = try? Data(contentsOf: trafficURL),
-              let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-        else { return }
+    private func waitForDisconnect() async {
+        guard let bridge else { return }
+        await bridge.waitForDisconnect()
+    }
+
+    // MARK: - Bridge callbacks (called from Go via gomobile)
+
+    fileprivate func didConnect() {
+        isConnected = true
+    }
+
+    fileprivate func didDisconnect(_ reason: String) {
+        isConnected = false
+    }
+
+    fileprivate func didReceive(status: LibmihomoStatus) {
         traffic = TrafficSnapshot(
-            up: (dict["up"] as? NSNumber)?.int64Value ?? 0,
-            down: (dict["down"] as? NSNumber)?.int64Value ?? 0,
-            upTotal: (dict["upTotal"] as? NSNumber)?.int64Value ?? 0,
-            downTotal: (dict["downTotal"] as? NSNumber)?.int64Value ?? 0,
-            connections: (dict["connections"] as? NSNumber)?.int64Value ?? 0
+            up: status.up,
+            down: status.down,
+            upTotal: status.upTotal,
+            downTotal: status.downTotal,
+            connections: status.connections
         )
-        memory = MemoryStats(
-            resident: (dict["memoryResident"] as? NSNumber)?.intValue ?? 0,
-            available: (dict["memoryAvailable"] as? NSNumber)?.intValue ?? 0
-        )
+        let resident = Int(status.memoryResident)
+        let budget = Int(status.memoryBudget)
+        let available = max(0, budget - resident)
+        memory = MemoryStats(resident: resident, available: available)
     }
 
-    private func tailLog() {
-        guard let handle = try? FileHandle(forReadingFrom: logURL) else { return }
-        defer { try? handle.close() }
-
-        let size = (try? handle.seekToEnd()) ?? 0
-        if size < lastLogOffset {
-            // File rotated/truncated.
-            lastLogOffset = 0
-        }
-        guard size > lastLogOffset else { return }
-        try? handle.seek(toOffset: lastLogOffset)
-        let chunk = (try? handle.readToEnd()) ?? Data()
-        lastLogOffset = size
-
-        guard let text = String(data: chunk, encoding: .utf8), !text.isEmpty else { return }
-
-        var newEntries: [LogEntry] = []
-        for line in text.split(separator: "\n") {
-            // Format: "<level>\t<message>"
-            let parts = line.split(separator: "\t", maxSplits: 1, omittingEmptySubsequences: false)
-            guard parts.count == 2,
-                  let raw = Int(parts[0]) else { continue }
-            newEntries.append(LogEntry(rawLevel: raw, message: String(parts[1])))
-        }
-        if newEntries.isEmpty { return }
-        logs.append(contentsOf: newEntries)
+    fileprivate func didReceive(log entry: LogEntry) {
+        logs.append(entry)
         if logs.count > Self.maxLogBuffer {
             logs.removeFirst(logs.count - Self.maxLogBuffer)
         }
     }
 }
+
+/// Glue between the gomobile-generated handler protocol and our Swift
+/// view-model. Methods are invoked from arbitrary Go-runtime threads,
+/// so every UI-touching update is dispatched onto the main actor.
+private final class ClientBridge: NSObject, LibmihomoCommandClientHandlerProtocol {
+    private weak var owner: CommandClient?
+    private let disconnect = AsyncOneShot()
+
+    init(owner: CommandClient) {
+        self.owner = owner
+    }
+
+    func waitForDisconnect() async {
+        await disconnect.wait()
+    }
+
+    // MARK: LibmihomoCommandClientHandlerProtocol
+
+    func connected() {
+        Task { @MainActor [weak owner] in owner?.didConnect() }
+    }
+
+    func disconnected(_ message: String?) {
+        Task { @MainActor [weak owner] in owner?.didDisconnect(message ?? "") }
+        disconnect.signal()
+    }
+
+    func write(_ status: LibmihomoStatus?) {
+        guard let status else { return }
+        Task { @MainActor [weak owner] in owner?.didReceive(status: status) }
+    }
+
+    func writeLog(_ level: Int, payload: String?) {
+        let entry = LogEntry(rawLevel: level, message: payload ?? "")
+        Task { @MainActor [weak owner] in owner?.didReceive(log: entry) }
+    }
+}
+
+/// Tiny one-shot async signal used to await the bridge's disconnect.
+private actor AsyncOneShot {
+    private var fired = false
+    private var continuations: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        if fired { return }
+        await withCheckedContinuation { cont in
+            continuations.append(cont)
+        }
+    }
+
+    nonisolated func signal() {
+        Task { await self._signal() }
+    }
+
+    private func _signal() {
+        guard !fired else { return }
+        fired = true
+        for c in continuations { c.resume() }
+        continuations.removeAll()
+    }
+}
+

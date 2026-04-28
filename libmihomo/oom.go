@@ -69,11 +69,13 @@ var (
 // SetMemoryLimit configures the per-process memory budget (bytes) used by
 // the OOM killer. Pass 0 to fall back to the iOS-NE default of 50 MB
 // (matches sing-box). Call before Start; later calls take effect on the
-// next Start.
+// next Start. The same value is surfaced to the host app's CommandClient
+// via StatusMessage.memory_budget so the dashboard can display it.
 func SetMemoryLimit(limit int64) {
 	memoryLimitMu.Lock()
 	memoryLimit = limit
 	memoryLimitMu.Unlock()
+	memBudget.Store(limit)
 }
 
 // MemoryUsage returns the process's phys_footprint in bytes — the same
@@ -108,6 +110,9 @@ func startOOMKiller() {
 	if !killer.CompareAndSwap(nil, k) {
 		return // already running
 	}
+
+	// Surface the resolved budget for the dashboard.
+	memBudget.Store(int64(limit))
 
 	// Tell the Go GC the budget. This is a soft cap; the runtime tries to
 	// keep heap below it but won't OOM-kill itself. The point is to make

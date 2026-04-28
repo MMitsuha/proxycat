@@ -34,6 +34,12 @@ public enum LibmihomoBridge {
         LibmihomoSetHomeDir(path)
     }
 
+    /// Tell the embedded gRPC command server where to listen. Path must
+    /// be inside the App Group container so the host app can connect.
+    public static func setCommandSocketPath(_ path: String) {
+        LibmihomoSetCommandSocketPath(path)
+    }
+
     /// Configure the Go OOM killer's per-process memory budget. Pass 0 to
     /// keep the 50 MB default (matches sing-box). The killer will trigger
     /// FreeOSMemory + connection drain when usage reaches limit-safety.
@@ -74,7 +80,33 @@ public enum LibmihomoBridge {
         LibmihomoCloseAllConnections()
     }
 
+    /// Identifying information about the embedded mihomo core. Cached
+    /// since the underlying values are baked in at build time.
+    public static let version: VersionInfo = .init(LibmihomoVersion())
+
     private static func makeError(_ message: String) -> NSError {
         NSError(domain: "io.proxycat.Libmihomo", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
+    }
+}
+
+public struct VersionInfo: Sendable, Hashable {
+    public let mihomo: String
+    public let mihomoBuildTime: String
+    public let mihomoCommit: String
+    public let wrapperBuildTime: String
+    public let buildTags: String
+    public let go: String
+    public let platform: String
+    public let meta: Bool
+
+    init(_ go: LibmihomoVersionInfo?) {
+        self.mihomo = go?.mihomo ?? "unknown"
+        self.mihomoBuildTime = go?.mihomoBuildTime ?? "unknown"
+        self.mihomoCommit = go?.mihomoCommit ?? "unknown"
+        self.wrapperBuildTime = go?.wrapperBuildTime ?? "unknown"
+        self.buildTags = go?.buildTags ?? ""
+        self.go = go?.go ?? ""
+        self.platform = go?.platform ?? ""
+        self.meta = go?.meta ?? false
     }
 }
