@@ -6,7 +6,7 @@ public struct ProfileListView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var showImporter = false
     @State private var importError: String?
-    @State private var showInlineEditor = false
+    @State private var presentedSheet: EditorSheet?
 
     public init() {}
 
@@ -21,34 +21,26 @@ public struct ProfileListView: View {
             }
 
             ForEach(profileStore.profiles) { profile in
-                Button {
-                    try? profileStore.setActive(profile)
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(profile.name)
-                                .foregroundStyle(.primary)
-                            if let url = profile.remoteURL {
-                                Text(url.absoluteString)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
+                profileRow(profile)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        try? profileStore.setActive(profile)
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        Button {
+                            presentedSheet = .editing(profile)
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
                         }
-                        Spacer()
-                        if profileStore.activeProfileID == profile.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.tint)
+                        .tint(.blue)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            try? profileStore.delete(profile)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
                     }
-                }
-                .swipeActions(allowsFullSwipe: false) {
-                    Button(role: .destructive) {
-                        try? profileStore.delete(profile)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
             }
         }
         .navigationTitle("Profiles")
@@ -61,9 +53,9 @@ public struct ProfileListView: View {
                         Label("Import YAML", systemImage: "square.and.arrow.down")
                     }
                     Button {
-                        showInlineEditor = true
+                        presentedSheet = .creating
                     } label: {
-                        Label("Paste YAML", systemImage: "doc.text.below.ecg")
+                        Label("New / Paste YAML", systemImage: "doc.text.below.ecg")
                     }
                 } label: {
                     Image(systemName: "plus")
@@ -94,12 +86,13 @@ public struct ProfileListView: View {
                 importError = error.localizedDescription
             }
         }
-        .sheet(isPresented: $showInlineEditor) {
-            InlineYAMLEditor { name, body in
-                do {
-                    try profileStore.importYAML(body, name: name)
-                } catch {
-                    importError = error.localizedDescription
+        .sheet(item: $presentedSheet) { sheet in
+            NavigationStack {
+                switch sheet {
+                case .creating:
+                    ProfileEditorView(mode: .create)
+                case let .editing(profile):
+                    ProfileEditorView(mode: .edit(profile))
                 }
             }
         }
@@ -109,39 +102,39 @@ public struct ProfileListView: View {
             Text(importError ?? "")
         }
     }
-}
 
-private struct InlineYAMLEditor: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var name: String = "New Profile"
-    @State private var yaml: String = ""
-
-    let onSave: (String, String) -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Name") {
-                    TextField("Profile name", text: $name)
-                }
-                Section("YAML") {
-                    TextEditor(text: $yaml)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(minHeight: 240)
+    @ViewBuilder
+    private func profileRow(_ profile: Profile) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(profile.name).foregroundStyle(.primary)
+                if let url = profile.remoteURL {
+                    Text(url.absoluteString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else if let date = profile.lastUpdated {
+                    Text("Edited \(date.formatted(.relative(presentation: .named)))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("New Profile")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        onSave(name, yaml)
-                        dismiss()
-                    }
-                    .disabled(yaml.isEmpty || name.isEmpty)
-                }
+            Spacer()
+            if profileStore.activeProfileID == profile.id {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.tint)
+            }
+        }
+    }
+
+    private enum EditorSheet: Identifiable {
+        case creating
+        case editing(Profile)
+
+        var id: String {
+            switch self {
+            case .creating: return "creating"
+            case let .editing(profile): return "editing-\(profile.id.uuidString)"
             }
         }
     }

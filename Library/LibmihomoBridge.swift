@@ -34,6 +34,17 @@ public enum LibmihomoBridge {
         LibmihomoSetHomeDir(path)
     }
 
+    /// Parses the YAML and throws on syntax / semantic errors. Doesn't
+    /// apply anything; safe to call from the host app while the tunnel
+    /// is running.
+    public static func validate(yaml: Data) throws {
+        var err: NSError?
+        LibmihomoValidate(yaml, &err)
+        if let err {
+            throw err
+        }
+    }
+
     public static func subscribeLogs(_ delegate: LibmihomoLogDelegateProtocol) -> Int64 {
         LibmihomoSubscribeLogs(delegate)
     }
