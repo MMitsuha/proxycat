@@ -33,6 +33,14 @@ public struct ProfileListView: View {
                             Label("Edit", systemImage: "pencil")
                         }
                         .tint(.blue)
+                        if profile.remoteURL != nil {
+                            Button {
+                                refresh(profile)
+                            } label: {
+                                Label("Refresh", systemImage: "arrow.clockwise")
+                            }
+                            .tint(.orange)
+                        }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
@@ -51,6 +59,11 @@ public struct ProfileListView: View {
                         showImporter = true
                     } label: {
                         Label("Import YAML", systemImage: "square.and.arrow.down")
+                    }
+                    Button {
+                        presentedSheet = .downloading
+                    } label: {
+                        Label("Download from URL", systemImage: "arrow.down.circle")
                     }
                     Button {
                         presentedSheet = .creating
@@ -91,6 +104,8 @@ public struct ProfileListView: View {
                     ProfileEditorView(mode: .create)
                 case let .editing(profile):
                     ProfileEditorView(mode: .edit(profile))
+                case .downloading:
+                    ProfileDownloadView()
                 }
             }
         }
@@ -107,6 +122,16 @@ public struct ProfileListView: View {
     /// swipe action failed.
     private func run(_ block: () throws -> Void) {
         do { try block() } catch { actionError = error.localizedDescription }
+    }
+
+    private func refresh(_ profile: Profile) {
+        Task {
+            do {
+                try await profileStore.refreshRemote(profile)
+            } catch {
+                actionError = error.localizedDescription
+            }
+        }
     }
 
     @ViewBuilder
@@ -135,11 +160,13 @@ public struct ProfileListView: View {
 
     private enum EditorSheet: Identifiable {
         case creating
+        case downloading
         case editing(Profile)
 
         var id: String {
             switch self {
             case .creating: return "creating"
+            case .downloading: return "downloading"
             case let .editing(profile): return "editing-\(profile.id.uuidString)"
             }
         }
