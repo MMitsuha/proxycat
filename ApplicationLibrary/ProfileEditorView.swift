@@ -62,7 +62,7 @@ public struct ProfileEditorView: View {
                     .frame(minHeight: 320)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .onChange(of: yaml) { _ in
+                    .onChange(of: yaml) {
                         validation = .pristine
                     }
             } header: {
