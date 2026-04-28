@@ -57,7 +57,11 @@ public final class ProfileStore: ObservableObject {
 
     public func setActive(_ profile: Profile) throws {
         activeProfileID = profile.id
-        try profile.id.uuidString.data(using: .utf8)?.write(to: activePointer, options: .atomic)
+        // UUIDs are pure ASCII so utf8 conversion can't fail; the
+        // optional-chain in the previous version silently swallowed
+        // any disk-write error here.
+        let data = Data(profile.id.uuidString.utf8)
+        try data.write(to: activePointer, options: .atomic)
     }
 
     /// Returns the YAML content for the currently active profile.

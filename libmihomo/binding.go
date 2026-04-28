@@ -27,8 +27,8 @@ var (
 )
 
 var (
-	startMu  sync.Mutex
-	started  atomic.Bool
+	startMu   sync.Mutex
+	started   atomic.Bool
 	pendingFd int32
 
 	homeDirMu sync.Mutex
@@ -90,6 +90,8 @@ func Start(yamlConfig []byte) error {
 	if err != nil {
 		return err
 	}
+
+	cfg.DNS.Enable = true
 
 	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
 		// Inject the fd. Force the TUN to look the way iOS expects.
@@ -155,6 +157,10 @@ func Stop() {
 	StopCommandServer()
 	stopOOMKiller()
 	executor.Shutdown()
+	// Clear the cached fd. iOS may reuse the same integer for an
+	// unrelated descriptor on the next session — binding mihomo to a
+	// stale fd silently drops every packet.
+	atomic.StoreInt32(&pendingFd, 0)
 	started.Store(false)
 }
 

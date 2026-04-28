@@ -86,12 +86,12 @@ public struct ProfileEditorView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        validate()
+                        Task { await validate() }
                     } label: {
                         Label("Validate", systemImage: "checkmark.shield")
                     }
                     Button {
-                        save()
+                        Task { await save() }
                     } label: {
                         Label("Save", systemImage: "tray.and.arrow.down")
                     }
@@ -158,24 +158,31 @@ public struct ProfileEditorView: View {
         }
     }
 
-    private func validate() {
-        guard let data = yaml.data(using: .utf8) else {
-            validation = .failed("YAML is not UTF-8")
-            return
-        }
+    @MainActor
+    private func validate() async {
+        let data = Data(yaml.utf8)
         isValidating = true
-        defer { isValidating = false }
+        // mihomo's parser can take hundreds of milliseconds on a large
+        // YAML (rule providers, regex, proxy groups). Hop to a detached
+        // task so the validating spinner actually animates.
+        let result: Validation
         do {
-            try LibmihomoBridge.validate(yaml: data)
-            validation = .ok
+            try await Task.detached(priority: .userInitiated) {
+                try LibmihomoBridge.validate(yaml: data)
+            }.value
+            result = .ok
         } catch {
-            validation = .failed(error.localizedDescription)
+            result = .failed(error.localizedDescription)
         }
+        validation = result
+        isValidating = false
     }
 
-    private func save() {
-        // Always validate one more time before persisting.
-        validate()
+    @MainActor
+    private func save() async {
+        // Always re-validate before persisting — the user may have typed
+        // since their last manual Validate.
+        await validate()
         if case let .failed(msg) = validation {
             saveError = msg
             return

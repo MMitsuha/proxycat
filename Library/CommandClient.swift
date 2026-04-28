@@ -44,10 +44,16 @@ public final class CommandClient: ObservableObject {
         shouldRun = false
         reconnectTask?.cancel()
         reconnectTask = nil
-        goClient?.disconnect()
+        let oldClient = goClient
         goClient = nil
         bridge = nil
         isConnected = false
+        // CommandClient.Disconnect() in Go calls wg.Wait() — gRPC stream
+        // teardown can take 100–500ms on a Unix socket, so do it off the
+        // main actor to keep the UI responsive.
+        if let oldClient {
+            Task.detached { oldClient.disconnect() }
+        }
     }
 
     public func clearLogs() {
@@ -76,6 +82,16 @@ public final class CommandClient: ObservableObject {
     }
 
     private func attemptConnect() async -> Bool {
+        // Tear down any leftover Go client from the previous attempt.
+        // Otherwise its goroutines + gRPC connection leak across each
+        // reconnect cycle and the bridge's stale signal can race the
+        // new bridge.
+        if let old = goClient {
+            goClient = nil
+            bridge = nil
+            await Task.detached { old.disconnect() }.value
+        }
+
         let options = LibmihomoCommandClientOptions()
         options.subscribeStatus = true
         options.subscribeLogs = true
@@ -91,6 +107,7 @@ public final class CommandClient: ObservableObject {
             try client.connect(FilePath.commandSocketPath)
             return true
         } catch {
+            client.disconnect()
             self.goClient = nil
             self.bridge = nil
             return false

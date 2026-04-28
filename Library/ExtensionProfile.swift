@@ -41,15 +41,15 @@ public final class ExtensionProfile: ObservableObject {
         attachObserver(mgr)
     }
 
-    public func start(configContent: String) throws {
+    public func start(configContent: String) async throws {
         guard let manager else { throw ExtensionProfileError.notLoaded }
-        guard manager.isEnabled else {
+        if !manager.isEnabled {
+            // Re-enabling has to be persisted before startVPNTunnel will
+            // accept it. Awaiting inline lets the caller surface real
+            // save errors and avoids the previous retry round-trip.
             manager.isEnabled = true
-            Task {
-                try? await manager.saveToPreferences()
-                try? await manager.loadFromPreferences()
-            }
-            throw ExtensionProfileError.becameEnabledRetry
+            try await manager.saveToPreferences()
+            try await manager.loadFromPreferences()
         }
         var options: [String: NSObject] = [:]
         options[AppConfiguration.configContentKey] = configContent as NSString
@@ -86,12 +86,10 @@ public final class ExtensionProfile: ObservableObject {
 
 public enum ExtensionProfileError: LocalizedError {
     case notLoaded
-    case becameEnabledRetry
 
     public var errorDescription: String? {
         switch self {
         case .notLoaded: return "VPN configuration not loaded"
-        case .becameEnabledRetry: return "VPN was disabled — please retry"
         }
     }
 }
