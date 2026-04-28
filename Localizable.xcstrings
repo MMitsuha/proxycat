@@ -734,6 +734,16 @@
         }
       }
     },
+    "Open Web UI" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开网页控制台"
+          }
+        }
+      }
+    },
     "Pause" : {
       "extractionState" : "stale",
       "localizations" : {

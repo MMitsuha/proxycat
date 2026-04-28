@@ -44,18 +44,31 @@ public struct DashboardView: View {
             }
 
             Button(action: toggle) {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: profile.isConnected ? "stop.fill" : "play.fill")
                     Text(profile.isConnected ? String(localized: "Disconnect") : String(localized: "Connect"))
-                        .font(.body.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, 4)
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .controlSize(.regular)
             .tint(profile.isConnected ? .red : .accentColor)
             .disabled(profileStore.active == nil)
+
+            if profile.isConnected, let url = URL(string: "http://127.0.0.1:9090/ui/") {
+                Link(destination: url) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "safari")
+                        Text("Open Web UI")
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
+                    }
+                    .font(.subheadline)
+                }
+            }
         }
         .card()
     }
