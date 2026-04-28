@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 public struct ProfileListView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @State private var showImporter = false
-    @State private var importError: String?
+    @State private var actionError: String?
     @State private var presentedSheet: EditorSheet?
 
     public init() {}
@@ -24,7 +24,7 @@ public struct ProfileListView: View {
                 profileRow(profile)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        try? profileStore.setActive(profile)
+                        run { try profileStore.setActive(profile) }
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
                         Button {
@@ -36,7 +36,7 @@ public struct ProfileListView: View {
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
-                            try? profileStore.delete(profile)
+                            run { try profileStore.delete(profile) }
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -76,14 +76,12 @@ public struct ProfileListView: View {
                 guard let url = urls.first else { return }
                 _ = url.startAccessingSecurityScopedResource()
                 defer { url.stopAccessingSecurityScopedResource() }
-                do {
+                run {
                     let content = try String(contentsOf: url, encoding: .utf8)
                     try profileStore.importYAML(content, name: url.deletingPathExtension().lastPathComponent)
-                } catch {
-                    importError = error.localizedDescription
                 }
             case let .failure(error):
-                importError = error.localizedDescription
+                actionError = error.localizedDescription
             }
         }
         .sheet(item: $presentedSheet) { sheet in
@@ -96,11 +94,19 @@ public struct ProfileListView: View {
                 }
             }
         }
-        .alert("Import failed", isPresented: .constant(importError != nil)) {
-            Button("OK") { importError = nil }
+        .alert("Action failed", isPresented: .constant(actionError != nil)) {
+            Button("OK") { actionError = nil }
         } message: {
-            Text(importError ?? "")
+            Text(actionError ?? "")
         }
+    }
+
+    /// Runs a throwing block and surfaces any thrown error in the alert.
+    /// Replaces a sea of `try?` calls that previously swallowed disk and
+    /// IPC errors silently, leaving the user with no feedback when a
+    /// swipe action failed.
+    private func run(_ block: () throws -> Void) {
+        do { try block() } catch { actionError = error.localizedDescription }
     }
 
     @ViewBuilder

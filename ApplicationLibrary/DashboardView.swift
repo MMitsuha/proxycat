@@ -152,15 +152,23 @@ public struct DashboardView: View {
             profile.stop()
             return
         }
-        guard profileStore.active != nil else {
+        guard let active = profileStore.active else {
             connectError = "Pick a profile first."
             return
         }
-        do {
-            let yaml = try profileStore.loadActiveContent()
-            try profile.start(configContent: yaml)
-        } catch {
-            connectError = error.localizedDescription
+        // Read the YAML off-main (could be tens of KB on cold storage)
+        // and start the tunnel asynchronously so the manager save in
+        // ExtensionProfile.start can be awaited without blocking the UI.
+        let url = FilePath.profilesDirectory.appendingPathComponent(active.fileName)
+        Task {
+            do {
+                let yaml = try await Task.detached(priority: .userInitiated) {
+                    try String(contentsOf: url, encoding: .utf8)
+                }.value
+                try await profile.start(configContent: yaml)
+            } catch {
+                connectError = error.localizedDescription
+            }
         }
     }
 }

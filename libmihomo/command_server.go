@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net"
 	"os"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -165,6 +164,3 @@ func buildStatus() *pb.StatusMessage {
 		MemoryBudget:   memBudget.Load(),
 	}
 }
-
-// Note: noisy idle-server detection
-var _ = sync.Mutex{}
