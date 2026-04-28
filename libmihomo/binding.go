@@ -10,23 +10,39 @@ import (
 	"sync"
 	"sync/atomic"
 
+	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
-	"github.com/metacubex/mihomo/listener"
 	"github.com/metacubex/mihomo/log"
-	"github.com/metacubex/mihomo/tunnel"
 )
 
 var (
 	startMu  sync.Mutex
 	started  atomic.Bool
 	pendingFd int32
+
+	homeDirMu sync.Mutex
+	homeDir   string
 )
+
+// SetHomeDir tells mihomo where to keep cache.db, downloaded providers, the
+// external UI, etc. On iOS the only writable path for the Network Extension
+// is the App Group container; pass that here BEFORE Start. Calling after a
+// successful Start has no effect on already-loaded files.
+func SetHomeDir(path string) {
+	homeDirMu.Lock()
+	homeDir = path
+	homeDirMu.Unlock()
+	C.SetHomeDir(path)
+}
 
 // Start parses the YAML config and brings the mihomo core up.
 // If a TUN file descriptor was previously installed via SetTunFd, the parsed
 // config is patched so the TUN inbound uses it instead of opening a kernel
-// device (which iOS Network Extensions cannot do).
+// device (which iOS Network Extensions cannot do). The TUN's device name
+// and inet4/inet6 addresses are also cleared because on iOS the host's
+// NEPacketTunnelNetworkSettings already owns those values; leaving the YAML
+// defaults causes "bad tun name" or IPv6 bind failures.
 func Start(yamlConfig []byte) error {
 	startMu.Lock()
 	defer startMu.Unlock()
@@ -35,17 +51,41 @@ func Start(yamlConfig []byte) error {
 		return fmt.Errorf("mihomo already started")
 	}
 
-	if err := hub.Parse(yamlConfig); err != nil {
+	homeDirMu.Lock()
+	hd := homeDir
+	homeDirMu.Unlock()
+	if hd != "" {
+		C.SetHomeDir(hd)
+	}
+
+	cfg, err := executor.ParseWithBytes(yamlConfig)
+	if err != nil {
 		return err
 	}
 
 	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
-		conf := listener.GetTunConf()
-		conf.Enable = true
-		conf.FileDescriptor = int(fd)
-		listener.ReCreateTun(conf, tunnel.Tunnel)
+		// Inject the fd and strip fields that conflict with iOS NE.
+		cfg.General.Tun.Enable = true
+		cfg.General.Tun.FileDescriptor = int(fd)
+		cfg.General.Tun.Device = ""
+		cfg.General.Tun.AutoRoute = false
+		cfg.General.Tun.AutoDetectInterface = false
+		cfg.General.Tun.AutoRedirect = false
+		// Host-side network settings (set by NEPacketTunnelNetworkSettings)
+		// own the address space. Clearing these prevents sing-tun from
+		// trying to bind to an address that doesn't exist on the host.
+		cfg.General.Tun.Inet4Address = nil
+		cfg.General.Tun.Inet6Address = nil
+		cfg.General.Tun.Inet4RouteAddress = nil
+		cfg.General.Tun.Inet6RouteAddress = nil
+		cfg.General.Tun.RouteAddress = nil
+		cfg.General.Tun.RouteAddressSet = nil
+		cfg.General.Tun.RouteExcludeAddress = nil
+		cfg.General.Tun.RouteExcludeAddressSet = nil
+		cfg.General.Tun.StrictRoute = false
 	}
 
+	hub.ApplyConfig(cfg)
 	started.Store(true)
 	return nil
 }
@@ -68,17 +108,12 @@ func IsRunning() bool {
 }
 
 // SetTunFd installs a TUN file descriptor obtained from
-// NEPacketTunnelProvider. Call before Start, or while running to swap.
-// Pass 0 to clear.
+// NEPacketTunnelProvider. Must be called before Start. Pass 0 to clear.
+//
+// On iOS the fd ownership belongs to the kernel-supplied utun socket; we
+// don't dup or close it here.
 func SetTunFd(fd int) error {
 	atomic.StoreInt32(&pendingFd, int32(fd))
-	if !started.Load() {
-		return nil
-	}
-	conf := listener.GetTunConf()
-	conf.FileDescriptor = fd
-	conf.Enable = fd > 0
-	listener.ReCreateTun(conf, tunnel.Tunnel)
 	return nil
 }
 
