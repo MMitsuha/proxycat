@@ -13,7 +13,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    DEVELOPMENT_TEAM: ""               # fill with your Apple Team ID
+    DEVELOPMENT_TEAM: "JV3QRB73G3" # fill with your Apple Team ID
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     SUPPORTS_MACCATALYST: NO
