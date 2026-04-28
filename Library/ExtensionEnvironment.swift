@@ -37,8 +37,13 @@ public final class ExtensionEnvironment: ObservableObject {
     // fall back to ~/.config/mihomo which doesn't exist in the iOS app
     // sandbox — any `[GEOIP,…]` rule then fails to write the downloaded
     // MMDB with "open: no such file or directory".
+    //
+    // Also seeds compile-time bundled assets (geo dbs, external UI)
+    // into the working directory so the host app's Settings and any
+    // host-side validate() calls see the same files mihomo would.
     private static func bootstrapMihomoPaths() {
         LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
+        BundledAssets.installIfNeeded()
     }
 
     public func bootstrap() async {

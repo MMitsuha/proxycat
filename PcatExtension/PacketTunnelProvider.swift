@@ -47,6 +47,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //     Network Extension sandbox.
         LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
 
+        // 4a.i. Seed compile-time bundled geo databases and external UI
+        //       into the working directory so mihomo finds them on first
+        //       run before any download happens. Idempotent — already-up-
+        //       to-date assets are skipped.
+        BundledAssets.installIfNeeded()
+
         // 4b. Tell the Go OOM killer the actual iOS budget (resident +
         //     available) instead of the 50 MB sing-box default. iOS
         //     doesn't expose the real jetsam limit; this approximation

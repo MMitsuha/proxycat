@@ -13,6 +13,14 @@ ProxyCat.xcodeproj/
 # gomobile output (regenerable from libmihomo/ via scripts/build-libmihomo.sh)
 Frameworks/
 
+# Compile-time bundled assets (regenerable via `make assets`). The
+# directory layout is tracked via .gitkeep so xcodegen sees the folder
+# reference; only the downloaded payload is excluded.
+BundledAssets/geo/*
+!BundledAssets/geo/.gitkeep
+BundledAssets/ui/*
+!BundledAssets/ui/.gitkeep
+
 # Go module download cache
 libmihomo/vendor/
 
