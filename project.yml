@@ -20,6 +20,13 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     APP_GROUP_ID: group.io.proxycat
     OTHER_LDFLAGS: "$(inherited)"
+    # Frameworks generated with GENERATE_INFOPLIST_FILE=YES need these
+    # explicitly — without MARKETING_VERSION the auto-plist omits
+    # CFBundleShortVersionString and App Store validation rejects the
+    # archive. Keep in sync with Pcat/Info.plist (the host app uses a
+    # static plist).
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
 
 packages: {}
 
