@@ -115,6 +115,7 @@ func Start(yamlConfig []byte) error {
 	}
 
 	hub.ApplyConfig(cfg)
+	startOOMKiller()
 	started.Store(true)
 	return nil
 }
@@ -127,6 +128,7 @@ func Stop() {
 	if !started.Load() {
 		return
 	}
+	stopOOMKiller()
 	executor.Shutdown()
 	started.Store(false)
 }

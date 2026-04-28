@@ -61,7 +61,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //     Network Extension sandbox.
         LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
 
-        // 6b. Push the iOS fd into mihomo before starting so the parsed
+        // 6b. Tell the Go OOM killer the actual iOS budget (resident +
+        //     available) instead of the 50 MB sing-box default. iOS
+        //     doesn't expose the real jetsam limit; this approximation
+        //     captures it the moment we ask, before mihomo allocates much.
+        let resident = MemoryMonitor.residentBytes()
+        let available = MemoryMonitor.availableBytes()
+        let budget = Int64(resident + available)
+        if budget > 0 {
+            LibmihomoBridge.setMemoryLimit(budget)
+            Self.logger.info("OOM budget set to \(budget, privacy: .public) (resident=\(resident, privacy: .public) available=\(available, privacy: .public))")
+        }
+
+        // 6c. Push the iOS fd into mihomo before starting so the parsed
         //     YAML's TUN inbound binds to the kernel-supplied fd and we
         //     overwrite address fields that don't apply on iOS.
         try LibmihomoBridge.setTunFd(Int(fd))
@@ -293,12 +305,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private func flushTraffic() {
         guard let snapshot = LibmihomoBridge.trafficNow() else { return }
+        // Memory must be sampled inside the extension — the host app's
+        // process has its own (much larger) memory budget so reading it
+        // there would be misleading. Write the extension's phys_footprint
+        // and remaining bytes into the shared snapshot for the dashboard.
+        let memory = MemoryMonitor.snapshot()
         let dict: [String: Any] = [
             "up": snapshot.up,
             "down": snapshot.down,
             "upTotal": snapshot.uploadTotal,
             "downTotal": snapshot.downloadTotal,
             "connections": snapshot.connections,
+            "memoryResident": memory.resident,
+            "memoryAvailable": memory.available,
         ]
         if let data = try? JSONSerialization.data(withJSONObject: dict) {
             let url = FilePath.cacheDirectory.appendingPathComponent("traffic.json")
