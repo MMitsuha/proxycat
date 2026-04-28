@@ -12,4 +12,9 @@ public enum AppConfiguration {
     /// Key used to ask the extension to override (for the current run only)
     /// the YAML's external-controller secret. Optional.
     public static let controllerSecretKey = "controllerSecret"
+
+    /// Filename of the Unix-domain command socket placed in the App
+    /// Group container. The Network Extension's gRPC command server
+    /// listens here; the host app's CommandClient dials it.
+    public static let commandSocketName = "command.sock"
 }

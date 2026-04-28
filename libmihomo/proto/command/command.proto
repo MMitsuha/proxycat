@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package proxycat.command;
+
+option go_package = "github.com/proxycat/libmihomo/proto/command;command";
+
+// Command service exposes streaming subscriptions used by the iOS host
+// app. Mirrors the shape of sing-box's daemon.StartedService (gRPC over
+// Unix domain socket inside the App Group container) but trimmed to the
+// fields ProxyCat actually needs. Mihomo's REST controller is
+// intentionally NOT used here — that surface is for the end-user.
+service Command {
+  // Streams a Status message every IntervalMs (default 1000).
+  rpc SubscribeStatus(StatusRequest) returns (stream StatusMessage);
+
+  // Streams every log event produced by mihomo from subscription onward.
+  rpc SubscribeLogs(LogRequest) returns (stream LogMessage);
+}
+
+message StatusRequest {
+  // 0 → server default (1 s). Clamped to [100ms, 10s].
+  int64 interval_ms = 1;
+}
+
+message StatusMessage {
+  // Bytes/sec for the current second.
+  int64 up = 1;
+  int64 down = 2;
+  // Cumulative since the extension started.
+  int64 up_total = 3;
+  int64 down_total = 4;
+  // Currently tracked connections.
+  int64 connections = 5;
+  // Extension process phys_footprint (bytes) — same number jetsam compares.
+  int64 memory_resident = 6;
+  // Per-process budget set at Start (resident + os_proc_available_memory).
+  int64 memory_budget = 7;
+}
+
+message LogRequest {}
+
+message LogMessage {
+  // Mihomo log level: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
+  int32 level = 1;
+  string payload = 2;
+}

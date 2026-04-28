@@ -33,4 +33,12 @@ public enum FilePath {
     public static var activeProfilePointer: URL {
         sharedDirectory.appendingPathComponent("active-profile")
     }
+
+    /// Path of the Unix-domain command socket. Both the Network
+    /// Extension (server) and the host app (client) compute it the
+    /// same way, so they meet at the App Group container. The path
+    /// stays well below sun_path's 104-byte limit.
+    public static var commandSocketPath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.commandSocketName).path
+    }
 }

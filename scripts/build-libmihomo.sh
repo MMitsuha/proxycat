@@ -36,12 +36,25 @@ fi
 # Default to "with_gvisor" since iOS users will want it for stack stability.
 BUILD_TAGS="with_gvisor"
 
+# Inject mihomo + wrapper build identifiers so the iOS Settings →
+# Diagnostics screen can show real values instead of "unknown time".
+BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+MIHOMO_VERSION="$(grep -E '^\s*Version\s*=' "$ROOT/../mihomo/constant/version.go" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)"
+MIHOMO_COMMIT="$(git -C "$ROOT/../mihomo" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
+LDFLAGS="-s -w"
+LDFLAGS+=" -X 'github.com/metacubex/mihomo/constant.Version=$MIHOMO_VERSION'"
+LDFLAGS+=" -X 'github.com/metacubex/mihomo/constant.BuildTime=$BUILD_TIME'"
+LDFLAGS+=" -X 'github.com/proxycat/libmihomo.wrapperBuildTime=$BUILD_TIME'"
+LDFLAGS+=" -X 'github.com/proxycat/libmihomo.wrapperBuildTag=$BUILD_TAGS'"
+LDFLAGS+=" -X 'github.com/proxycat/libmihomo.mihomoCommit=$MIHOMO_COMMIT'"
+
 echo "==> gomobile bind target=$TARGETS tags=$BUILD_TAGS"
+echo "    mihomo $MIHOMO_VERSION ($MIHOMO_COMMIT) built $BUILD_TIME"
 gomobile bind \
   -target="$TARGETS" \
   -tags="$BUILD_TAGS" \
   -trimpath \
-  -ldflags="-s -w" \
+  -ldflags="$LDFLAGS" \
   -o "$OUT/Libmihomo.xcframework" \
   github.com/proxycat/libmihomo
 
