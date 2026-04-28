@@ -195,6 +195,14 @@ func Validate(yamlConfig []byte) error {
 	if len(yamlConfig) == 0 {
 		return fmt.Errorf("config is empty")
 	}
+
+	homeDirMu.Lock()
+	hd := homeDir
+	homeDirMu.Unlock()
+	if hd != "" {
+		C.SetHomeDir(hd)
+	}
+
 	_, err := executor.ParseWithBytes(yamlConfig)
 	return err
 }

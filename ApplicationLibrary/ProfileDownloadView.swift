@@ -15,7 +15,7 @@ public struct ProfileDownloadView: View {
     @State private var name: String = ""
     @State private var nameEdited: Bool = false
     @State private var downloadedYAML: String?
-    @State private var validation: Validation = .pristine
+    @State private var validation: ProfileValidation = .pristine
     @State private var isWorking: Bool = false
     @State private var saveError: String?
 
@@ -43,7 +43,10 @@ public struct ProfileDownloadView: View {
             } header: {
                 Text("Name")
             } footer: {
-                validationFooter
+                ProfileValidationFooter(
+                    validation: validation,
+                    pristineHint: "Tap **Validate** to download and parse with mihomo before saving."
+                )
             }
         }
         .navigationTitle("Download Profile")
@@ -83,32 +86,7 @@ public struct ProfileDownloadView: View {
         }
     }
 
-    @ViewBuilder
-    private var validationFooter: some View {
-        switch validation {
-        case .pristine:
-            Text("Tap **Validate** to download and parse with mihomo before saving.")
-        case .ok:
-            Label("Configuration looks valid.", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case let .failed(message):
-            Label {
-                Text(message)
-                    .font(.caption.monospaced())
-            } icon: {
-                Image(systemName: "xmark.octagon.fill")
-            }
-            .foregroundStyle(.red)
-        }
-    }
-
-    private var hasValidURL: Bool {
-        guard let url = URL(string: urlText.trimmingCharacters(in: .whitespaces)),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https"
-        else { return false }
-        return true
-    }
+    private var hasValidURL: Bool { parsedURL != nil }
 
     private var canSave: Bool {
         guard hasValidURL, !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
@@ -132,10 +110,7 @@ public struct ProfileDownloadView: View {
 
         do {
             let yaml = try await RemoteProfileFetcher.fetch(url)
-            let data = Data(yaml.utf8)
-            try await Task.detached(priority: .userInitiated) {
-                try LibmihomoBridge.validate(yaml: data)
-            }.value
+            try await LibmihomoBridge.validateAsync(yaml: Data(yaml.utf8))
             downloadedYAML = yaml
             validation = .ok
         } catch {
@@ -178,11 +153,5 @@ public struct ProfileDownloadView: View {
         let last = url.deletingPathExtension().lastPathComponent
         if last.isEmpty || last == "/" { return host }
         return last
-    }
-
-    private enum Validation: Equatable {
-        case pristine
-        case ok
-        case failed(String)
     }
 }

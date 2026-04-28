@@ -24,7 +24,7 @@ public struct ProfileEditorView: View {
 
     @State private var name: String
     @State private var yaml: String
-    @State private var validation: Validation = .pristine
+    @State private var validation: ProfileValidation = .pristine
     @State private var isValidating = false
     @State private var saveError: String?
     @State private var loadError: String?
@@ -74,7 +74,10 @@ public struct ProfileEditorView: View {
                         .foregroundStyle(.secondary)
                 }
             } footer: {
-                validationFooter
+                ProfileValidationFooter(
+                    validation: validation,
+                    pristineHint: "Tap **Validate** before saving. Mihomo's parser will run on this YAML."
+                )
             }
         }
         .navigationTitle(title)
@@ -113,27 +116,6 @@ public struct ProfileEditorView: View {
         }
     }
 
-    // MARK: - Subviews
-
-    @ViewBuilder
-    private var validationFooter: some View {
-        switch validation {
-        case .pristine:
-            Text("Tap **Validate** before saving. Mihomo's parser will run on this YAML.")
-        case .ok:
-            Label("Configuration looks valid.", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case let .failed(message):
-            Label {
-                Text(message)
-                    .font(.caption.monospaced())
-            } icon: {
-                Image(systemName: "xmark.octagon.fill")
-            }
-            .foregroundStyle(.red)
-        }
-    }
-
     // MARK: - Logic
 
     private var title: String {
@@ -162,19 +144,12 @@ public struct ProfileEditorView: View {
     private func validate() async {
         let data = Data(yaml.utf8)
         isValidating = true
-        // mihomo's parser can take hundreds of milliseconds on a large
-        // YAML (rule providers, regex, proxy groups). Hop to a detached
-        // task so the validating spinner actually animates.
-        let result: Validation
         do {
-            try await Task.detached(priority: .userInitiated) {
-                try LibmihomoBridge.validate(yaml: data)
-            }.value
-            result = .ok
+            try await LibmihomoBridge.validateAsync(yaml: data)
+            validation = .ok
         } catch {
-            result = .failed(error.localizedDescription)
+            validation = .failed(error.localizedDescription)
         }
-        validation = result
         isValidating = false
     }
 
@@ -203,11 +178,5 @@ public struct ProfileEditorView: View {
         } catch {
             saveError = error.localizedDescription
         }
-    }
-
-    private enum Validation: Equatable {
-        case pristine
-        case ok
-        case failed(String)
     }
 }

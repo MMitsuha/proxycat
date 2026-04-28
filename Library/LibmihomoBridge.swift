@@ -64,6 +64,15 @@ public enum LibmihomoBridge {
         }
     }
 
+    /// `validate(yaml:)` on a detached background task — mihomo's parser
+    /// can block for hundreds of milliseconds on large configs, so UI
+    /// callers should always go through this variant.
+    public static func validateAsync(yaml: Data) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            try validate(yaml: yaml)
+        }.value
+    }
+
     public static func subscribeLogs(_ delegate: LibmihomoLogDelegateProtocol) -> Int64 {
         LibmihomoSubscribeLogs(delegate)
     }
