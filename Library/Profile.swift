@@ -63,8 +63,23 @@ public final class ProfileStore: ObservableObject {
     /// Returns the YAML content for the currently active profile.
     public func loadActiveContent() throws -> String {
         guard let p = active else { throw ProfileError.noProfileSelected }
-        let url = FilePath.profilesDirectory.appendingPathComponent(p.fileName)
+        return try loadContent(of: p)
+    }
+
+    /// Returns the YAML content stored for a specific profile.
+    public func loadContent(of profile: Profile) throws -> String {
+        let url = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
         return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    /// Overwrites a profile's YAML and bumps its `lastUpdated`.
+    public func updateContent(of profile: Profile, yaml: String) throws {
+        let url = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
+        try yaml.write(to: url, atomically: true, encoding: .utf8)
+        if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
+            profiles[idx].lastUpdated = .init()
+            try persist()
+        }
     }
 
     @discardableResult
@@ -81,6 +96,14 @@ public final class ProfileStore: ObservableObject {
             try setActive(profile)
         }
         return profile
+    }
+
+    /// Updates the in-memory profile and persists the index. Caller is
+    /// responsible for ensuring the profile id still exists.
+    public func rename(_ profile: Profile) throws {
+        guard let idx = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
+        profiles[idx] = profile
+        try persist()
     }
 
     public func delete(_ profile: Profile) throws {

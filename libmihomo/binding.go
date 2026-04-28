@@ -146,6 +146,20 @@ func SetTunFd(fd int) error {
 	return nil
 }
 
+// Validate parses the YAML and reports the first parse / semantic error,
+// without applying anything. Returns nil when the config is acceptable.
+//
+// Mihomo's parser is lenient — it tolerates unknown keys and fills in
+// missing fields with defaults — so a successful Validate doesn't promise
+// the proxy will actually connect, only that the file is loadable.
+func Validate(yamlConfig []byte) error {
+	if len(yamlConfig) == 0 {
+		return fmt.Errorf("config is empty")
+	}
+	_, err := executor.ParseWithBytes(yamlConfig)
+	return err
+}
+
 // SetLogLevel changes runtime log filter. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
 func SetLogLevel(level int) {
 	if level < 0 {
