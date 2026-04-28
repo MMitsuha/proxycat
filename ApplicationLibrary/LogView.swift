@@ -27,6 +27,7 @@ public struct LogView: View {
             .onDisappear { model.unbind() }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    savedLogsLink
                     pauseButton
                     levelMenu
                     actionsMenu
@@ -38,6 +39,15 @@ public struct LogView: View {
             } message: {
                 Text("\(model.lastCopyCount) line\(model.lastCopyCount == 1 ? "" : "s") on the clipboard.")
             }
+    }
+
+    private var savedLogsLink: some View {
+        NavigationLink {
+            SavedLogsView()
+        } label: {
+            Image(systemName: "archivebox")
+                .accessibilityLabel("Saved Logs")
+        }
     }
 
     private var pauseButton: some View {

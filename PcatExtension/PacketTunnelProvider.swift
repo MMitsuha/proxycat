@@ -70,6 +70,18 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //     overwrite address fields that don't apply on iOS.
         try LibmihomoBridge.setTunFd(Int(fd))
 
+        // 4e. Open a per-session log file and tee mihomo's log stream
+        //     into it. The host app reads from FilePath.logsDirectory
+        //     to surface them in the Saved Logs list. Failures here
+        //     are non-fatal: the live log stream still works.
+        LibmihomoBridge.setLogFileDir(FilePath.logsDirectory.path)
+        do {
+            let logPath = try LibmihomoBridge.startLogFile()
+            Self.logger.info("session log → \(logPath, privacy: .public)")
+        } catch {
+            Self.logger.warning("could not open session log: \(error.localizedDescription, privacy: .public)")
+        }
+
         // 5. Start mihomo with the YAML. Start() also brings up the
         //    Unix-domain gRPC server at the path set in step 4c.
         guard let yamlData = yaml.data(using: .utf8) else {
@@ -82,6 +94,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
         Self.logger.info("stopTunnel reason=\(reason.rawValue, privacy: .public)")
+        // Flush before mihomo shuts down so the trailing "session ended"
+        // marker reflects the real reason for stopping. (Stop() also
+        // calls StopLogFile defensively, but doing it here is explicit.)
+        LibmihomoBridge.stopLogFile()
         LibmihomoBridge.stop()
         if let token = memoryObserverToken {
             MemoryMonitor.shared.remove(token)

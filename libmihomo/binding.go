@@ -95,6 +95,7 @@ func Start(yamlConfig []byte) error {
 	cfg.Controller.ExternalController = "127.0.0.1:9090"
 	cfg.Controller.Secret = ""
 	cfg.Controller.ExternalUI = "metacubexd"
+	cfg.Controller.ExternalUIURL = "https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip"
 	cfg.General.GeodataLoader = "memconservative"
 	cfg.Profile.StoreSelected = false
 	cfg.Profile.StoreFakeIP = false
@@ -162,6 +163,10 @@ func Stop() {
 	}
 	StopCommandServer()
 	stopOOMKiller()
+	// Defensive: the host app should also call StopLogFile from
+	// stopTunnel, but flushing here ensures the on-disk log is
+	// well-formed even if Stop() is reached on an unexpected path.
+	StopLogFile()
 	executor.Shutdown()
 	// Clear the cached fd. iOS may reuse the same integer for an
 	// unrelated descriptor on the next session — binding mihomo to a

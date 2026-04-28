@@ -81,6 +81,38 @@ public enum LibmihomoBridge {
         LibmihomoUnsubscribeLogs(id)
     }
 
+    /// Tell the persist layer where to write per-session log files.
+    /// Pass an App Group container path so the host app can read them.
+    public static func setLogFileDir(_ path: String) {
+        LibmihomoSetLogFileDir(path)
+    }
+
+    /// Open a fresh timestamped log file and start streaming every
+    /// mihomo log event into it. Returns the absolute path of the
+    /// resulting file. Idempotent — a second call returns the active
+    /// session's path without rotating.
+    @discardableResult
+    public static func startLogFile() throws -> String {
+        var err: NSError?
+        let path = LibmihomoStartLogFile(&err)
+        if let err {
+            throw err
+        }
+        return path
+    }
+
+    /// Flush + close the active log file. Safe to call multiple times.
+    public static func stopLogFile() {
+        LibmihomoStopLogFile()
+    }
+
+    /// Path of the in-progress log file, or nil when no session is
+    /// currently being persisted.
+    public static func currentLogFilePath() -> String? {
+        let s = LibmihomoCurrentLogFilePath()
+        return s.isEmpty ? nil : s
+    }
+
     public static func trafficNow() -> LibmihomoTraffic? {
         LibmihomoTrafficNow()
     }
