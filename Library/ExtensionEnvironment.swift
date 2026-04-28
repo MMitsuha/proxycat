@@ -21,13 +21,24 @@ public final class ExtensionEnvironment: ObservableObject {
     private var statusObservation: AnyCancellable?
 
     public init() {
+        Self.bootstrapMihomoPaths()
         self.profile = ExtensionProfile()
         self.commandClient = CommandClient()
     }
 
     public init(profile: ExtensionProfile, commandClient: CommandClient) {
+        Self.bootstrapMihomoPaths()
         self.profile = profile
         self.commandClient = commandClient
+    }
+
+    // The host app process has its own Go runtime, so the extension's
+    // SetHomeDir doesn't propagate. Without this, validate() lets mihomo
+    // fall back to ~/.config/mihomo which doesn't exist in the iOS app
+    // sandbox — any `[GEOIP,…]` rule then fails to write the downloaded
+    // MMDB with "open: no such file or directory".
+    private static func bootstrapMihomoPaths() {
+        LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
     }
 
     public func bootstrap() async {
