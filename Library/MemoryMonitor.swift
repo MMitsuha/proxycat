@@ -110,4 +110,32 @@ public final class MemoryMonitor: @unchecked Sendable {
         #endif
         return 0
     }
+
+    /// Bytes the kernel currently bills against this process. This is
+    /// `task_vm_info.phys_footprint` — the same number jetsam compares
+    /// against the per-process limit. sing-box-for-apple uses the same
+    /// field for its status memory display.
+    ///
+    /// Returns 0 on failure (e.g. kernel call denied in a sandboxed
+    /// configuration we don't expect to hit on iOS).
+    public static func residentBytes() -> Int {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(
+            MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size
+        )
+        let result = withUnsafeMutablePointer(to: &info) { ptr -> kern_return_t in
+            ptr.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { intPtr in
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), intPtr, &count)
+            }
+        }
+        if result == KERN_SUCCESS {
+            return Int(info.phys_footprint)
+        }
+        return 0
+    }
+
+    /// Snapshot of both numbers, captured atomically.
+    public static func snapshot() -> MemoryStats {
+        MemoryStats(resident: residentBytes(), available: availableBytes())
+    }
 }

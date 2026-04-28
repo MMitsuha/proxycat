@@ -24,6 +24,14 @@ public struct DashboardView: View {
                 TrafficRow(label: "Down total", value: ByteFormatter.string(commandClient.traffic.downTotal))
                 TrafficRow(label: "Connections", value: "\(commandClient.traffic.connections)")
             }
+            Section {
+                MemoryGauge(memory: commandClient.memory, isConnected: profile.isConnected)
+            } header: {
+                Text("Extension Memory")
+            } footer: {
+                Text("Sampled inside the Network Extension. iOS jetsam compares the resident value against an undocumented per-process limit (~15–50 MB depending on iOS version and device).")
+                    .font(.caption2)
+            }
             Section("Profile") {
                 if let active = profileStore.active {
                     Text(active.name)
@@ -104,5 +112,61 @@ private struct TrafficRow: View {
             Spacer()
             Text(value).font(.system(.body, design: .monospaced))
         }
+    }
+}
+
+private struct MemoryGauge: View {
+    let memory: MemoryStats
+    let isConnected: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !isConnected || memory.estimatedLimit == 0 {
+                HStack {
+                    Image(systemName: "memorychip")
+                        .foregroundStyle(.secondary)
+                    Text(isConnected ? "Waiting for first sample…" : "Extension not running")
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 6)
+            } else {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Resident")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(ByteFormatter.string(Int64(memory.resident)))
+                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .foregroundStyle(tint)
+                }
+                ProgressView(value: memory.fraction)
+                    .tint(tint)
+                HStack {
+                    Text("Available").foregroundStyle(.secondary)
+                    Spacer()
+                    Text(ByteFormatter.string(Int64(memory.available)))
+                        .font(.system(.caption, design: .monospaced))
+                }
+                HStack {
+                    Text("Budget (resident + available)")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(ByteFormatter.string(Int64(memory.estimatedLimit)))
+                        .font(.system(.caption, design: .monospaced))
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var tint: Color {
+        // <3 MB available → critical; <6 MB → warning. Same thresholds the
+        // PacketTunnelProvider uses to trigger pressure responses.
+        if memory.available > 0, memory.available < 3 * 1024 * 1024 {
+            return .red
+        }
+        if memory.available > 0, memory.available < 6 * 1024 * 1024 {
+            return .orange
+        }
+        return .accentColor
     }
 }

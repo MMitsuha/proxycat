@@ -34,6 +34,19 @@ public enum LibmihomoBridge {
         LibmihomoSetHomeDir(path)
     }
 
+    /// Configure the Go OOM killer's per-process memory budget. Pass 0 to
+    /// keep the 50 MB default (matches sing-box). The killer will trigger
+    /// FreeOSMemory + connection drain when usage reaches limit-safety.
+    public static func setMemoryLimit(_ limit: Int64) {
+        LibmihomoSetMemoryLimit(limit)
+    }
+
+    /// Current process resident memory (phys_footprint). Same source the
+    /// Go OOM killer reads, so dashboards using this match its perspective.
+    public static func memoryUsage() -> Int64 {
+        LibmihomoMemoryUsage()
+    }
+
     /// Parses the YAML and throws on syntax / semantic errors. Doesn't
     /// apply anything; safe to call from the host app while the tunnel
     /// is running.

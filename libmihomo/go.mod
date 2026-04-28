@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/metacubex/mihomo v0.0.0
+	github.com/metacubex/sing v0.5.7
 	golang.org/x/mobile v0.0.0-20260410095206-2cfb76559b7b
 )
 
@@ -63,7 +64,6 @@ require (
 	github.com/metacubex/quic-go v0.59.1-0.20260413153657-53bb22f2c306 // indirect
 	github.com/metacubex/randv2 v0.2.0 // indirect
 	github.com/metacubex/restls-client-go v0.1.7 // indirect
-	github.com/metacubex/sing v0.5.7 // indirect
 	github.com/metacubex/sing-mux v0.3.9 // indirect
 	github.com/metacubex/sing-quic v0.0.0-20260414034501-3ea3410d197a // indirect
 	github.com/metacubex/sing-shadowsocks v0.2.12 // indirect

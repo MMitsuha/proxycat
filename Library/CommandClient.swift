@@ -23,6 +23,10 @@ public final class CommandClient: ObservableObject {
     @Published public private(set) var isConnected: Bool = false
     @Published public private(set) var logs: [LogEntry] = []
     @Published public private(set) var traffic: TrafficSnapshot = .zero
+    /// Memory used by the *extension* process, sampled at the same cadence
+    /// as `traffic`. Reading the host app's process memory would be
+    /// misleading because the two have separate jetsam budgets.
+    @Published public private(set) var memory: MemoryStats = .zero
     /// Currently effective log level. Mirrors mihomo's runtime filter so the
     /// log view's "Default" option matches what the extension is producing.
     @Published public var defaultLogLevel: LogLevel = .info
@@ -79,6 +83,10 @@ public final class CommandClient: ObservableObject {
             upTotal: (dict["upTotal"] as? NSNumber)?.int64Value ?? 0,
             downTotal: (dict["downTotal"] as? NSNumber)?.int64Value ?? 0,
             connections: (dict["connections"] as? NSNumber)?.int64Value ?? 0
+        )
+        memory = MemoryStats(
+            resident: (dict["memoryResident"] as? NSNumber)?.intValue ?? 0,
+            available: (dict["memoryAvailable"] as? NSNumber)?.intValue ?? 0
         )
     }
 
