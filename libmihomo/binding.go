@@ -92,6 +92,13 @@ func Start(yamlConfig []byte) error {
 	}
 
 	cfg.DNS.Enable = true
+	cfg.Controller.ExternalUI = ""
+	cfg.Controller.ExternalController = ""
+	cfg.Controller.ExternalUI = ""
+	cfg.Controller.ExternalDohServer = ""
+	cfg.General.GeodataLoader = "memconservative"
+	cfg.Profile.StoreSelected = false
+	cfg.Profile.StoreFakeIP = false
 
 	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
 		// Inject the fd. Force the TUN to look the way iOS expects.
