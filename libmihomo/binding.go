@@ -77,11 +77,24 @@ func Start(yamlConfig []byte) error {
 		cfg.General.Tun.Enable = true
 		cfg.General.Tun.FileDescriptor = int(fd)
 		cfg.General.Tun.Device = "" // don't try to open by name
-		// Routing is owned by NEPacketTunnelNetworkSettings on iOS.
+		// gVisor netstack is the only stack that works inside the iOS
+		// Network Extension sandbox. The "System" stack tries to make
+		// real kernel-level socket calls that the NE entitlement doesn't
+		// permit and silently drops responses.
+		cfg.General.Tun.Stack = C.TunGvisor
+		// Routing is owned by NEPacketTunnelNetworkSettings on iOS, and
+		// AutoDetectInterface picks the TUN itself (since utun is the
+		// default route once NE is up) which loops DIRECT outbound back
+		// onto the tunnel.
 		cfg.General.Tun.AutoRoute = false
 		cfg.General.Tun.AutoDetectInterface = false
 		cfg.General.Tun.AutoRedirect = false
 		cfg.General.Tun.StrictRoute = false
+		// Same reason: don't let mihomo bind DIRECT outbound sockets to
+		// any interface — iOS NE already exempts the extension's own
+		// sockets from the tunnel it provides.
+		cfg.General.Interface = ""
+		cfg.General.RoutingMark = 0
 		// Provide a deterministic virtual address pair so sing-tun's
 		// gvisor netstack accepts packets. Must match what
 		// PacketTunnelProvider.configureNetworkSettings installs on the
