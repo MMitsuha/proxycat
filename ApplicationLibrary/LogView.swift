@@ -4,7 +4,8 @@ import SwiftUI
 import UIKit
 
 /// Streaming log viewer with the user-requested controls:
-///   • Log level filter (Default = the level mihomo is currently running at)
+///   • Log level filter — initial value is read from the active profile's
+///     `log-level:` key, falling back to `.debug` when absent
 ///   • Debounced search box
 ///   • "Copy All" — copies every line currently visible under the active
 ///     filter to UIPasteboard.
@@ -51,10 +52,9 @@ public struct LogView: View {
     private var levelMenu: some View {
         Menu {
             Picker("Filter Level", selection: $model.selectedLevel) {
-                Text("Default").tag(LogLevel?.none)
                 ForEach(LogLevel.allCases) { lvl in
                     Label(lvl.displayName, systemImage: lvl.symbolName)
-                        .tag(LogLevel?.some(lvl))
+                        .tag(lvl)
                 }
             }
         } label: {
@@ -175,7 +175,7 @@ private struct LogRow: View {
 @MainActor
 final class LogViewModel: ObservableObject {
     @Published var searchText: String = ""
-    @Published var selectedLevel: LogLevel? = nil
+    @Published var selectedLevel: LogLevel = .debug
     @Published var isPaused: Bool = false
     @Published var visible: [LogEntry] = []
     @Published var isConnected: Bool = false
@@ -188,11 +188,17 @@ final class LogViewModel: ObservableObject {
     private var environment: ExtensionEnvironment?
     private var bag = Set<AnyCancellable>()
     private var pausedSnapshot: [LogEntry]?
+    private var hasLoadedConfigLevel = false
 
     func bind(to environment: ExtensionEnvironment) {
         self.environment = environment
         commandClient = environment.commandClient
         searchText = environment.logSearchText
+
+        if !hasLoadedConfigLevel {
+            hasLoadedConfigLevel = true
+            Task { await self.loadLevelFromActiveConfig() }
+        }
 
         guard let client = commandClient else { return }
         // The gRPC connection is owned by ExtensionEnvironment now —
@@ -202,20 +208,18 @@ final class LogViewModel: ObservableObject {
             .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
             .removeDuplicates()
 
-        Publishers.CombineLatest4(
+        Publishers.CombineLatest3(
             client.$logs,
-            client.$defaultLogLevel,
             $selectedLevel,
             debouncedSearch
         )
         .combineLatest($isPaused)
         .receive(on: RunLoop.main)
         .sink { [weak self] tuple, paused in
-            let (logs, defaultLevel, picked, query) = tuple
+            let (logs, picked, query) = tuple
             self?.recompute(
                 logs: logs,
-                defaultLevel: defaultLevel,
-                picked: picked,
+                cutoff: picked,
                 query: query,
                 paused: paused
             )
@@ -250,12 +254,10 @@ final class LogViewModel: ObservableObject {
 
     private func recompute(
         logs: [LogEntry],
-        defaultLevel: LogLevel,
-        picked: LogLevel?,
+        cutoff: LogLevel,
         query: String,
         paused: Bool
     ) {
-        let cutoff: LogLevel = picked ?? defaultLevel
         let source: [LogEntry]
         if paused {
             if pausedSnapshot == nil { pausedSnapshot = logs }
@@ -274,6 +276,38 @@ final class LogViewModel: ObservableObject {
             visible = filtered
         } else {
             visible = Array(filtered.suffix(Self.maxVisible))
+        }
+    }
+
+    private func loadLevelFromActiveConfig() async {
+        guard let active = ProfileStore.shared.active else { return }
+        let url = FilePath.profilesDirectory.appendingPathComponent(active.fileName)
+        let level = await Task.detached(priority: .utility) { () -> LogLevel in
+            guard let yaml = try? String(contentsOf: url, encoding: .utf8) else {
+                return .debug
+            }
+            return Self.parseLogLevel(in: yaml) ?? .debug
+        }.value
+        selectedLevel = level
+    }
+
+    /// Picks the first top-level `log-level: <value>` line out of a mihomo
+    /// YAML config. Indented occurrences (which would belong to a nested
+    /// mapping) are skipped so we don't accidentally read a sub-key.
+    nonisolated static func parseLogLevel(in yaml: String) -> LogLevel? {
+        let pattern = #"(?m)^log-level\s*:\s*["']?([A-Za-z]+)["']?"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: yaml, range: NSRange(yaml.startIndex..., in: yaml)),
+              let range = Range(match.range(at: 1), in: yaml) else {
+            return nil
+        }
+        switch String(yaml[range]).lowercased() {
+        case "debug": return .debug
+        case "info": return .info
+        case "warning": return .warning
+        case "error": return .error
+        case "silent": return .silent
+        default: return nil
         }
     }
 }

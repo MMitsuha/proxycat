@@ -19,7 +19,6 @@ public final class CommandClient: ObservableObject {
     /// every Status frame so the host always reads the right process'
     /// usage (the host app has a separate, much larger jetsam budget).
     @Published public private(set) var memory: MemoryStats = .zero
-    @Published public var defaultLogLevel: LogLevel = .info
 
     public static let maxLogBuffer = 1500
 
