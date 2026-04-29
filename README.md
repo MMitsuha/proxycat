@@ -63,11 +63,33 @@ open ProxyCat.xcodeproj
 | target            | 说明                                                   |
 |-------------------|--------------------------------------------------------|
 | `make libmihomo`  | 仅重建 `Frameworks/Libmihomo.xcframework`              |
-| `make project`    | 仅运行 `xcodegen generate`                             |
+| `make project`    | 运行 `xcodegen` 并自动注入版本号（见下）               |
+| `make version`    | 打印下一次 `make project` 会写入的版本/编号            |
 | `make all`        | `libmihomo` + `project`，首次 clone 后跑一次           |
 | `make sim`        | 不签名地为 iOS 模拟器构建                              |
 | `make build`      | 真机构建（需要签名）                                   |
 | `make clean`      | 清理生成产物                                           |
+
+## 版本与显示信息
+
+应用元数据集中在 `project.yml` 中，由 `xcodegen` 写入 `ProxyCat.xcodeproj`，再由 Xcode 在编译时合并到 `Info.plist`：
+
+| 项目                  | 来源                                                       | Xcode Target → General 字段 |
+|-----------------------|------------------------------------------------------------|------------------------------|
+| Marketing version     | `VERSION` 文件（手动 bump）                                | Version                      |
+| Build number          | `git rev-list --count HEAD`（自动单调递增）                | Build                        |
+| Display Name          | `INFOPLIST_KEY_CFBundleDisplayName`（`project.yml`）       | Display Name                 |
+| App Category          | `INFOPLIST_KEY_LSApplicationCategoryType`                  | Category                     |
+
+调用链：`make project` → `scripts/generate-project.sh` 读取 `VERSION` 与 git，导出 `PROXYCAT_MARKETING_VERSION` / `PROXYCAT_BUILD_NUMBER`，由 `project.yml` 的 `${...}` 占位符插入。
+
+要发布新版只需 `echo 1.0.0 > VERSION && make project`；build number 会随 commit 自动递增，无需手动维护。需要临时覆盖时（例如手工 archive 至 TestFlight）可：
+
+```bash
+PROXYCAT_BUILD_NUMBER=4242 make project
+```
+
+`Pcat/Info.plist` 与 `PcatExtension/Info.plist` 现在只保留 `INFOPLIST_KEY_*` 不能表达的条目（YAML profile 的 UTI、Network Extension 的 `NSExtension` 字典）。其他都从 `project.yml` 的 build settings 流入，避免一处版本三处改。
 
 ## 内存预算与 OOM 守护
 

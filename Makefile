@@ -1,4 +1,4 @@
-.PHONY: all libmihomo project clean build sim help \
+.PHONY: all libmihomo project version clean build sim help \
         assets geo-assets ui-assets clean-assets
 
 XCODEGEN ?= xcodegen
@@ -9,7 +9,8 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  make libmihomo     build Frameworks/Libmihomo.xcframework via gomobile"
-	@echo "  make project       run xcodegen to (re)generate ProxyCat.xcodeproj"
+	@echo "  make project       run xcodegen (auto-fills version from VERSION + git)"
+	@echo "  make version       print the marketing version + build number"
 	@echo "  make all           libmihomo + project (run after first checkout)"
 	@echo "  make build         full xcodebuild for the iOS app (needs codesigning)"
 	@echo "  make sim           build for iOS Simulator (no codesigning)"
@@ -29,7 +30,12 @@ libmihomo:
 	./scripts/build-libmihomo.sh
 
 project:
-	$(XCODEGEN) generate
+	XCODEGEN=$(XCODEGEN) ./scripts/generate-project.sh
+
+version:
+	@printf "MARKETING_VERSION  %s\n" "$$(cat VERSION 2>/dev/null || echo 0.1.0)"
+	@printf "BUILD_NUMBER       %s\n" "$$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+	@printf "GIT_DESCRIBE       %s\n" "$$(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
 
 build:
 	xcodebuild -project ProxyCat.xcodeproj \
@@ -43,7 +49,7 @@ sim:
 		-scheme Pcat \
 		-configuration Debug \
 		-sdk iphonesimulator \
-		-destination 'platform=iOS Simulator,name=iPhone 15' \
+		-destination 'generic/platform=iOS Simulator' \
 		CODE_SIGN_IDENTITY="" \
 		CODE_SIGNING_REQUIRED=NO \
 		CODE_SIGNING_ALLOWED=NO \

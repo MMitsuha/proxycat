@@ -49,7 +49,7 @@ public struct SettingsView: View {
 
             Section("About") {
                 LabeledContent("App Version") {
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")
+                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                 }
                 Link("mihomo on GitHub", destination: URL(string: "https://github.com/MetaCubeX/mihomo")!)
             }

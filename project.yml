@@ -1,5 +1,10 @@
-# XcodeGen spec. Run `xcodegen generate` after dropping Libmihomo.xcframework
+# XcodeGen spec. Run `make project` after dropping Libmihomo.xcframework
 # into Frameworks/. Install xcodegen via `brew install xcodegen`.
+#
+# Versioning is automatic: scripts/generate-project.sh exports
+# PROXYCAT_MARKETING_VERSION (from ./VERSION) and PROXYCAT_BUILD_NUMBER
+# (from `git rev-list --count HEAD`). Run `make version` to preview the
+# values that the next `make project` will bake into the project.
 
 name: ProxyCat
 options:
@@ -20,13 +25,14 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     APP_GROUP_ID: group.io.proxycat
     OTHER_LDFLAGS: "$(inherited)"
-    # Frameworks generated with GENERATE_INFOPLIST_FILE=YES need these
-    # explicitly — without MARKETING_VERSION the auto-plist omits
-    # CFBundleShortVersionString and App Store validation rejects the
-    # archive. Keep in sync with Pcat/Info.plist (the host app uses a
-    # static plist).
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    # Frameworks built with GENERATE_INFOPLIST_FILE=YES still need these
+    # at the project level — without MARKETING_VERSION the auto-plist
+    # omits CFBundleShortVersionString and App Store validation rejects
+    # the archive. Empty values mean someone ran xcodegen without going
+    # through scripts/generate-project.sh; the build will then fail loudly
+    # at archive time, which is the desired behavior.
+    MARKETING_VERSION: ${PROXYCAT_MARKETING_VERSION}
+    CURRENT_PROJECT_VERSION: ${PROXYCAT_BUILD_NUMBER}
 
 packages: {}
 
@@ -57,6 +63,10 @@ targets:
         SKIP_INSTALL: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: NO
         GENERATE_INFOPLIST_FILE: YES
+        # XcodeGen's framework preset hardcodes CURRENT_PROJECT_VERSION: 1,
+        # overriding the project-level base. Re-assert here so embedded
+        # framework bundles match the app's build number.
+        CURRENT_PROJECT_VERSION: ${PROXYCAT_BUILD_NUMBER}
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
@@ -78,6 +88,7 @@ targets:
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
         GENERATE_INFOPLIST_FILE: YES
+        CURRENT_PROJECT_VERSION: ${PROXYCAT_BUILD_NUMBER}
 
   Pcat:
     type: application
@@ -100,10 +111,32 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.proxycat.Pcat
+        # The static plist holds only what can't be expressed via
+        # INFOPLIST_KEY_* (the YAML profile UTI). Xcode merges
+        # INFOPLIST_KEY_* into the generated plist and then merges
+        # INFOPLIST_FILE on top, so both sources end up in the bundle.
+        GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Pcat/Info.plist
         CODE_SIGN_ENTITLEMENTS: Pcat/Pcat.entitlements
         SWIFT_OBJC_BRIDGING_HEADER: ""
         ENABLE_PREVIEWS: YES
+        # Target → General fields: Display Name + Category live here so
+        # they're discoverable from the GUI and centralized in this file.
+        INFOPLIST_KEY_CFBundleDisplayName: ProxyCat
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_LSRequiresIPhoneOS: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        # Skip the App Store export-compliance prompt (no custom crypto).
+        # Must be the INFOPLIST_KEY_ prefixed variant — the plain
+        # ITSAppUsesNonExemptEncryption build setting doesn't reach the
+        # bundled plist.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # UIApplicationSceneManifest stays in the static plist. The
+        # INFOPLIST_KEY_UIApplicationSceneManifest_Generation autogen
+        # forces UIApplicationSupportsMultipleScenes=YES regardless of
+        # the separate setting, which is wrong for this app.
 
   PcatExtension:
     type: app-extension
@@ -119,5 +152,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.proxycat.Pcat.PcatExtension
+        # The static plist carries the NSExtension dict (no INFOPLIST_KEY_
+        # equivalent); display name and version flow through build settings.
+        GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: PcatExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: PcatExtension/PcatExtension.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: "ProxyCat Tunnel"
