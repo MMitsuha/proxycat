@@ -94,6 +94,17 @@
         }
       }
     },
+    "Advanced" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高级"
+          }
+        }
+      }
+    },
     "App Group" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -845,12 +856,12 @@
         }
       }
     },
-    "Removes the rule-provider cache, downloaded GeoIP / GeoSite databases, and the downloaded external UI. mihomo re-fetches them on next start. Bundled assets above are preserved." : {
+    "Removes the rule-provider cache, downloaded GeoIP / GeoSite databases, and the downloaded external UI. mihomo re-fetches them on next start. Bundled assets are preserved." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移除规则提供方缓存、已下载的 GeoIP / GeoSite 数据库及外部 UI。mihomo 将在下次启动时重新获取。上方的内置资源会被保留。"
+            "value" : "移除规则提供方缓存、已下载的 GeoIP / GeoSite 数据库及外部 UI。mihomo 将在下次启动时重新获取。内置资源会被保留。"
           }
         }
       }
