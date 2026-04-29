@@ -284,6 +284,16 @@
         }
       }
     },
+    "Connect first to manage proxies" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先连接后再管理代理"
+          }
+        }
+      }
+    },
     "Connected" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -892,6 +902,16 @@
         }
       }
     },
+    "Proxies" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "代理"
+          }
+        }
+      }
+    },
     "Reasserting" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -931,6 +951,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
           }
         }
       }
@@ -1109,6 +1139,16 @@
         }
       }
     },
+    "Test latency" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试延迟"
+          }
+        }
+      }
+    },
     "This removes every %@ file and cannot be undone. The active session, if any, is preserved." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1214,6 +1254,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "警告"
+          }
+        }
+      }
+    },
+    "Web Controller is off" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网页控制器已关闭"
           }
         }
       }
