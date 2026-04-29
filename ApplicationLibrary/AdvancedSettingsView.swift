@@ -58,7 +58,7 @@ struct AdvancedSettingsView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(assets) { asset in
-                    LabeledContent(asset.displayName) {
+                    LabeledContent(LocalizedStringKey(asset.displayName)) {
                         HStack(spacing: 6) {
                             Text(label(for: asset.kind))
                                 .font(.caption2)
@@ -92,7 +92,7 @@ struct AdvancedSettingsView: View {
     }
 
     @ViewBuilder
-    private func copyableRow(_ label: String, value: String, mono: Bool = false) -> some View {
+    private func copyableRow(_ label: LocalizedStringKey, value: String, mono: Bool = false) -> some View {
         LabeledContent(label) {
             Text(value)
                 .font(mono ? .system(.caption, design: .monospaced) : .caption)

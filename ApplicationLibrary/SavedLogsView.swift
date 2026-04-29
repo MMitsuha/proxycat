@@ -195,7 +195,10 @@ struct SavedLogDetailView: View {
                 defer { try? handle.close() }
                 try handle.seek(toOffset: UInt64(size - limit))
                 let tail = try handle.readToEnd() ?? Data()
-                let header = "[truncated — showing last \(limit) of \(size) bytes]\n\n"
+                let header = String(
+                    localized: "[truncated — showing last \(limit) of \(size) bytes]\n\n",
+                    bundle: .main
+                )
                 return .success(header + String(decoding: tail, as: UTF8.self))
             } catch {
                 return .failure(error)
