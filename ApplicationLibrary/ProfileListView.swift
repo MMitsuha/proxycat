@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 public struct ProfileListView: View {
     @EnvironmentObject private var profileStore: ProfileStore
+    @EnvironmentObject private var environment: ExtensionEnvironment
     @State private var showImporter = false
     @State private var actionError: String?
     @State private var presentedSheet: EditorSheet?
@@ -113,6 +114,11 @@ public struct ProfileListView: View {
             Button("OK") { actionError = nil }
         } message: {
             Text(actionError ?? "")
+        }
+        .alert("Reload failed", isPresented: .constant(environment.reloadError != nil)) {
+            Button("OK") { environment.reloadError = nil }
+        } message: {
+            Text(environment.reloadError ?? "")
         }
     }
 

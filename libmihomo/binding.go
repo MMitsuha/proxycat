@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
 	"github.com/metacubex/mihomo/hub/executor"
@@ -96,6 +97,55 @@ func Start(yamlConfig []byte, options *StartOptions) error {
 		return fmt.Errorf("mihomo already started")
 	}
 
+	cfg, err := prepareConfig(yamlConfig, options)
+	if err != nil {
+		return err
+	}
+
+	hub.ApplyConfig(cfg)
+	startOOMKiller()
+	if path := commandSocketPath(); path != "" {
+		if err := StartCommandServer(path); err != nil {
+			log.Warnln("[command] start server: %v", err)
+		}
+	}
+	started.Store(true)
+	return nil
+}
+
+// Reload hot-swaps the running mihomo core with a new YAML config. Returns
+// an error if the core isn't running (caller should fall back to Start) or
+// if the YAML fails to parse.
+//
+// On iOS, the cached TUN fd from the original Start is reused — the new
+// config has the same fd patched in before hub.ApplyConfig, and mihomo's
+// listener.ReCreateTun short-circuits when the tun config is unchanged
+// (so the kernel-supplied utun socket isn't disturbed). The OOM killer
+// and gRPC command server keep running across the reload.
+//
+// options may be nil; see StartOptions for the available toggles. Pass the
+// same flags used at Start to keep the controller / Web UI exposure
+// consistent across the swap.
+func Reload(yamlConfig []byte, options *StartOptions) error {
+	startMu.Lock()
+	defer startMu.Unlock()
+
+	if !started.Load() {
+		return fmt.Errorf("mihomo not started")
+	}
+
+	cfg, err := prepareConfig(yamlConfig, options)
+	if err != nil {
+		return err
+	}
+
+	hub.ApplyConfig(cfg)
+	return nil
+}
+
+// prepareConfig parses the YAML and applies the iOS-specific overrides that
+// every Start / Reload needs. The caller drives the actual hub.ApplyConfig.
+func prepareConfig(yamlConfig []byte, options *StartOptions) (*config.Config, error) {
 	homeDirMu.Lock()
 	hd := homeDir
 	homeDirMu.Unlock()
@@ -105,7 +155,7 @@ func Start(yamlConfig []byte, options *StartOptions) error {
 
 	cfg, err := executor.ParseWithBytes(yamlConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cfg.DNS.Enable = true
@@ -182,15 +232,7 @@ func Start(yamlConfig []byte, options *StartOptions) error {
 		cfg.General.Tun.RouteExcludeAddressSet = nil
 	}
 
-	hub.ApplyConfig(cfg)
-	startOOMKiller()
-	if path := commandSocketPath(); path != "" {
-		if err := StartCommandServer(path); err != nil {
-			log.Warnln("[command] start server: %v", err)
-		}
-	}
-	started.Store(true)
-	return nil
+	return cfg, nil
 }
 
 // Stop halts mihomo cleanly. Safe to call multiple times.
