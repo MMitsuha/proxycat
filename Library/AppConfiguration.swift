@@ -25,4 +25,13 @@ public enum AppConfiguration {
     /// Group container. The Network Extension's gRPC command server
     /// listens here; the host app's CommandClient dials it.
     public static let commandSocketName = "command.sock"
+
+    /// UserDefaults key persisting the user's runtime log-level choice.
+    /// Stored as the raw mihomo level int (0=DEBUG…4=SILENT). The host
+    /// reads this with `@AppStorage` and pushes it through to the
+    /// extension over the `loglevel:` IPC each time the picker changes.
+    /// Default (and value used when missing) is 2 (WARNING) — the YAML's
+    /// own `log-level:` is intentionally ignored, matching the Go core's
+    /// runtimeLogLevel default.
+    public static let logLevelKey = "logLevel"
 }

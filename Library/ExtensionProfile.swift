@@ -54,7 +54,35 @@ public final class ExtensionProfile: ObservableObject {
         var options: [String: NSObject] = [:]
         options[AppConfiguration.configContentKey] = configContent as NSString
         options[AppConfiguration.disableExternalControllerKey] = NSNumber(value: disableExternalController)
+        // Forward the user's persisted runtime log level so the extension
+        // applies it before mihomo emits its first message. The Network
+        // Extension lives in a separate process, so the host's UserDefaults
+        // value isn't visible there without going through the start options
+        // (or App-Group defaults, which aren't wired here).
+        options[AppConfiguration.logLevelKey] = NSNumber(value: Self.persistedLogLevel)
         try manager.connection.startVPNTunnel(options: options)
+    }
+
+    /// Hot-apply a new mihomo log level on the running tunnel. No-op when
+    /// disconnected — the next `start(configContent:…)` reads the persisted
+    /// value from UserDefaults and seeds the extension afresh.
+    public func setLogLevel(_ level: Int) async {
+        guard isConnected, let session = manager?.connection as? NETunnelProviderSession else {
+            return
+        }
+        guard let payload = "loglevel:\(level)".data(using: .utf8) else { return }
+        try? session.sendProviderMessage(payload) { _ in }
+    }
+
+    /// Reads the user's persisted log level (0=DEBUG…4=SILENT). Falls back
+    /// to WARNING (2) — matching the Go core's `runtimeLogLevel` default —
+    /// when the key isn't set yet.
+    private static var persistedLogLevel: Int {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: AppConfiguration.logLevelKey) != nil else {
+            return 2
+        }
+        return defaults.integer(forKey: AppConfiguration.logLevelKey)
     }
 
     public func stop() {

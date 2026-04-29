@@ -37,7 +37,20 @@ var (
 
 	socketPathMu sync.Mutex
 	socketPath   string
+
+	// runtimeLogLevel is the wrapper's source of truth for the mihomo
+	// log filter. Initialised to WARNING (2) so YAML profiles that ship
+	// with `log-level: debug` or `info` don't flood the host app's log
+	// stream by default. SetLogLevel updates this atomically; every
+	// Start / Reload re-applies it on top of the parsed config so the
+	// YAML's own `log-level:` is always ignored.
+	runtimeLogLevel atomic.Int32
 )
+
+func init() {
+	runtimeLogLevel.Store(int32(log.WARNING))
+	log.SetLevel(log.WARNING)
+}
 
 // SetCommandSocketPath chooses where the gRPC command server listens.
 // Must point at a path inside an App Group container so the host app
@@ -157,6 +170,12 @@ func prepareConfig(yamlConfig []byte, options *StartOptions) (*config.Config, er
 	if err != nil {
 		return nil, err
 	}
+
+	// The YAML's own `log-level:` is intentionally discarded — the host
+	// app owns this setting at runtime through SetLogLevel and the
+	// `loglevel:` IPC, and we don't want a profile import to silently
+	// re-enable debug logging mid-session.
+	cfg.General.LogLevel = log.LogLevel(runtimeLogLevel.Load())
 
 	cfg.DNS.Enable = true
 	cfg.DNS.EnhancedMode = C.DNSMapping
@@ -294,7 +313,10 @@ func Validate(yamlConfig []byte) error {
 	return err
 }
 
-// SetLogLevel changes runtime log filter. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
+// SetLogLevel changes the runtime log filter. Levels: 0=DEBUG 1=INFO 2=WARNING
+// 3=ERROR 4=SILENT. The new value sticks across hot reloads — prepareConfig
+// re-applies it to the parsed config on every Start / Reload, overriding
+// whatever `log-level:` the YAML carries.
 func SetLogLevel(level int) {
 	if level < 0 {
 		level = 0
@@ -302,6 +324,7 @@ func SetLogLevel(level int) {
 	if level > 4 {
 		level = 4
 	}
+	runtimeLogLevel.Store(int32(level))
 	log.SetLevel(log.LogLevel(level))
 }
 

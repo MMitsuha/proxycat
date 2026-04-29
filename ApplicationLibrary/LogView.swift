@@ -4,8 +4,10 @@ import SwiftUI
 import UIKit
 
 /// Streaming log viewer with the user-requested controls:
-///   • Log level filter — initial value is read from the active profile's
-///     `log-level:` key, falling back to `.debug` when absent
+///   • Log level filter — defaults to `.warning`, persisted across launches
+///     in UserDefaults, and pushed through to the running mihomo core via
+///     the `loglevel:` IPC so the change is hot-applied. The YAML profile's
+///     `log-level:` key is intentionally ignored.
 ///   • Debounced search box
 ///   • "Copy All" — copies every line currently visible under the active
 ///     filter to UIPasteboard.
@@ -185,7 +187,7 @@ private struct LogRow: View {
 @MainActor
 final class LogViewModel: ObservableObject {
     @Published var searchText: String = ""
-    @Published var selectedLevel: LogLevel = .debug
+    @Published var selectedLevel: LogLevel
     @Published var isPaused: Bool = false
     @Published var visible: [LogEntry] = []
     @Published var isConnected: Bool = false
@@ -198,17 +200,17 @@ final class LogViewModel: ObservableObject {
     private var environment: ExtensionEnvironment?
     private var bag = Set<AnyCancellable>()
     private var pausedSnapshot: [LogEntry]?
-    private var hasLoadedConfigLevel = false
+
+    init() {
+        let defaults = UserDefaults.standard
+        let stored = defaults.object(forKey: AppConfiguration.logLevelKey) as? Int
+        self.selectedLevel = stored.flatMap(LogLevel.init(rawValue:)) ?? .warning
+    }
 
     func bind(to environment: ExtensionEnvironment) {
         self.environment = environment
         commandClient = environment.commandClient
         searchText = environment.logSearchText
-
-        if !hasLoadedConfigLevel {
-            hasLoadedConfigLevel = true
-            Task { await self.loadLevelFromActiveConfig() }
-        }
 
         guard let client = commandClient else { return }
         // The gRPC connection is owned by ExtensionEnvironment now —
@@ -248,6 +250,17 @@ final class LogViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] connected in
                 self?.isConnected = connected
+            }
+            .store(in: &bag)
+
+        // Push every level change through to the running extension and
+        // persist it for next launch. dropFirst skips the initial value so
+        // we don't immediately echo whatever bind() loaded from defaults.
+        $selectedLevel
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self] level in
+                self?.applyLogLevel(level)
             }
             .store(in: &bag)
     }
@@ -300,35 +313,13 @@ final class LogViewModel: ObservableObject {
         }
     }
 
-    private func loadLevelFromActiveConfig() async {
-        guard let active = ProfileStore.shared.active else { return }
-        let url = FilePath.profilesDirectory.appendingPathComponent(active.fileName)
-        let level = await Task.detached(priority: .utility) { () -> LogLevel in
-            guard let yaml = try? String(contentsOf: url, encoding: .utf8) else {
-                return .debug
-            }
-            return Self.parseLogLevel(in: yaml) ?? .debug
-        }.value
-        selectedLevel = level
-    }
-
-    /// Picks the first top-level `log-level: <value>` line out of a mihomo
-    /// YAML config. Indented occurrences (which would belong to a nested
-    /// mapping) are skipped so we don't accidentally read a sub-key.
-    nonisolated static func parseLogLevel(in yaml: String) -> LogLevel? {
-        let pattern = #"(?m)^log-level\s*:\s*["']?([A-Za-z]+)["']?"#
-        guard let regex = try? NSRegularExpression(pattern: pattern),
-              let match = regex.firstMatch(in: yaml, range: NSRange(yaml.startIndex..., in: yaml)),
-              let range = Range(match.range(at: 1), in: yaml) else {
-            return nil
-        }
-        switch String(yaml[range]).lowercased() {
-        case "debug": return .debug
-        case "info": return .info
-        case "warning": return .warning
-        case "error": return .error
-        case "silent": return .silent
-        default: return nil
+    private func applyLogLevel(_ level: LogLevel) {
+        UserDefaults.standard.set(level.rawValue, forKey: AppConfiguration.logLevelKey)
+        // Hot-apply when the tunnel is up. While disconnected, the
+        // persisted value is what `ExtensionProfile.start` injects into
+        // the next session's options dictionary.
+        if let environment {
+            Task { await environment.profile.setLogLevel(level.rawValue) }
         }
     }
 }

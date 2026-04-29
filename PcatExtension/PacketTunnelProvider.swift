@@ -30,6 +30,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         let disableExternalController = (options?[AppConfiguration.disableExternalControllerKey] as? NSNumber)?.boolValue ?? false
         self.disableExternalController = disableExternalController
 
+        // Apply the host-app's persisted log level *before* anything else
+        // touches mihomo so the wrapper's runtime filter is correct when
+        // hub.ApplyConfig fires. Falls back to WARNING (2) if absent.
+        let logLevel = (options?[AppConfiguration.logLevelKey] as? NSNumber)?.intValue ?? 2
+        LibmihomoBridge.setLogLevel(logLevel)
+
         // 1. Configure tunnel network settings *before* taking the fd. iOS
         //    materializes the utun device only after this completes.
         try await configureNetworkSettings()
@@ -135,7 +141,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             case "ping":
                 return "pong".data(using: .utf8)
             case let s where s.hasPrefix("loglevel:"):
-                let raw = Int(s.dropFirst("loglevel:".count)) ?? 1
+                let raw = Int(s.dropFirst("loglevel:".count)) ?? 2
                 LibmihomoBridge.setLogLevel(raw)
                 return nil
             case "reload":
