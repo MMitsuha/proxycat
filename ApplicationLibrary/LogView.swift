@@ -5,9 +5,11 @@ import UIKit
 
 /// Streaming log viewer with the user-requested controls:
 ///   • Log level filter — defaults to `.warning`, persisted across launches
-///     in UserDefaults, and pushed through to the running mihomo core via
-///     the `loglevel:` IPC so the change is hot-applied. The YAML profile's
-///     `log-level:` key is intentionally ignored.
+///     in `RuntimeSettings.shared` (which writes settings.json in the App
+///     Group). The Go core re-reads that file on every reload, so a
+///     change here propagates to mihomo without going through any
+///     dedicated IPC. The YAML profile's `log-level:` key is
+///     intentionally ignored.
 ///   • Debounced search box
 ///   • "Copy All" — copies every line currently visible under the active
 ///     filter to UIPasteboard.
@@ -187,6 +189,12 @@ private struct LogRow: View {
 @MainActor
 final class LogViewModel: ObservableObject {
     @Published var searchText: String = ""
+    /// Mirror of `RuntimeSettings.shared.logLevel`, exposed as a
+    /// `LogLevel` enum so the picker binding stays type-safe. Two-way:
+    /// changes from the picker write back into RuntimeSettings (which
+    /// persists + nudges the extension), and external changes to
+    /// RuntimeSettings flow back here through the Combine pipe set up
+    /// in `bind`.
     @Published var selectedLevel: LogLevel
     @Published var isPaused: Bool = false
     @Published var visible: [LogEntry] = []
@@ -198,13 +206,12 @@ final class LogViewModel: ObservableObject {
 
     private weak var commandClient: CommandClient?
     private var environment: ExtensionEnvironment?
+    private let settings = RuntimeSettings.shared
     private var bag = Set<AnyCancellable>()
     private var pausedSnapshot: [LogEntry]?
 
     init() {
-        let defaults = UserDefaults.standard
-        let stored = defaults.object(forKey: AppConfiguration.logLevelKey) as? Int
-        self.selectedLevel = stored.flatMap(LogLevel.init(rawValue:)) ?? .warning
+        self.selectedLevel = LogLevel(rawValue: RuntimeSettings.shared.logLevel) ?? .warning
     }
 
     func bind(to environment: ExtensionEnvironment) {
@@ -253,14 +260,29 @@ final class LogViewModel: ObservableObject {
             }
             .store(in: &bag)
 
-        // Push every level change through to the running extension and
-        // persist it for next launch. dropFirst skips the initial value so
-        // we don't immediately echo whatever bind() loaded from defaults.
+        // Picker → RuntimeSettings. Writing here triggers the shared
+        // store's persist + post path, which ExtensionEnvironment
+        // observes and turns into a `reload` so mihomo picks up the new
+        // level. dropFirst skips the initial value emission so we
+        // don't immediately re-write what we loaded in init().
         $selectedLevel
             .dropFirst()
             .removeDuplicates()
             .sink { [weak self] level in
-                self?.applyLogLevel(level)
+                self?.settings.logLevel = level.rawValue
+            }
+            .store(in: &bag)
+
+        // RuntimeSettings → picker. If something else mutates the
+        // shared store (e.g. a future macOS companion app, or an
+        // import/export action), reflect it back into the UI.
+        settings.$logLevel
+            .receive(on: RunLoop.main)
+            .compactMap { LogLevel(rawValue: $0) }
+            .removeDuplicates()
+            .sink { [weak self] level in
+                guard let self, level != self.selectedLevel else { return }
+                self.selectedLevel = level
             }
             .store(in: &bag)
     }
@@ -310,16 +332,6 @@ final class LogViewModel: ObservableObject {
             visible = filtered
         } else {
             visible = Array(filtered.suffix(Self.maxVisible))
-        }
-    }
-
-    private func applyLogLevel(_ level: LogLevel) {
-        UserDefaults.standard.set(level.rawValue, forKey: AppConfiguration.logLevelKey)
-        // Hot-apply when the tunnel is up. While disconnected, the
-        // persisted value is what `ExtensionProfile.start` injects into
-        // the next session's options dictionary.
-        if let environment {
-            Task { await environment.profile.setLogLevel(level.rawValue) }
         }
     }
 }

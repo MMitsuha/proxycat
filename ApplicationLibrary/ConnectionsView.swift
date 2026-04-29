@@ -3,8 +3,7 @@ import SwiftUI
 
 public struct ConnectionsView: View {
     @EnvironmentObject private var profile: ExtensionProfile
-    @AppStorage(AppConfiguration.disableExternalControllerKey)
-    private var disableExternalController = false
+    @ObservedObject private var settings = RuntimeSettings.shared
 
     @StateObject private var store = ConnectionsStore()
     @State private var query: String = ""
@@ -20,7 +19,7 @@ public struct ConnectionsView: View {
                     symbol: "powerplug.portrait",
                     title: String(localized: "Connect first to view connections")
                 )
-            } else if disableExternalController {
+            } else if settings.disableExternalController {
                 empty(
                     symbol: "network.slash",
                     title: String(localized: "Web Controller is off")
@@ -37,14 +36,14 @@ public struct ConnectionsView: View {
         // mid-view, stop the WS retry loop and let the empty state take
         // over instead of letting the store hammer a closed socket.
         .onChange(of: profile.isConnected) { _, _ in syncStreaming() }
-        .onChange(of: disableExternalController) { _, _ in syncStreaming() }
+        .onChange(of: settings.disableExternalController) { _, _ in syncStreaming() }
         .sheet(item: $detail) { conn in
             ConnectionDetailSheet(connection: conn)
         }
     }
 
     private func syncStreaming() {
-        if profile.isConnected, !disableExternalController {
+        if profile.isConnected, !settings.disableExternalController {
             store.start()
         } else {
             store.stop()

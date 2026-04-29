@@ -6,8 +6,7 @@ public struct SettingsView: View {
     @State private var showClearConfirm = false
     @State private var clearError: String?
 
-    @AppStorage(AppConfiguration.disableExternalControllerKey)
-    private var disableExternalController = false
+    @ObservedObject private var settings = RuntimeSettings.shared
 
     // ByteCountFormatter spells "Zero KB" by default; we want "0 KB".
     private static let byteFormatter: ByteCountFormatter = {
@@ -22,11 +21,11 @@ public struct SettingsView: View {
     public var body: some View {
         Form {
             Section {
-                Toggle("Disable Web Controller", isOn: $disableExternalController)
+                Toggle("Disable Web Controller", isOn: $settings.disableExternalController)
             } header: {
                 Text("Privacy")
             } footer: {
-                Text("Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Takes effect on next connect.")
+                Text("Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Applies immediately while connected.")
             }
 
             Section {

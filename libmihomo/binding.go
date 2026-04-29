@@ -3,12 +3,25 @@
 // supports: primitives, byte slices, strings, error, and named structs of
 // those. No interfaces (besides callbacks declared here), no channels, no
 // generics across the boundary.
+//
+// Design note: this wrapper owns ALL runtime state. The host app and the
+// extension only tell us where the App-Group container lives (via the
+// Set*Path setters); we read profile YAML, runtime settings, and the
+// active-profile pointer ourselves. The Network Extension is intentionally
+// a thin shim — every Start / Reload re-reads everything fresh from disk
+// so a setting toggled in the host UI takes effect on the next Reload
+// without anyone shuttling values through NEPacketTunnelProvider's option
+// dictionary or sendProviderMessage payloads.
 package libmihomo
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/netip"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -38,12 +51,20 @@ var (
 	socketPathMu sync.Mutex
 	socketPath   string
 
+	activePointerMu sync.RWMutex
+	activePointer   string
+
+	profilesDirMu sync.RWMutex
+	profilesDir   string
+
 	// runtimeLogLevel is the wrapper's source of truth for the mihomo
 	// log filter. Initialised to WARNING (2) so YAML profiles that ship
 	// with `log-level: debug` or `info` don't flood the host app's log
 	// stream by default. SetLogLevel updates this atomically; every
 	// Start / Reload re-applies it on top of the parsed config so the
-	// YAML's own `log-level:` is always ignored.
+	// YAML's own `log-level:` is always ignored. Reload also re-reads
+	// settings.json into this field so the host app can change the
+	// runtime level just by writing the JSON.
 	runtimeLogLevel atomic.Int32
 )
 
@@ -78,31 +99,95 @@ func SetHomeDir(path string) {
 	C.SetHomeDir(path)
 }
 
-// StartOptions tunes Start's behavior on top of whatever the parsed YAML
-// says. Pass nil for the historical defaults — external controller bound
-// to 127.0.0.1:9090 with the bundled UI and loopback-only CORS.
-//
-// Keep this struct gomobile-friendly: primitives only, no slices, no
-// nested structs.
-type StartOptions struct {
-	// DisableExternalController, when true, prevents mihomo from binding
-	// any external-controller listener (HTTP, TLS, Unix, named-pipe) and
-	// suppresses the bundled Web UI. The wrapper's gRPC command socket
-	// is unaffected, so the host app keeps working without exposing a
-	// local HTTP surface other processes on the device could reach.
-	DisableExternalController bool
+// SetActiveProfilePointer tells the wrapper where the host app's
+// `active-profile` UUID file lives. Combined with SetProfilesDir this
+// lets Start / Reload load the active profile YAML themselves so the
+// extension never has to read or forward it.
+func SetActiveProfilePointer(path string) {
+	activePointerMu.Lock()
+	activePointer = path
+	activePointerMu.Unlock()
 }
 
-// Start parses the YAML config and brings the mihomo core up.
-// If a TUN file descriptor was previously installed via SetTunFd, the parsed
-// config is patched so the TUN inbound uses it instead of opening a kernel
-// device (which iOS Network Extensions cannot do). The TUN's device name
-// and inet4/inet6 addresses are also cleared because on iOS the host's
-// NEPacketTunnelNetworkSettings already owns those values; leaving the YAML
-// defaults causes "bad tun name" or IPv6 bind failures.
+// SetProfilesDir tells the wrapper where the host app's `Profiles/`
+// directory lives (containing `index.json` plus one YAML per profile).
+// Combined with SetActiveProfilePointer this lets Start / Reload load
+// the active profile YAML on demand.
+func SetProfilesDir(path string) {
+	profilesDirMu.Lock()
+	profilesDir = path
+	profilesDirMu.Unlock()
+}
+
+// profileEntry is the subset of Library/Profile.swift's `Profile` shape
+// needed to resolve an active UUID to its YAML filename. Extra fields in
+// the JSON are ignored by encoding/json so the host can keep evolving
+// the schema without breaking us.
+type profileEntry struct {
+	ID       string `json:"id"`
+	FileName string `json:"fileName"`
+}
+
+// loadActiveYAML walks the same disk layout the host app's
+// `ProfileStore.loadActiveContentFromDisk` does: read the active-profile
+// UUID, look it up in the Profiles index, return the YAML bytes.
 //
-// options may be nil; see StartOptions for the available toggles.
-func Start(yamlConfig []byte, options *StartOptions) error {
+// Errors are returned verbatim to the caller (Start / Reload). The
+// extension surfaces them as the `reload` reply payload so the host UI
+// can show a precise message instead of "reload failed".
+func loadActiveYAML() ([]byte, error) {
+	activePointerMu.RLock()
+	pointer := activePointer
+	activePointerMu.RUnlock()
+	profilesDirMu.RLock()
+	dir := profilesDir
+	profilesDirMu.RUnlock()
+
+	if pointer == "" || dir == "" {
+		return nil, fmt.Errorf("profile paths not configured (call SetActiveProfilePointer + SetProfilesDir)")
+	}
+
+	raw, err := os.ReadFile(pointer)
+	if err != nil {
+		return nil, fmt.Errorf("read active-profile pointer: %w", err)
+	}
+	id := strings.TrimSpace(string(raw))
+	if id == "" {
+		return nil, fmt.Errorf("active-profile pointer is empty")
+	}
+
+	indexPath := filepath.Join(dir, "index.json")
+	indexRaw, err := os.ReadFile(indexPath)
+	if err != nil {
+		return nil, fmt.Errorf("read profile index: %w", err)
+	}
+	var entries []profileEntry
+	if err := json.Unmarshal(indexRaw, &entries); err != nil {
+		return nil, fmt.Errorf("parse profile index: %w", err)
+	}
+	for _, e := range entries {
+		if e.ID == id {
+			yamlPath := filepath.Join(dir, e.FileName)
+			data, err := os.ReadFile(yamlPath)
+			if err != nil {
+				return nil, fmt.Errorf("read profile yaml %s: %w", e.FileName, err)
+			}
+			return data, nil
+		}
+	}
+	return nil, fmt.Errorf("active profile %s not found in index", id)
+}
+
+// Start brings the mihomo core up using the active profile YAML and
+// runtime settings the host app has already written into the App-Group
+// container. Required setup before this call: SetHomeDir,
+// SetCommandSocketPath, SetSettingsPath, SetActiveProfilePointer,
+// SetProfilesDir, SetTunFd. SetMemoryLimit is optional but recommended.
+//
+// The Go side reads everything itself instead of taking a YAML or
+// options argument so the extension never has to forward host-app
+// state — see the package comment for the rationale.
+func Start() error {
 	startMu.Lock()
 	defer startMu.Unlock()
 
@@ -110,7 +195,11 @@ func Start(yamlConfig []byte, options *StartOptions) error {
 		return fmt.Errorf("mihomo already started")
 	}
 
-	cfg, err := prepareConfig(yamlConfig, options)
+	yaml, err := loadActiveYAML()
+	if err != nil {
+		return err
+	}
+	cfg, err := prepareConfig(yaml)
 	if err != nil {
 		return err
 	}
@@ -126,9 +215,10 @@ func Start(yamlConfig []byte, options *StartOptions) error {
 	return nil
 }
 
-// Reload hot-swaps the running mihomo core with a new YAML config. Returns
-// an error if the core isn't running (caller should fall back to Start) or
-// if the YAML fails to parse.
+// Reload hot-swaps the running mihomo core with a fresh read of the
+// active profile YAML and settings.json. Returns an error if the core
+// isn't running (caller should fall back to Start) or if the on-disk
+// state fails to load / parse.
 //
 // On iOS, the cached TUN fd from the original Start is reused — the new
 // config has the same fd patched in before hub.ApplyConfig, and mihomo's
@@ -136,10 +226,11 @@ func Start(yamlConfig []byte, options *StartOptions) error {
 // (so the kernel-supplied utun socket isn't disturbed). The OOM killer
 // and gRPC command server keep running across the reload.
 //
-// options may be nil; see StartOptions for the available toggles. Pass the
-// same flags used at Start to keep the controller / Web UI exposure
-// consistent across the swap.
-func Reload(yamlConfig []byte, options *StartOptions) error {
+// Use this for any change the host wants the extension to pick up:
+// profile switch, profile YAML edit, or settings.json toggle. There's no
+// separate "settings only" path because hub.ApplyConfig is already
+// idempotent and a full re-parse takes well under 100ms.
+func Reload() error {
 	startMu.Lock()
 	defer startMu.Unlock()
 
@@ -147,7 +238,11 @@ func Reload(yamlConfig []byte, options *StartOptions) error {
 		return fmt.Errorf("mihomo not started")
 	}
 
-	cfg, err := prepareConfig(yamlConfig, options)
+	yaml, err := loadActiveYAML()
+	if err != nil {
+		return err
+	}
+	cfg, err := prepareConfig(yaml)
 	if err != nil {
 		return err
 	}
@@ -156,9 +251,11 @@ func Reload(yamlConfig []byte, options *StartOptions) error {
 	return nil
 }
 
-// prepareConfig parses the YAML and applies the iOS-specific overrides that
-// every Start / Reload needs. The caller drives the actual hub.ApplyConfig.
-func prepareConfig(yamlConfig []byte, options *StartOptions) (*config.Config, error) {
+// prepareConfig parses the YAML and applies the iOS-specific overrides
+// that every Start / Reload needs, layering settings.json (controller
+// toggle, log level) on top of whatever the YAML carried. The caller
+// drives the actual hub.ApplyConfig.
+func prepareConfig(yamlConfig []byte) (*config.Config, error) {
 	homeDirMu.Lock()
 	hd := homeDir
 	homeDirMu.Unlock()
@@ -171,15 +268,19 @@ func prepareConfig(yamlConfig []byte, options *StartOptions) (*config.Config, er
 		return nil, err
 	}
 
-	// The YAML's own `log-level:` is intentionally discarded — the host
-	// app owns this setting at runtime through SetLogLevel and the
-	// `loglevel:` IPC, and we don't want a profile import to silently
-	// re-enable debug logging mid-session.
-	cfg.General.LogLevel = log.LogLevel(runtimeLogLevel.Load())
+	settings := loadSettings()
+	// Sync the runtime atomic so SetLogLevel callers and the pumped
+	// log.SetLevel below see the same value the host has written. The
+	// YAML's own `log-level:` is intentionally discarded — the host app
+	// owns this setting at runtime through settings.json, and we don't
+	// want a profile import to silently re-enable debug logging.
+	runtimeLogLevel.Store(int32(settings.LogLevel))
+	log.SetLevel(log.LogLevel(settings.LogLevel))
+	cfg.General.LogLevel = log.LogLevel(settings.LogLevel)
 
 	cfg.DNS.Enable = true
 	cfg.DNS.EnhancedMode = C.DNSMapping
-	if options != nil && options.DisableExternalController {
+	if settings.DisableExternalController {
 		// Clear every listener field too, so a YAML that asks for a
 		// controller (HTTP / TLS / Unix / named-pipe) can't sneak one
 		// back up while the user thinks it's off.
@@ -297,6 +398,9 @@ func SetTunFd(fd int) error {
 // Mihomo's parser is lenient — it tolerates unknown keys and fills in
 // missing fields with defaults — so a successful Validate doesn't promise
 // the proxy will actually connect, only that the file is loadable.
+//
+// Used by the profile editor to validate user input before saving;
+// unrelated to the disk-loading path Start / Reload follow.
 func Validate(yamlConfig []byte) error {
 	if len(yamlConfig) == 0 {
 		return fmt.Errorf("config is empty")
@@ -314,9 +418,10 @@ func Validate(yamlConfig []byte) error {
 }
 
 // SetLogLevel changes the runtime log filter. Levels: 0=DEBUG 1=INFO 2=WARNING
-// 3=ERROR 4=SILENT. The new value sticks across hot reloads — prepareConfig
-// re-applies it to the parsed config on every Start / Reload, overriding
-// whatever `log-level:` the YAML carries.
+// 3=ERROR 4=SILENT. Provided as a no-restart hook for tests / direct callers;
+// the host app normally drives this by writing settings.json + asking the
+// extension to Reload, which re-reads the file and lands here via
+// prepareConfig.
 func SetLogLevel(level int) {
 	if level < 0 {
 		level = 0

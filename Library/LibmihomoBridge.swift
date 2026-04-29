@@ -5,26 +5,27 @@ import Libmihomo
 /// gomobile emits `BOOL Func(args, NSError** error)` signatures; Swift only
 /// auto-bridges that pattern to `throws` for Obj-C instance methods, not for
 /// free functions, so we wrap manually.
+///
+/// The Go core owns runtime state. Callers configure paths once
+/// (home dir, command socket, settings file, profiles dir, active-profile
+/// pointer, log dir) and then drive lifecycle with `start()` / `reload()` /
+/// `stop()` — no YAML or settings flow through these wrappers.
 public enum LibmihomoBridge {
-    public static func start(yaml: Data, disableExternalController: Bool = false) throws {
+    public static func start() throws {
         var err: NSError?
-        let options = LibmihomoStartOptions()
-        options.disableExternalController = disableExternalController
-        let ok = LibmihomoStart(yaml, options, &err)
+        let ok = LibmihomoStart(&err)
         if !ok {
             throw err ?? makeError("LibmihomoStart returned false")
         }
     }
 
-    /// Hot-swap the running mihomo core with a new YAML config. The TUN
-    /// fd, OOM killer, and gRPC command server keep running across the
-    /// swap. Pass the same `disableExternalController` flag used at start
-    /// so the controller surface doesn't flip on/off mid-session.
-    public static func reload(yaml: Data, disableExternalController: Bool = false) throws {
+    /// Hot-swap the running mihomo core. Re-reads the active-profile YAML
+    /// and runtime settings from disk, then asks mihomo to apply the new
+    /// config. The TUN fd, OOM killer, and gRPC command server keep
+    /// running across the swap.
+    public static func reload() throws {
         var err: NSError?
-        let options = LibmihomoStartOptions()
-        options.disableExternalController = disableExternalController
-        let ok = LibmihomoReload(yaml, options, &err)
+        let ok = LibmihomoReload(&err)
         if !ok {
             throw err ?? makeError("LibmihomoReload returned false")
         }
@@ -42,6 +43,10 @@ public enum LibmihomoBridge {
         LibmihomoStop()
     }
 
+    /// Push a runtime log filter without going through Reload. Used as a
+    /// no-restart hook for tests / direct callers; the host app normally
+    /// drives this by writing settings.json + asking the extension to
+    /// `reload()`, which re-reads the file and lands in the same place.
     public static func setLogLevel(_ level: Int) {
         LibmihomoSetLogLevel(level)
     }
@@ -54,6 +59,27 @@ public enum LibmihomoBridge {
     /// be inside the App Group container so the host app can connect.
     public static func setCommandSocketPath(_ path: String) {
         LibmihomoSetCommandSocketPath(path)
+    }
+
+    /// Tell the Go core where the host app's `settings.json` lives. The
+    /// core re-reads this file on every Start / Reload, so toggling a
+    /// setting in the host UI takes effect on the next reload without
+    /// shuttling values through the extension's IPC.
+    public static func setSettingsPath(_ path: String) {
+        LibmihomoSetSettingsPath(path)
+    }
+
+    /// Tell the Go core where the host app's `active-profile` UUID file
+    /// lives. Combined with `setProfilesDir` this lets Start / Reload
+    /// load the active YAML themselves — the extension never reads it.
+    public static func setActiveProfilePointer(_ path: String) {
+        LibmihomoSetActiveProfilePointer(path)
+    }
+
+    /// Tell the Go core where the host app's `Profiles/` directory
+    /// lives (containing `index.json` plus one YAML per profile).
+    public static func setProfilesDir(_ path: String) {
+        LibmihomoSetProfilesDir(path)
     }
 
     /// Configure the Go OOM killer's per-process memory budget. Pass 0 to
@@ -71,7 +97,8 @@ public enum LibmihomoBridge {
 
     /// Parses the YAML and throws on syntax / semantic errors. Doesn't
     /// apply anything; safe to call from the host app while the tunnel
-    /// is running.
+    /// is running. Used by the profile editor before saving — unrelated
+    /// to the disk-loading path Start / Reload follow.
     public static func validate(yaml: Data) throws {
         var err: NSError?
         LibmihomoValidate(yaml, &err)

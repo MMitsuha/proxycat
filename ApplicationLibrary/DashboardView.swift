@@ -10,8 +10,7 @@ public struct DashboardView: View {
 
     @State private var connectError: String?
 
-    @AppStorage(AppConfiguration.disableExternalControllerKey)
-    private var disableExternalController = false
+    @ObservedObject private var settings = RuntimeSettings.shared
 
     public init() {}
 
@@ -60,7 +59,7 @@ public struct DashboardView: View {
             .tint(profile.isConnected ? .red : .accentColor)
             .disabled(profileStore.active == nil)
 
-            if profile.isConnected, !disableExternalController, let url = URL(string: "http://127.0.0.1:9090/ui/") {
+            if profile.isConnected, !settings.disableExternalController, let url = URL(string: "http://127.0.0.1:9090/ui/") {
                 Link(destination: url) {
                     HStack(spacing: 6) {
                         Image(systemName: "safari")
@@ -73,7 +72,7 @@ public struct DashboardView: View {
                 }
             }
 
-            if profile.isConnected, !disableExternalController {
+            if profile.isConnected, !settings.disableExternalController {
                 NavigationLink {
                     ProxiesView()
                 } label: {
@@ -171,7 +170,7 @@ public struct DashboardView: View {
 
     @ViewBuilder
     private var connectionsCell: some View {
-        let isInteractive = profile.isConnected && !disableExternalController
+        let isInteractive = profile.isConnected && !settings.disableExternalController
         if isInteractive {
             NavigationLink {
                 ConnectionsView()
@@ -211,20 +210,16 @@ public struct DashboardView: View {
             profile.stop()
             return
         }
-        guard let active = profileStore.active else {
+        guard profileStore.active != nil else {
             connectError = String(localized: "Pick a profile first.")
             return
         }
-        // Read the YAML off-main (could be tens of KB on cold storage)
-        // and start the tunnel asynchronously so the manager save in
-        // ExtensionProfile.start can be awaited without blocking the UI.
-        let url = FilePath.profilesDirectory.appendingPathComponent(active.fileName)
+        // The Go core reads the active profile YAML and runtime settings
+        // from the App Group container itself, so all the host has to do
+        // is await the manager save inside ExtensionProfile.start().
         Task {
             do {
-                let yaml = try await Task.detached(priority: .userInitiated) {
-                    try String(contentsOf: url, encoding: .utf8)
-                }.value
-                try await profile.start(configContent: yaml, disableExternalController: disableExternalController)
+                try await profile.start()
             } catch {
                 connectError = error.localizedDescription
             }

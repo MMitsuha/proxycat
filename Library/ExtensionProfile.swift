@@ -3,7 +3,14 @@ import Foundation
 import NetworkExtension
 
 /// Wraps NEVPNManager so the rest of the app never imports
-/// NetworkExtension directly. Mirrors sing-box-for-apple's ExtensionProfile.
+/// NetworkExtension directly. Mirrors sing-box-for-apple's
+/// ExtensionProfile.
+///
+/// The shape is deliberately small: `start()` and `stop()` for lifecycle,
+/// `reload()` to nudge the extension after the host has written new
+/// state to the App Group container. There are no per-setting methods
+/// because the Go core re-reads settings.json + the active profile on
+/// every reload — settings flow through the file system, not this API.
 @MainActor
 public final class ExtensionProfile: ObservableObject {
     @Published public private(set) var status: NEVPNStatus = .invalid
@@ -41,7 +48,7 @@ public final class ExtensionProfile: ObservableObject {
         attachObserver(mgr)
     }
 
-    public func start(configContent: String, disableExternalController: Bool = false) async throws {
+    public func start() async throws {
         guard let manager else { throw ExtensionProfileError.notLoaded }
         if !manager.isEnabled {
             // Re-enabling has to be persisted before startVPNTunnel will
@@ -51,48 +58,22 @@ public final class ExtensionProfile: ObservableObject {
             try await manager.saveToPreferences()
             try await manager.loadFromPreferences()
         }
-        var options: [String: NSObject] = [:]
-        options[AppConfiguration.configContentKey] = configContent as NSString
-        options[AppConfiguration.disableExternalControllerKey] = NSNumber(value: disableExternalController)
-        // Forward the user's persisted runtime log level so the extension
-        // applies it before mihomo emits its first message. The Network
-        // Extension lives in a separate process, so the host's UserDefaults
-        // value isn't visible there without going through the start options
-        // (or App-Group defaults, which aren't wired here).
-        options[AppConfiguration.logLevelKey] = NSNumber(value: Self.persistedLogLevel)
-        try manager.connection.startVPNTunnel(options: options)
-    }
-
-    /// Hot-apply a new mihomo log level on the running tunnel. No-op when
-    /// disconnected — the next `start(configContent:…)` reads the persisted
-    /// value from UserDefaults and seeds the extension afresh.
-    public func setLogLevel(_ level: Int) async {
-        guard isConnected, let session = manager?.connection as? NETunnelProviderSession else {
-            return
-        }
-        guard let payload = "loglevel:\(level)".data(using: .utf8) else { return }
-        try? session.sendProviderMessage(payload) { _ in }
-    }
-
-    /// Reads the user's persisted log level (0=DEBUG…4=SILENT). Falls back
-    /// to WARNING (2) — matching the Go core's `runtimeLogLevel` default —
-    /// when the key isn't set yet.
-    private static var persistedLogLevel: Int {
-        let defaults = UserDefaults.standard
-        guard defaults.object(forKey: AppConfiguration.logLevelKey) != nil else {
-            return 2
-        }
-        return defaults.integer(forKey: AppConfiguration.logLevelKey)
+        // No options dictionary: the extension reads the active profile
+        // YAML and runtime settings from the App Group container itself.
+        try manager.connection.startVPNTunnel(options: nil)
     }
 
     public func stop() {
         manager?.connection.stopVPNTunnel()
     }
 
-    /// Asks the running tunnel to hot-reload the currently active profile.
-    /// No-op (and not an error) when the tunnel isn't connected — switching
-    /// profiles before connecting is fine, the next connect picks the new
-    /// one up by reading from disk.
+    /// Asks the running tunnel to hot-reload from disk. Triggered by the
+    /// host whenever the user changes the active profile, edits the
+    /// active YAML, or toggles a runtime setting — the Go core re-reads
+    /// everything fresh, so a single call covers all three flows.
+    ///
+    /// No-op (and not an error) when the tunnel isn't connected: the
+    /// next `start()` already reads the latest disk state.
     ///
     /// Throws if the extension reports a reload failure (e.g. invalid
     /// YAML on disk). The caller decides whether to surface that to the

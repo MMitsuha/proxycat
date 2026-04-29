@@ -5,36 +5,21 @@ import Libmihomo
 import NetworkExtension
 import os.log
 
-/// The Network Extension entry point. Heavy lifting (memory management,
-/// gomobile bridge, gRPC command server) lives here; UI lives in
-/// Pcat / ApplicationLibrary.
+/// Network Extension entry point. Intentionally a thin shim — the Go core
+/// owns all runtime state (YAML, settings, log level, controller config),
+/// and we only configure paths once and trigger lifecycle events. A
+/// setting toggled in the host UI propagates by writing settings.json
+/// (which Go re-reads) and a single "reload" message that lands in
+/// `handleAppMessage` below.
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let logger = Logger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
     private var memoryObserverToken: UUID?
 
-    /// Cached at startTunnel so a later "reload" message keeps the
-    /// controller / Web UI exposure in lock-step with the original
-    /// startup choice. The host app's UserDefaults isn't shared with
-    /// the extension, so we have to remember it here.
-    private var disableExternalController = false
-
     // MARK: - Lifecycle
 
-    override func startTunnel(options: [String: NSObject]?) async throws {
+    override func startTunnel(options _: [String: NSObject]?) async throws {
         Self.logger.info("startTunnel")
-
-        guard let yaml = (options?[AppConfiguration.configContentKey] as? String), !yaml.isEmpty else {
-            throw PTPError("missing \(AppConfiguration.configContentKey) in startTunnel options")
-        }
-        let disableExternalController = (options?[AppConfiguration.disableExternalControllerKey] as? NSNumber)?.boolValue ?? false
-        self.disableExternalController = disableExternalController
-
-        // Apply the host-app's persisted log level *before* anything else
-        // touches mihomo so the wrapper's runtime filter is correct when
-        // hub.ApplyConfig fires. Falls back to WARNING (2) if absent.
-        let logLevel = (options?[AppConfiguration.logLevelKey] as? NSNumber)?.intValue ?? 2
-        LibmihomoBridge.setLogLevel(logLevel)
 
         // 1. Configure tunnel network settings *before* taking the fd. iOS
         //    materializes the utun device only after this completes.
@@ -55,16 +40,17 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //    react if the bind itself spikes memory.
         startMemoryMonitor()
 
-        // 4a. Tell mihomo to keep its mutable state (cache.db, downloaded
-        //     providers, external-ui) inside the App Group container. The
-        //     default ~/.config/mihomo path is unwritable in the iOS
-        //     Network Extension sandbox.
-        LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
+        // 4. Tell the Go core where every shared file lives. After this
+        //    point Start / Reload re-read the active YAML and runtime
+        //    settings on their own — nothing flows through this extension's
+        //    options dictionary or sendProviderMessage payload other than
+        //    the literal lifecycle signals.
+        configureLibmihomoPaths()
 
-        // 4a.i. Seed compile-time bundled geo databases and external UI
-        //       into the working directory so mihomo finds them on first
-        //       run before any download happens. Idempotent — already-up-
-        //       to-date assets are skipped.
+        // 4a. Seed compile-time bundled geo databases and external UI
+        //     into the working directory so mihomo finds them on first
+        //     run before any download happens. Idempotent — already-up-
+        //     to-date assets are skipped.
         BundledAssets.installIfNeeded()
 
         // 4b. Tell the Go OOM killer the actual iOS budget (resident +
@@ -79,22 +65,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             Self.logger.info("OOM budget set to \(budget, privacy: .public) (resident=\(resident, privacy: .public) available=\(available, privacy: .public))")
         }
 
-        // 4c. Tell mihomo where to expose the gRPC command server. Same
-        //     path the host app's CommandClient dials. mihomo's REST API
-        //     (external-controller, port 9090) is intentionally not used
-        //     for IPC — that surface is reserved for the end-user.
-        LibmihomoBridge.setCommandSocketPath(FilePath.commandSocketPath)
-
-        // 4d. Push the iOS fd into mihomo before starting so the parsed
+        // 4c. Push the iOS fd into mihomo before starting so the parsed
         //     YAML's TUN inbound binds to the kernel-supplied fd and we
         //     overwrite address fields that don't apply on iOS.
         try LibmihomoBridge.setTunFd(Int(fd))
 
-        // 4e. Open a per-session log file and tee mihomo's log stream
+        // 4d. Open a per-session log file and tee mihomo's log stream
         //     into it. The host app reads from FilePath.logsDirectory
         //     to surface them in the Saved Logs list. Failures here
         //     are non-fatal: the live log stream still works.
-        LibmihomoBridge.setLogFileDir(FilePath.logsDirectory.path)
         do {
             let logPath = try LibmihomoBridge.startLogFile()
             Self.logger.info("session log → \(logPath, privacy: .public)")
@@ -102,12 +81,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             Self.logger.warning("could not open session log: \(error.localizedDescription, privacy: .public)")
         }
 
-        // 5. Start mihomo with the YAML. Start() also brings up the
-        //    Unix-domain gRPC server at the path set in step 4c.
-        guard let yamlData = yaml.data(using: .utf8) else {
-            throw PTPError("config YAML not utf8")
-        }
-        try LibmihomoBridge.start(yaml: yamlData, disableExternalController: disableExternalController)
+        // 5. Start mihomo. Go reads the active profile YAML and
+        //    settings.json from disk; this call returns the parser /
+        //    apply error verbatim if either fails.
+        try LibmihomoBridge.start()
 
         Self.logger.info("startTunnel done")
     }
@@ -135,27 +112,26 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     override func handleAppMessage(_ messageData: Data) async -> Data? {
         // Streaming status / logs go through the gRPC channel, not here.
-        // This surface is for short, one-shot host→extension commands.
-        if let cmd = String(data: messageData, encoding: .utf8) {
-            switch cmd {
-            case "ping":
-                return "pong".data(using: .utf8)
-            case let s where s.hasPrefix("loglevel:"):
-                let raw = Int(s.dropFirst("loglevel:".count)) ?? 2
-                LibmihomoBridge.setLogLevel(raw)
-                return nil
-            case "reload":
-                return await handleReload()
-            default:
-                return nil
-            }
+        // This surface carries one signal: "reload". The host sends it
+        // when the active profile changes OR when the user toggles a
+        // runtime setting; Go re-reads everything from disk either way,
+        // so a single message type covers both flows.
+        guard let cmd = String(data: messageData, encoding: .utf8) else {
+            return nil
         }
-        return nil
+        switch cmd {
+        case "ping":
+            return "pong".data(using: .utf8)
+        case "reload":
+            return await handleReload()
+        default:
+            return nil
+        }
     }
 
-    /// Hot-swap mihomo to whatever profile the host has currently marked
-    /// active in the App Group container. Returns nil on success; an
-    /// error string (UTF-8) on failure so the host can surface it.
+    /// Hot-swap mihomo to whatever the host has currently marked active
+    /// in the App Group container. Returns nil on success; an error
+    /// string (UTF-8) on failure so the host can surface it.
     private func handleReload() async -> Data? {
         // Mark the connection as reasserting so SwiftUI shows the
         // "reasserting" state (orange dot) for the duration of the swap.
@@ -165,17 +141,41 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         defer { reasserting = false }
 
         do {
-            let yaml = try ProfileStore.loadActiveContentFromDisk()
-            guard let data = yaml.data(using: .utf8) else {
-                throw PTPError("active profile YAML is not utf8")
-            }
-            try LibmihomoBridge.reload(yaml: data, disableExternalController: disableExternalController)
+            try LibmihomoBridge.reload()
             Self.logger.info("reload done")
             return nil
         } catch {
             Self.logger.error("reload failed: \(error.localizedDescription, privacy: .public)")
             return error.localizedDescription.data(using: .utf8)
         }
+    }
+
+    // MARK: - Setup
+
+    /// Sets every path the Go core needs before Start. Idempotent — safe
+    /// to call again on a future startTunnel after a reconnect.
+    private func configureLibmihomoPaths() {
+        // Tell mihomo to keep its mutable state (cache.db, downloaded
+        // providers, external-ui) inside the App Group container. The
+        // default ~/.config/mihomo path is unwritable in the iOS
+        // Network Extension sandbox.
+        LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
+
+        // Tell mihomo where to expose the gRPC command server. Same
+        // path the host app's CommandClient dials. mihomo's REST API
+        // (external-controller, port 9090) is intentionally not used
+        // for IPC — that surface is reserved for the end-user.
+        LibmihomoBridge.setCommandSocketPath(FilePath.commandSocketPath)
+
+        // Wire the on-disk shared state Go reads on every Reload:
+        // settings.json (controller toggle, log level), the active
+        // profile pointer, and the profiles directory.
+        LibmihomoBridge.setSettingsPath(FilePath.settingsFilePath)
+        LibmihomoBridge.setActiveProfilePointer(FilePath.activeProfilePointer.path)
+        LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
+
+        // Where per-session log files land for the Saved Logs UI.
+        LibmihomoBridge.setLogFileDir(FilePath.logsDirectory.path)
     }
 
     // MARK: - Network settings

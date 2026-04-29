@@ -3,8 +3,7 @@ import SwiftUI
 
 public struct ProxiesView: View {
     @EnvironmentObject private var profile: ExtensionProfile
-    @AppStorage(AppConfiguration.disableExternalControllerKey)
-    private var disableExternalController = false
+    @ObservedObject private var settings = RuntimeSettings.shared
     @StateObject private var store = ProxiesStore()
 
     public init() {}
@@ -16,7 +15,7 @@ public struct ProxiesView: View {
                     symbol: "powerplug.portrait",
                     title: String(localized: "Connect first to manage proxies")
                 )
-            } else if disableExternalController {
+            } else if settings.disableExternalController {
                 empty(
                     symbol: "network.slash",
                     title: String(localized: "Web Controller is off")

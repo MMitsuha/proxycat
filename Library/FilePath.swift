@@ -63,6 +63,15 @@ public enum FilePath {
         sharedDirectory.appendingPathComponent(AppConfiguration.commandSocketName).path
     }
 
+    /// Path of the shared runtime-settings JSON. The host app's
+    /// `RuntimeSettings` writes it; the Go core reads it on every
+    /// Start / Reload / ApplySettings. Lives in the App Group root
+    /// next to `active-profile` so the same set of paths configures
+    /// every cross-process consumer.
+    public static var settingsFilePath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.settingsFileName).path
+    }
+
     private static func ensureSubdirectory(_ name: String) -> URL {
         let url = sharedDirectory.appendingPathComponent(name, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

@@ -9,6 +9,11 @@ import NetworkExtension
 /// VPN reaches `.connecting` / `.connected` and stops it on disconnect.
 /// Views just read `@Published` traffic/memory/logs — none of them need to
 /// call `connect()` themselves any more.
+///
+/// Also bridges the host app's runtime-settings store to the running
+/// tunnel: any change to `RuntimeSettings.shared` posts
+/// `runtimeSettingsDidChange`, which we react to by asking the extension
+/// to reload (Go re-reads `settings.json` from disk and hot-applies).
 @MainActor
 public final class ExtensionEnvironment: ObservableObject {
     public let profile: ExtensionProfile
@@ -20,6 +25,7 @@ public final class ExtensionEnvironment: ObservableObject {
 
     private var statusObservation: AnyCancellable?
     private var activeContentObserver: NSObjectProtocol?
+    private var settingsObserver: NSObjectProtocol?
     private var memoryObserverToken: UUID?
     /// Surfaces the most recent reload error to the UI so taps on a
     /// profile while the tunnel is up don't fail silently.
@@ -41,22 +47,28 @@ public final class ExtensionEnvironment: ObservableObject {
         if let token = activeContentObserver {
             NotificationCenter.default.removeObserver(token)
         }
+        if let token = settingsObserver {
+            NotificationCenter.default.removeObserver(token)
+        }
         if let token = memoryObserverToken {
             MemoryMonitor.shared.remove(token)
         }
     }
 
     // The host app process has its own Go runtime, so the extension's
-    // SetHomeDir doesn't propagate. Without this, validate() lets mihomo
-    // fall back to ~/.config/mihomo which doesn't exist in the iOS app
-    // sandbox — any `[GEOIP,…]` rule then fails to write the downloaded
-    // MMDB with "open: no such file or directory".
+    // path setters don't propagate. We re-apply the same paths here so
+    // host-side `validate()` finds the bundled GeoIP/GeoSite files in
+    // the working directory, and so any future host-side calls into the
+    // bridge see the same shared state the extension does.
     //
     // Also seeds compile-time bundled assets (geo dbs, external UI)
     // into the working directory so the host app's Settings and any
     // host-side validate() calls see the same files mihomo would.
     private static func bootstrapMihomoPaths() {
         LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
+        LibmihomoBridge.setSettingsPath(FilePath.settingsFilePath)
+        LibmihomoBridge.setActiveProfilePointer(FilePath.activeProfilePointer.path)
+        LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
         BundledAssets.installIfNeeded()
     }
 
@@ -68,6 +80,7 @@ public final class ExtensionEnvironment: ObservableObject {
         }
         observeProfileStatus()
         observeActiveContent()
+        observeRuntimeSettings()
         startMemoryPressureWatch()
         // Make sure the current state is honored even before the
         // observer's first event fires (e.g. app cold-launches with VPN
@@ -113,11 +126,24 @@ public final class ExtensionEnvironment: ObservableObject {
         }
     }
 
+    private func observeRuntimeSettings() {
+        guard settingsObserver == nil else { return }
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: AppConfiguration.runtimeSettingsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.reloadIfConnected()
+            }
+        }
+    }
+
     /// Fires `ExtensionProfile.reload()` when the tunnel is up so that
-    /// switching to a different profile (or rewriting the active YAML)
-    /// hot-applies the new config without requiring the user to disconnect
-    /// and reconnect by hand. No-ops while disconnected — the next
-    /// `Connect` already reads the active profile fresh from disk.
+    /// switching profiles, editing the active YAML, or toggling a
+    /// runtime setting hot-applies without requiring the user to
+    /// disconnect and reconnect by hand. No-ops while disconnected —
+    /// the next `start()` already reads everything fresh from disk.
     private func reloadIfConnected() async {
         guard profile.isConnected else { return }
         do {
