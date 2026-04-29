@@ -212,7 +212,10 @@ final class LogViewModel: ObservableObject {
 
         guard let client = commandClient else { return }
         // The gRPC connection is owned by ExtensionEnvironment now —
-        // no per-view connect() needed.
+        // no per-view connect() needed. We only enable the host-side
+        // log buffer while this view is visible, so a session that
+        // never visits the Logs tab doesn't accumulate any log entries.
+        client.enableLogBuffering()
 
         let debouncedSearch = $searchText
             .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
@@ -236,14 +239,22 @@ final class LogViewModel: ObservableObject {
         }
         .store(in: &bag)
 
+        // sink + [weak self] instead of assign(to:on:) — the latter
+        // captures self strongly, and the resulting AnyCancellable is
+        // stored in self.bag, forming a retain cycle that only breaks
+        // if unbind() is called. With the weak sink the cycle is gone
+        // even if the view is torn down without onDisappear firing.
         client.$isConnected
             .receive(on: RunLoop.main)
-            .assign(to: \.isConnected, on: self)
+            .sink { [weak self] connected in
+                self?.isConnected = connected
+            }
             .store(in: &bag)
     }
 
     func unbind() {
         environment?.logSearchText = searchText
+        commandClient?.disableLogBuffering()
         bag.removeAll()
     }
 

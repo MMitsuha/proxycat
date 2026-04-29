@@ -22,6 +22,11 @@ public final class CommandClient: ObservableObject {
 
     public static let maxLogBuffer = 1500
 
+    /// Logs from the gRPC stream are kept on the host side only while a
+    /// LogView is on screen. Off by default so a host app that never
+    /// visits the Logs tab pays no buffer cost over a long session.
+    private var logBufferingEnabled = false
+
     private var goClient: LibmihomoCommandClient?
     private var bridge: ClientBridge?
 
@@ -57,6 +62,21 @@ public final class CommandClient: ObservableObject {
 
     public func clearLogs() {
         logs.removeAll(keepingCapacity: false)
+    }
+
+    /// Turn on log buffering. Subsequent log frames from the extension
+    /// are appended to `logs` (capped by `maxLogBuffer`). Idempotent.
+    public func enableLogBuffering() {
+        logBufferingEnabled = true
+    }
+
+    /// Stop buffering and drop anything already accumulated. Safe to
+    /// call when buffering is already off.
+    public func disableLogBuffering() {
+        logBufferingEnabled = false
+        if !logs.isEmpty {
+            logs.removeAll(keepingCapacity: false)
+        }
     }
 
     // MARK: - Reconnect loop
@@ -143,6 +163,7 @@ public final class CommandClient: ObservableObject {
     }
 
     fileprivate func didReceive(log entry: LogEntry) {
+        guard logBufferingEnabled else { return }
         logs.append(entry)
         if logs.count > Self.maxLogBuffer {
             logs.removeFirst(logs.count - Self.maxLogBuffer)

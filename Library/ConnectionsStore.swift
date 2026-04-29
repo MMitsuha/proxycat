@@ -86,6 +86,14 @@ public final class ConnectionsStore: ObservableObject {
     private var streamTask: Task<Void, Never>?
     private var wsTask: URLSessionWebSocketTask?
 
+    /// Reusable scratch buffers for `apply(_:)`. Avoids allocating a
+    /// fresh `[String: Connection]` and `[String: Int64]` every WS
+    /// frame (1 Hz) — over a long session that's hundreds of dictionary
+    /// allocations Swift's allocator + ARC have to chew through, on
+    /// top of the connection list itself.
+    private var prevByID: [String: Connection] = [:]
+    private var chainSpeedsBuf: [String: Int64] = [:]
+
     /// `ISO8601DateFormatter` parses are thread-safe after configuration,
     /// but the type isn't formally Sendable, so we wrap them. mihomo
     /// emits RFC3339Nano (Go default for `time.Time` JSON), which the
@@ -262,15 +270,16 @@ public final class ConnectionsStore: ObservableObject {
 
     private func apply(_ snapshot: ConnectionsSnapshot) {
         let prev = connections
-        var prevByID: [String: Connection] = [:]
+        prevByID.removeAll(keepingCapacity: true)
         prevByID.reserveCapacity(prev.count)
         for c in prev { prevByID[c.id] = c }
 
+        let incoming = snapshot.connections ?? []
         var next: [Connection] = []
-        next.reserveCapacity(snapshot.connections?.count ?? 0)
-        var chainSpeeds: [String: Int64] = [:]
+        next.reserveCapacity(incoming.count)
+        chainSpeedsBuf.removeAll(keepingCapacity: true)
 
-        for var c in snapshot.connections ?? [] {
+        for var c in incoming {
             if let p = prevByID[c.id] {
                 // Bytes are monotonic per connection. Clamp to 0 to
                 // defend against the edge case where mihomo's snapshot
@@ -284,7 +293,7 @@ public final class ConnectionsStore: ObservableObject {
             }
             next.append(c)
             for chain in c.chains {
-                chainSpeeds[chain, default: 0] += c.downloadSpeed
+                chainSpeedsBuf[chain, default: 0] += c.downloadSpeed
             }
         }
 
@@ -298,7 +307,7 @@ public final class ConnectionsStore: ObservableObject {
         connections = next
         uploadTotal = snapshot.uploadTotal
         downloadTotal = snapshot.downloadTotal
-        speedByChain = chainSpeeds
+        speedByChain = chainSpeedsBuf
     }
 
     private func humanReadable(_ error: Error) -> String {

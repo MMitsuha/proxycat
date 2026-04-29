@@ -20,6 +20,7 @@ public final class ExtensionEnvironment: ObservableObject {
 
     private var statusObservation: AnyCancellable?
     private var activeContentObserver: NSObjectProtocol?
+    private var memoryObserverToken: UUID?
     /// Surfaces the most recent reload error to the UI so taps on a
     /// profile while the tunnel is up don't fail silently.
     @Published public var reloadError: String?
@@ -39,6 +40,9 @@ public final class ExtensionEnvironment: ObservableObject {
     deinit {
         if let token = activeContentObserver {
             NotificationCenter.default.removeObserver(token)
+        }
+        if let token = memoryObserverToken {
+            MemoryMonitor.shared.remove(token)
         }
     }
 
@@ -64,10 +68,36 @@ public final class ExtensionEnvironment: ObservableObject {
         }
         observeProfileStatus()
         observeActiveContent()
+        startMemoryPressureWatch()
         // Make sure the current state is honored even before the
         // observer's first event fires (e.g. app cold-launches with VPN
         // already connected from a previous session).
         applyStatus(profile.status)
+    }
+
+    // The host app process gets memory warnings from iOS too — not just
+    // the NE — and used to ignore them entirely. Wire MemoryMonitor here
+    // so we can drop the largest reclaimable host-side buffer (logs)
+    // before jetsam fires. ConnectionsStore / ProxiesStore live as
+    // @StateObject of their views and disappear when the user navigates
+    // away, so they don't need a hook here.
+    private func startMemoryPressureWatch() {
+        guard memoryObserverToken == nil else { return }
+        MemoryMonitor.shared.start()
+        memoryObserverToken = MemoryMonitor.shared.observe { [weak self] pressure in
+            Task { @MainActor [weak self] in
+                self?.handleMemoryPressure(pressure)
+            }
+        }
+    }
+
+    private func handleMemoryPressure(_ pressure: MemoryMonitor.Pressure) {
+        switch pressure {
+        case .normal:
+            return
+        case .warning, .critical:
+            commandClient.clearLogs()
+        }
     }
 
     private func observeActiveContent() {
