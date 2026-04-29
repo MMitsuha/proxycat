@@ -21,6 +21,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         guard let yaml = (options?[AppConfiguration.configContentKey] as? String), !yaml.isEmpty else {
             throw PTPError("missing \(AppConfiguration.configContentKey) in startTunnel options")
         }
+        let disableExternalController = (options?[AppConfiguration.disableExternalControllerKey] as? NSNumber)?.boolValue ?? false
 
         // 1. Configure tunnel network settings *before* taking the fd. iOS
         //    materializes the utun device only after this completes.
@@ -93,7 +94,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         guard let yamlData = yaml.data(using: .utf8) else {
             throw PTPError("config YAML not utf8")
         }
-        try LibmihomoBridge.start(yaml: yamlData)
+        try LibmihomoBridge.start(yaml: yamlData, disableExternalController: disableExternalController)
 
         Self.logger.info("startTunnel done")
     }

@@ -6,9 +6,11 @@ import Libmihomo
 /// auto-bridges that pattern to `throws` for Obj-C instance methods, not for
 /// free functions, so we wrap manually.
 public enum LibmihomoBridge {
-    public static func start(yaml: Data) throws {
+    public static func start(yaml: Data, disableExternalController: Bool = false) throws {
         var err: NSError?
-        let ok = LibmihomoStart(yaml, &err)
+        let options = LibmihomoStartOptions()
+        options.disableExternalController = disableExternalController
+        let ok = LibmihomoStart(yaml, options, &err)
         if !ok {
             throw err ?? makeError("LibmihomoStart returned false")
         }

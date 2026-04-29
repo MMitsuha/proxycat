@@ -64,6 +64,21 @@ func SetHomeDir(path string) {
 	C.SetHomeDir(path)
 }
 
+// StartOptions tunes Start's behavior on top of whatever the parsed YAML
+// says. Pass nil for the historical defaults — external controller bound
+// to 127.0.0.1:9090 with the bundled UI and loopback-only CORS.
+//
+// Keep this struct gomobile-friendly: primitives only, no slices, no
+// nested structs.
+type StartOptions struct {
+	// DisableExternalController, when true, prevents mihomo from binding
+	// any external-controller listener (HTTP, TLS, Unix, named-pipe) and
+	// suppresses the bundled Web UI. The wrapper's gRPC command socket
+	// is unaffected, so the host app keeps working without exposing a
+	// local HTTP surface other processes on the device could reach.
+	DisableExternalController bool
+}
+
 // Start parses the YAML config and brings the mihomo core up.
 // If a TUN file descriptor was previously installed via SetTunFd, the parsed
 // config is patched so the TUN inbound uses it instead of opening a kernel
@@ -71,7 +86,9 @@ func SetHomeDir(path string) {
 // and inet4/inet6 addresses are also cleared because on iOS the host's
 // NEPacketTunnelNetworkSettings already owns those values; leaving the YAML
 // defaults causes "bad tun name" or IPv6 bind failures.
-func Start(yamlConfig []byte) error {
+//
+// options may be nil; see StartOptions for the available toggles.
+func Start(yamlConfig []byte, options *StartOptions) error {
 	startMu.Lock()
 	defer startMu.Unlock()
 
@@ -93,20 +110,32 @@ func Start(yamlConfig []byte) error {
 
 	cfg.DNS.Enable = true
 	cfg.DNS.EnhancedMode = C.DNSMapping
-	cfg.Controller.ExternalController = "127.0.0.1:9090"
-	cfg.Controller.Secret = ""
-	cfg.Controller.ExternalUI = "ui"
-	// Mihomo's default is AllowOrigins=["*"] / AllowPrivateNetwork=true, which
-	// lets any page the user visits in any browser reach the controller via
-	// CORS and read responses. The controller is bound to loopback already,
-	// so restricting CORS to loopback origins closes the cross-site hole
-	// without affecting the bundled UI (same-origin) or local debugging UIs.
-	cfg.Controller.Cors.AllowOrigins = []string{
-		"http://127.0.0.1:*",
-		"http://[::1]:*",
-		"http://localhost:*",
+	if options != nil && options.DisableExternalController {
+		// Clear every listener field too, so a YAML that asks for a
+		// controller (HTTP / TLS / Unix / named-pipe) can't sneak one
+		// back up while the user thinks it's off.
+		cfg.Controller.ExternalController = ""
+		cfg.Controller.ExternalControllerTLS = ""
+		cfg.Controller.ExternalControllerUnix = ""
+		cfg.Controller.ExternalControllerPipe = ""
+		cfg.Controller.ExternalUI = ""
+		cfg.Controller.Secret = ""
+	} else {
+		cfg.Controller.ExternalController = "127.0.0.1:9090"
+		cfg.Controller.Secret = ""
+		cfg.Controller.ExternalUI = "ui"
+		// Mihomo's default is AllowOrigins=["*"] / AllowPrivateNetwork=true, which
+		// lets any page the user visits in any browser reach the controller via
+		// CORS and read responses. The controller is bound to loopback already,
+		// so restricting CORS to loopback origins closes the cross-site hole
+		// without affecting the bundled UI (same-origin) or local debugging UIs.
+		cfg.Controller.Cors.AllowOrigins = []string{
+			"http://127.0.0.1:*",
+			"http://[::1]:*",
+			"http://localhost:*",
+		}
+		cfg.Controller.Cors.AllowPrivateNetwork = false
 	}
-	cfg.Controller.Cors.AllowPrivateNetwork = false
 	cfg.General.GeodataLoader = ""
 	cfg.Profile.StoreSelected = true
 	cfg.Profile.StoreFakeIP = true
