@@ -72,6 +72,22 @@ public struct DashboardView: View {
                     .font(.subheadline)
                 }
             }
+
+            if profile.isConnected, !disableExternalController {
+                NavigationLink {
+                    ProxiesView()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "globe.asia.australia")
+                        Text("Proxies")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.subheadline)
+                }
+            }
         }
         .card()
     }
