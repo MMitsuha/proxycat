@@ -164,6 +164,28 @@ public struct DashboardView: View {
         HStack(spacing: 12) {
             MemoryBar(memory: commandClient.memory, live: profile.isConnected)
             Divider().frame(height: 36)
+            connectionsCell
+        }
+        .card()
+    }
+
+    @ViewBuilder
+    private var connectionsCell: some View {
+        let isInteractive = profile.isConnected && !disableExternalController
+        if isInteractive {
+            NavigationLink {
+                ConnectionsView()
+            } label: {
+                connectionsLabel(showsChevron: true)
+            }
+            .buttonStyle(.plain)
+        } else {
+            connectionsLabel(showsChevron: false)
+        }
+    }
+
+    private func connectionsLabel(showsChevron: Bool) -> some View {
+        HStack(spacing: 4) {
             VStack(spacing: 2) {
                 Text("\(commandClient.traffic.connections)")
                     .font(.title3.monospacedDigit().weight(.semibold))
@@ -172,9 +194,14 @@ public struct DashboardView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            .frame(width: 56)
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
         }
-        .card()
+        .frame(width: showsChevron ? 72 : 56)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Actions
