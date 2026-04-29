@@ -191,7 +191,7 @@ Gated by the same condition as the Web UI link: `profile.isConnected && !disable
 |---|---|
 | VPN off | Empty state with "Connect first" message and a tunnel icon. |
 | Controller disabled in Settings | Empty state pointing the user at Settings. |
-| Connection refused (controller still spinning up) | Error banner with retry button; auto-retries silently every 1.5s for the first 6s. |
+| Connection refused (controller still spinning up) | Error view with a manual Retry button. Auto-retry deferred — the user almost always re-enters the view *after* the tunnel is fully up, and the spinner-then-error transition is fine. |
 | 404 on PUT (group/name vanished after a config reload) | Toast-style error, then `refresh()`. |
 | 400 on PUT (non-Selector group) | Should not happen — the row tap is disabled for non-Selectors. Defensive: log and ignore. |
 
