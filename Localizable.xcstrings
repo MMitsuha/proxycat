@@ -777,6 +777,9 @@
         }
       }
     },
+    "Privacy" : {
+
+    },
     "Profile has no remote URL" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -983,6 +986,9 @@
           }
         }
       }
+    },
+    "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Takes effect on next connect." : {
+
     },
     "Storage" : {
       "localizations" : {

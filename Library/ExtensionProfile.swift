@@ -41,7 +41,7 @@ public final class ExtensionProfile: ObservableObject {
         attachObserver(mgr)
     }
 
-    public func start(configContent: String) async throws {
+    public func start(configContent: String, disableExternalController: Bool = false) async throws {
         guard let manager else { throw ExtensionProfileError.notLoaded }
         if !manager.isEnabled {
             // Re-enabling has to be persisted before startVPNTunnel will
@@ -53,6 +53,7 @@ public final class ExtensionProfile: ObservableObject {
         }
         var options: [String: NSObject] = [:]
         options[AppConfiguration.configContentKey] = configContent as NSString
+        options[AppConfiguration.disableExternalControllerKey] = NSNumber(value: disableExternalController)
         try manager.connection.startVPNTunnel(options: options)
     }
 

@@ -10,6 +10,9 @@ public struct DashboardView: View {
 
     @State private var connectError: String?
 
+    @AppStorage(AppConfiguration.disableExternalControllerKey)
+    private var disableExternalController = false
+
     public init() {}
 
     public var body: some View {
@@ -57,7 +60,7 @@ public struct DashboardView: View {
             .tint(profile.isConnected ? .red : .accentColor)
             .disabled(profileStore.active == nil)
 
-            if profile.isConnected, let url = URL(string: "http://127.0.0.1:9090/ui/") {
+            if profile.isConnected, !disableExternalController, let url = URL(string: "http://127.0.0.1:9090/ui/") {
                 Link(destination: url) {
                     HStack(spacing: 6) {
                         Image(systemName: "safari")
@@ -178,7 +181,7 @@ public struct DashboardView: View {
                 let yaml = try await Task.detached(priority: .userInitiated) {
                     try String(contentsOf: url, encoding: .utf8)
                 }.value
-                try await profile.start(configContent: yaml)
+                try await profile.start(configContent: yaml, disableExternalController: disableExternalController)
             } catch {
                 connectError = error.localizedDescription
             }

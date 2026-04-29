@@ -6,6 +6,9 @@ public struct SettingsView: View {
     @State private var showClearConfirm = false
     @State private var clearError: String?
 
+    @AppStorage(AppConfiguration.disableExternalControllerKey)
+    private var disableExternalController = false
+
     // ByteCountFormatter spells "Zero KB" by default; we want "0 KB".
     private static let byteFormatter: ByteCountFormatter = {
         let f = ByteCountFormatter()
@@ -48,6 +51,14 @@ public struct SettingsView: View {
                 copyableRow("Go", value: v.go, mono: true)
                 copyableRow("Platform", value: v.platform, mono: true)
                 copyableRow("Wrapper built", value: v.wrapperBuildTime, mono: true)
+            }
+
+            Section {
+                Toggle("Disable Web Controller", isOn: $disableExternalController)
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Takes effect on next connect.")
             }
 
             bundledAssetsSection
