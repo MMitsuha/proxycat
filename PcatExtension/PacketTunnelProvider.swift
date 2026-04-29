@@ -13,6 +13,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private var memoryObserverToken: UUID?
 
+    /// Cached at startTunnel so a later "reload" message keeps the
+    /// controller / Web UI exposure in lock-step with the original
+    /// startup choice. The host app's UserDefaults isn't shared with
+    /// the extension, so we have to remember it here.
+    private var disableExternalController = false
+
     // MARK: - Lifecycle
 
     override func startTunnel(options: [String: NSObject]?) async throws {
@@ -22,6 +28,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             throw PTPError("missing \(AppConfiguration.configContentKey) in startTunnel options")
         }
         let disableExternalController = (options?[AppConfiguration.disableExternalControllerKey] as? NSNumber)?.boolValue ?? false
+        self.disableExternalController = disableExternalController
 
         // 1. Configure tunnel network settings *before* taking the fd. iOS
         //    materializes the utun device only after this completes.
@@ -121,8 +128,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     override func wake() {}
 
     override func handleAppMessage(_ messageData: Data) async -> Data? {
-        // Reserved for future host-app commands (e.g. reload config).
         // Streaming status / logs go through the gRPC channel, not here.
+        // This surface is for short, one-shot host→extension commands.
         if let cmd = String(data: messageData, encoding: .utf8) {
             switch cmd {
             case "ping":
@@ -131,11 +138,38 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 let raw = Int(s.dropFirst("loglevel:".count)) ?? 1
                 LibmihomoBridge.setLogLevel(raw)
                 return nil
+            case "reload":
+                return await handleReload()
             default:
                 return nil
             }
         }
         return nil
+    }
+
+    /// Hot-swap mihomo to whatever profile the host has currently marked
+    /// active in the App Group container. Returns nil on success; an
+    /// error string (UTF-8) on failure so the host can surface it.
+    private func handleReload() async -> Data? {
+        // Mark the connection as reasserting so SwiftUI shows the
+        // "reasserting" state (orange dot) for the duration of the swap.
+        // Network settings stay in place, so the OS treats this as a
+        // soft renegotiation rather than a stop/start cycle.
+        reasserting = true
+        defer { reasserting = false }
+
+        do {
+            let yaml = try ProfileStore.loadActiveContentFromDisk()
+            guard let data = yaml.data(using: .utf8) else {
+                throw PTPError("active profile YAML is not utf8")
+            }
+            try LibmihomoBridge.reload(yaml: data, disableExternalController: disableExternalController)
+            Self.logger.info("reload done")
+            return nil
+        } catch {
+            Self.logger.error("reload failed: \(error.localizedDescription, privacy: .public)")
+            return error.localizedDescription.data(using: .utf8)
+        }
     }
 
     // MARK: - Network settings

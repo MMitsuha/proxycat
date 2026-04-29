@@ -61,6 +61,36 @@ public final class ExtensionProfile: ObservableObject {
         manager?.connection.stopVPNTunnel()
     }
 
+    /// Asks the running tunnel to hot-reload the currently active profile.
+    /// No-op (and not an error) when the tunnel isn't connected — switching
+    /// profiles before connecting is fine, the next connect picks the new
+    /// one up by reading from disk.
+    ///
+    /// Throws if the extension reports a reload failure (e.g. invalid
+    /// YAML on disk). The caller decides whether to surface that to the
+    /// user or fall back to disconnect+reconnect.
+    public func reload() async throws {
+        guard isConnected, let session = manager?.connection as? NETunnelProviderSession else {
+            return
+        }
+        guard let payload = "reload".data(using: .utf8) else { return }
+
+        let response: Data? = try await withCheckedThrowingContinuation { cont in
+            do {
+                try session.sendProviderMessage(payload) { data in
+                    cont.resume(returning: data)
+                }
+            } catch {
+                cont.resume(throwing: error)
+            }
+        }
+
+        if let response, !response.isEmpty {
+            let message = String(data: response, encoding: .utf8) ?? "Reload failed"
+            throw ExtensionProfileError.reloadFailed(message)
+        }
+    }
+
     private func attachObserver(_ manager: NETunnelProviderManager) {
         if let token = statusObserver {
             NotificationCenter.default.removeObserver(token)
@@ -87,10 +117,12 @@ public final class ExtensionProfile: ObservableObject {
 
 public enum ExtensionProfileError: LocalizedError {
     case notLoaded
+    case reloadFailed(String)
 
     public var errorDescription: String? {
         switch self {
         case .notLoaded: return String(localized: "VPN configuration not loaded", bundle: .main)
+        case let .reloadFailed(message): return message
         }
     }
 }

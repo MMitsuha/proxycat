@@ -24,6 +24,12 @@ public struct Profile: Identifiable, Equatable, Hashable, Codable, Sendable {
 public final class ProfileStore: ObservableObject {
     public static let shared = ProfileStore()
 
+    /// Posted whenever the active profile selection changes, or the
+    /// active profile's YAML on disk is rewritten. Subscribers (e.g.
+    /// `ExtensionEnvironment`) use this to hot-reload the running
+    /// tunnel so it picks up the new config without a full restart.
+    public static let activeContentDidChange = Notification.Name("io.proxycat.ProfileStore.activeContentDidChange")
+
     @Published public private(set) var profiles: [Profile] = []
     @Published public var activeProfileID: UUID?
 
@@ -56,18 +62,42 @@ public final class ProfileStore: ObservableObject {
     }
 
     public func setActive(_ profile: Profile) throws {
+        let previous = activeProfileID
         activeProfileID = profile.id
         // UUIDs are pure ASCII so utf8 conversion can't fail; the
         // optional-chain in the previous version silently swallowed
         // any disk-write error here.
         let data = Data(profile.id.uuidString.utf8)
         try data.write(to: activePointer, options: .atomic)
+        if previous != profile.id {
+            NotificationCenter.default.post(name: Self.activeContentDidChange, object: self)
+        }
     }
 
     /// Returns the YAML content for the currently active profile.
     public func loadActiveContent() throws -> String {
         guard let p = active else { throw ProfileError.noProfileSelected }
         return try loadContent(of: p)
+    }
+
+    /// Reads the active profile YAML directly off disk without touching
+    /// the @MainActor singleton. Safe to call from the Network Extension,
+    /// which has no UI but shares the App Group container.
+    public nonisolated static func loadActiveContentFromDisk() throws -> String {
+        let pointerURL = FilePath.activeProfilePointer
+        let raw = try String(contentsOf: pointerURL, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let id = UUID(uuidString: raw) else {
+            throw ProfileError.noProfileSelected
+        }
+        let indexURL = FilePath.profilesDirectory.appendingPathComponent("index.json")
+        let data = try Data(contentsOf: indexURL)
+        let profiles = try JSONDecoder().decode([Profile].self, from: data)
+        guard let profile = profiles.first(where: { $0.id == id }) else {
+            throw ProfileError.noProfileSelected
+        }
+        let yamlURL = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
+        return try String(contentsOf: yamlURL, encoding: .utf8)
     }
 
     /// Returns the YAML content stored for a specific profile.
@@ -83,6 +113,9 @@ public final class ProfileStore: ObservableObject {
         if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
             profiles[idx].lastUpdated = .init()
             try persist()
+        }
+        if profile.id == activeProfileID {
+            NotificationCenter.default.post(name: Self.activeContentDidChange, object: self)
         }
     }
 

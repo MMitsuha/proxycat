@@ -16,6 +16,20 @@ public enum LibmihomoBridge {
         }
     }
 
+    /// Hot-swap the running mihomo core with a new YAML config. The TUN
+    /// fd, OOM killer, and gRPC command server keep running across the
+    /// swap. Pass the same `disableExternalController` flag used at start
+    /// so the controller surface doesn't flip on/off mid-session.
+    public static func reload(yaml: Data, disableExternalController: Bool = false) throws {
+        var err: NSError?
+        let options = LibmihomoStartOptions()
+        options.disableExternalController = disableExternalController
+        let ok = LibmihomoReload(yaml, options, &err)
+        if !ok {
+            throw err ?? makeError("LibmihomoReload returned false")
+        }
+    }
+
     public static func setTunFd(_ fd: Int) throws {
         var err: NSError?
         let ok = LibmihomoSetTunFd(fd, &err)

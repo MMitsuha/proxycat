@@ -19,6 +19,10 @@ public final class ExtensionEnvironment: ObservableObject {
     @Published public var logSearchText: String = ""
 
     private var statusObservation: AnyCancellable?
+    private var activeContentObserver: NSObjectProtocol?
+    /// Surfaces the most recent reload error to the UI so taps on a
+    /// profile while the tunnel is up don't fail silently.
+    @Published public var reloadError: String?
 
     public init() {
         Self.bootstrapMihomoPaths()
@@ -30,6 +34,12 @@ public final class ExtensionEnvironment: ObservableObject {
         Self.bootstrapMihomoPaths()
         self.profile = profile
         self.commandClient = commandClient
+    }
+
+    deinit {
+        if let token = activeContentObserver {
+            NotificationCenter.default.removeObserver(token)
+        }
     }
 
     // The host app process has its own Go runtime, so the extension's
@@ -53,10 +63,38 @@ public final class ExtensionEnvironment: ObservableObject {
             // Profile load failure is non-fatal; the user can retry from UI.
         }
         observeProfileStatus()
+        observeActiveContent()
         // Make sure the current state is honored even before the
         // observer's first event fires (e.g. app cold-launches with VPN
         // already connected from a previous session).
         applyStatus(profile.status)
+    }
+
+    private func observeActiveContent() {
+        guard activeContentObserver == nil else { return }
+        activeContentObserver = NotificationCenter.default.addObserver(
+            forName: ProfileStore.activeContentDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.reloadIfConnected()
+            }
+        }
+    }
+
+    /// Fires `ExtensionProfile.reload()` when the tunnel is up so that
+    /// switching to a different profile (or rewriting the active YAML)
+    /// hot-applies the new config without requiring the user to disconnect
+    /// and reconnect by hand. No-ops while disconnected — the next
+    /// `Connect` already reads the active profile fresh from disk.
+    private func reloadIfConnected() async {
+        guard profile.isConnected else { return }
+        do {
+            try await profile.reload()
+        } catch {
+            reloadError = error.localizedDescription
+        }
     }
 
     private func observeProfileStatus() {
