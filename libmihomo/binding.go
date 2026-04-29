@@ -96,7 +96,18 @@ func Start(yamlConfig []byte) error {
 	cfg.Controller.ExternalController = "127.0.0.1:9090"
 	cfg.Controller.Secret = ""
 	cfg.Controller.ExternalUI = "ui"
-	cfg.General.GeodataLoader = "memconservative"
+	// Mihomo's default is AllowOrigins=["*"] / AllowPrivateNetwork=true, which
+	// lets any page the user visits in any browser reach the controller via
+	// CORS and read responses. The controller is bound to loopback already,
+	// so restricting CORS to loopback origins closes the cross-site hole
+	// without affecting the bundled UI (same-origin) or local debugging UIs.
+	cfg.Controller.Cors.AllowOrigins = []string{
+		"http://127.0.0.1:*",
+		"http://[::1]:*",
+		"http://localhost:*",
+	}
+	cfg.Controller.Cors.AllowPrivateNetwork = false
+	cfg.General.GeodataLoader = ""
 	cfg.Profile.StoreSelected = true
 	cfg.Profile.StoreFakeIP = true
 
