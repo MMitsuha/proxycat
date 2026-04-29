@@ -1,5 +1,6 @@
 .PHONY: all libmihomo project version clean build sim help \
-        assets geo-assets ui-assets clean-assets
+        assets geo-assets ui-assets clean-assets \
+        mihomo-init mihomo-upgrade
 
 XCODEGEN ?= xcodegen
 GOMOBILE ?= gomobile
@@ -8,23 +9,43 @@ help:
 	@echo "ProxyCat — iOS client for mihomo"
 	@echo ""
 	@echo "Targets:"
-	@echo "  make libmihomo     build Frameworks/Libmihomo.xcframework via gomobile"
-	@echo "  make project       run xcodegen (auto-fills version from VERSION + git)"
-	@echo "  make version       print the marketing version + build number"
-	@echo "  make all           libmihomo + project (run after first checkout)"
-	@echo "  make build         full xcodebuild for the iOS app (needs codesigning)"
-	@echo "  make sim           build for iOS Simulator (no codesigning)"
-	@echo "  make assets        download geo dbs + metacubexd into BundledAssets/"
-	@echo "  make geo-assets    download geoip / geosite / mmdb only"
-	@echo "  make ui-assets     download metacubexd only"
-	@echo "  make clean-assets  empty BundledAssets/{geo,ui} (keeps .gitkeep)"
-	@echo "  make clean         wipe generated artifacts"
+	@echo "  make libmihomo      build Frameworks/Libmihomo.xcframework via gomobile"
+	@echo "  make project        run xcodegen (auto-fills version from VERSION + git)"
+	@echo "  make version        print the marketing version + build number"
+	@echo "  make all            libmihomo + project (run after first checkout)"
+	@echo "  make build          full xcodebuild for the iOS app (needs codesigning)"
+	@echo "  make sim            build for iOS Simulator (no codesigning)"
+	@echo "  make assets         download geo dbs + metacubexd into BundledAssets/"
+	@echo "  make geo-assets     download geoip / geosite / mmdb only"
+	@echo "  make ui-assets      download metacubexd only"
+	@echo "  make clean-assets   empty BundledAssets/{geo,ui} (keeps .gitkeep)"
+	@echo "  make mihomo-init    init/refresh the mihomo submodule (run after clone)"
+	@echo "  make mihomo-upgrade pull latest mihomo Alpha tip + rebuild xcframework"
+	@echo "  make clean          wipe generated artifacts"
 	@echo ""
 	@echo "Prereqs:"
 	@echo "  brew install xcodegen"
 	@echo "  go install golang.org/x/mobile/cmd/gomobile@latest && gomobile init"
 
-all: libmihomo project
+all: mihomo-init libmihomo project
+
+mihomo-init:
+	@if [ ! -f mihomo/go.mod ]; then \
+		echo "==> Initializing mihomo submodule"; \
+		git submodule update --init --recursive mihomo; \
+	else \
+		echo "==> mihomo submodule already initialized ($$(git -C mihomo rev-parse --short=12 HEAD))"; \
+	fi
+
+mihomo-upgrade:
+	@echo "==> Fetching latest mihomo Alpha tip"
+	git submodule update --init --remote mihomo
+	@printf "    now at %s (%s)\n" "$$(git -C mihomo rev-parse --short=12 HEAD)" "$$(git -C mihomo log -1 --format=%s)"
+	@echo "==> Rebuilding xcframework"
+	./scripts/build-libmihomo.sh
+	@echo ""
+	@echo "Mihomo upgraded. Commit the new pointer with:"
+	@echo "  git add mihomo && git commit -m \"Bump mihomo to $$(git -C mihomo rev-parse --short=12 HEAD)\""
 
 libmihomo:
 	./scripts/build-libmihomo.sh

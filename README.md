@@ -44,7 +44,20 @@ go install golang.org/x/mobile/cmd/gobind@latest
 gomobile init
 ```
 
-mihomo 源码必须放在 `proxycat/` 同级的 `../mihomo` 目录下（即 `/Users/mitsuha/mihomo/mihomo`）。`libmihomo/go.mod` 中的 `replace` 指向该路径。
+mihomo 源码以 git submodule 形式 vendored 在 `proxycat/mihomo/`，跟踪上游 `Alpha` 分支。`libmihomo/go.mod` 中的 `replace` 指向该子模块。
+
+```bash
+git clone --recurse-submodules <proxycat repo>
+# 或者已经 clone 过：
+make mihomo-init        # 等价于 git submodule update --init --recursive mihomo
+```
+
+升级到最新 Alpha tip 并重建 xcframework：
+
+```bash
+make mihomo-upgrade     # git submodule update --remote mihomo + ./scripts/build-libmihomo.sh
+git add mihomo && git commit -m "Bump mihomo to <sha>"
+```
 
 `libmihomo/tools.go` 显式 import 了 `golang.org/x/mobile/bind`。没有这个文件 `gomobile bind` 会报错 `unable to import bind: no Go package in golang.org/x/mobile/bind`，因为 `go mod tidy` 会把没有源码引用的依赖剪掉，而 `gobind` 只在临时目录里 import 它。
 
@@ -62,13 +75,15 @@ open ProxyCat.xcodeproj
 
 | target            | 说明                                                   |
 |-------------------|--------------------------------------------------------|
-| `make libmihomo`  | 仅重建 `Frameworks/Libmihomo.xcframework`              |
-| `make project`    | 运行 `xcodegen` 并自动注入版本号（见下）               |
-| `make version`    | 打印下一次 `make project` 会写入的版本/编号            |
-| `make all`        | `libmihomo` + `project`，首次 clone 后跑一次           |
-| `make sim`        | 不签名地为 iOS 模拟器构建                              |
-| `make build`      | 真机构建（需要签名）                                   |
-| `make clean`      | 清理生成产物                                           |
+| `make libmihomo`      | 仅重建 `Frameworks/Libmihomo.xcframework`              |
+| `make project`        | 运行 `xcodegen` 并自动注入版本号（见下）               |
+| `make version`        | 打印下一次 `make project` 会写入的版本/编号            |
+| `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
+| `make mihomo-init`    | 初始化或刷新 `mihomo/` submodule                       |
+| `make mihomo-upgrade` | 拉取最新 Alpha tip 并重建 xcframework                  |
+| `make sim`            | 不签名地为 iOS 模拟器构建                              |
+| `make build`          | 真机构建（需要签名）                                   |
+| `make clean`          | 清理生成产物                                           |
 
 ## 版本与显示信息
 
@@ -152,7 +167,7 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 `scripts/build-libmihomo.sh` 通过 `go build -ldflags -X` 注入构建期信息：
 
 - `mihomo` 语义版本（来自 `mihomo/constant/version.go`）
-- mihomo 上游 commit 短哈希（来自 `git -C ../mihomo rev-parse`）
+- mihomo 上游 commit 短哈希（来自 `git -C mihomo rev-parse`）
 - xcframework 打包时间
 - 启用的 build tags
 

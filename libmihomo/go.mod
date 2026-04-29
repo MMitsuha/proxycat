@@ -113,4 +113,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/metacubex/mihomo => ../../mihomo
+replace github.com/metacubex/mihomo => ../mihomo
