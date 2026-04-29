@@ -28,6 +28,7 @@ public struct ProfileEditorView: View {
     @State private var isValidating = false
     @State private var saveError: String?
     @State private var loadError: String?
+    @FocusState private var editorFocused: Bool
 
     public init(mode: Mode) {
         self.mode = mode
@@ -42,77 +43,122 @@ public struct ProfileEditorView: View {
     }
 
     public var body: some View {
-        Form {
+        VStack(spacing: 0) {
             if let loadError {
-                Section {
-                    Label(loadError, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                }
+                loadErrorBanner(loadError)
             }
-
-            Section("Name") {
-                TextField("Profile name", text: $name)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-            }
-
-            Section {
-                TextEditor(text: $yaml)
-                    .font(.system(.caption, design: .monospaced))
-                    .frame(minHeight: 320)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .onChange(of: yaml) {
-                        validation = .pristine
-                    }
-            } header: {
-                HStack {
-                    Text("YAML")
-                    Spacer()
-                    Text("\(yaml.count) chars")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            } footer: {
-                ProfileValidationFooter(
-                    validation: validation,
-                    pristineHint: "Tap **Validate** before saving. Mihomo's parser will run on this YAML."
-                )
-            }
+            nameRow
+            Divider()
+            editor
+            Divider()
+            statusBar
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        Task { await validate() }
-                    } label: {
-                        Label("Validate", systemImage: "checkmark.shield")
-                    }
-                    Button {
-                        Task { await save() }
-                    } label: {
-                        Label("Save", systemImage: "tray.and.arrow.down")
-                    }
-                    .disabled(!canSave)
-                } label: {
-                    if isValidating {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
-        }
+        .toolbar { toolbarContent }
         .task { loadInitial() }
         .alert("Save failed", isPresented: .constant(saveError != nil)) {
             Button("OK") { saveError = nil }
         } message: {
             Text(saveError ?? "")
+        }
+    }
+
+    // MARK: - Subviews
+
+    private func loadErrorBanner(_ message: String) -> some View {
+        Label(message, systemImage: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(.red)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(Color.red.opacity(0.12))
+    }
+
+    private var nameRow: some View {
+        HStack {
+            Text("Name")
+                .foregroundStyle(.secondary)
+            TextField("Profile name", text: $name)
+                .multilineTextAlignment(.trailing)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 11)
+        .background(Color(.secondarySystemGroupedBackground))
+    }
+
+    private var editor: some View {
+        TextEditor(text: $yaml)
+            .focused($editorFocused)
+            .font(.system(.caption, design: .monospaced))
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemBackground))
+            .overlay(alignment: .topLeading) {
+                if yaml.isEmpty {
+                    Text("Paste or type YAML here…")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .onChange(of: yaml) { validation = .pristine }
+    }
+
+    private var statusBar: some View {
+        HStack(alignment: .firstTextBaseline) {
+            ProfileValidationFooter(
+                validation: validation,
+                pristineHint: "Tap **Validate** before saving."
+            )
+            .font(.caption)
+            Spacer(minLength: 12)
+            Text("\(yaml.count)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color(.secondarySystemGroupedBackground))
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button("Cancel") { dismiss() }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    Task { await validate() }
+                } label: {
+                    Label("Validate", systemImage: "checkmark.shield")
+                }
+                Button {
+                    Task { await save() }
+                } label: {
+                    Label("Save", systemImage: "tray.and.arrow.down")
+                }
+                .disabled(!canSave)
+            } label: {
+                if isValidating {
+                    ProgressView()
+                } else {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button("Done") { editorFocused = false }
         }
     }
 
