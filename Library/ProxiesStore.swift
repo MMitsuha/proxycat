@@ -14,11 +14,23 @@ public final class ProxiesStore: ObservableObject {
     @Published public private(set) var groupTesting: Set<String> = []
     /// `"<group>/<node>"` pairs with an in-flight selection.
     @Published public private(set) var selecting: Set<String> = []
+    /// Group names whose node list is currently collapsed in the UI.
+    @Published public private(set) var collapsed: Set<String> = []
 
     private let controller: MihomoController
+    private let defaults: UserDefaults
+    private static let collapsedKey = "io.proxycat.proxies.collapsed"
 
-    public init(controller: MihomoController = MihomoController()) {
+    public init(
+        controller: MihomoController = MihomoController(),
+        defaults: UserDefaults = .standard
+    ) {
         self.controller = controller
+        self.defaults = defaults
+        if let data = defaults.data(forKey: Self.collapsedKey),
+           let arr = try? JSONDecoder().decode([String].self, from: data) {
+            self.collapsed = Set(arr)
+        }
     }
 
     /// `GET /proxies` and split the response into groups vs nodes. Groups
@@ -83,6 +95,22 @@ public final class ProxiesStore: ObservableObject {
 
     public func isSelecting(group: String, node: String) -> Bool {
         selecting.contains(selectingKey(group: group, node: node))
+    }
+
+    public func isCollapsed(_ group: String) -> Bool {
+        collapsed.contains(group)
+    }
+
+    public func toggleCollapsed(_ group: String) {
+        if collapsed.contains(group) {
+            collapsed.remove(group)
+        } else {
+            collapsed.insert(group)
+        }
+        let arr = Array(collapsed).sorted()
+        if let data = try? JSONEncoder().encode(arr) {
+            defaults.set(data, forKey: Self.collapsedKey)
+        }
     }
 }
 
