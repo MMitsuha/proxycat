@@ -1237,6 +1237,16 @@
         }
       }
     },
+    "ProxyCat on GitHub" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 上查看 ProxyCat"
+          }
+        }
+      }
+    },
     "Reasserting" : {
       "extractionState" : "stale",
       "localizations" : {

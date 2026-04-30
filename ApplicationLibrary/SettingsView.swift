@@ -50,6 +50,7 @@ public struct SettingsView: View {
                 LabeledContent("App Version") {
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                 }
+                Link("ProxyCat on GitHub", destination: URL(string: "https://github.com/MMitsuha/proxycat")!)
                 Link("mihomo on GitHub", destination: URL(string: "https://github.com/MetaCubeX/mihomo")!)
             }
 
