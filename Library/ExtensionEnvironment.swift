@@ -26,10 +26,14 @@ public final class ExtensionEnvironment: ObservableObject {
     private var statusObservation: AnyCancellable?
     private var activeContentObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
+    private var hostSettingsObserver: NSObjectProtocol?
     private var memoryObserverToken: UUID?
     /// Surfaces the most recent reload error to the UI so taps on a
     /// profile while the tunnel is up don't fail silently.
     @Published public var reloadError: String?
+    /// Surfaces the most recent on-demand-rule save failure so the
+    /// Auto Connect sub view can show an alert.
+    @Published public var autoConnectError: String?
 
     public init() {
         Self.bootstrapMihomoPaths()
@@ -48,6 +52,9 @@ public final class ExtensionEnvironment: ObservableObject {
             NotificationCenter.default.removeObserver(token)
         }
         if let token = settingsObserver {
+            NotificationCenter.default.removeObserver(token)
+        }
+        if let token = hostSettingsObserver {
             NotificationCenter.default.removeObserver(token)
         }
         if let token = memoryObserverToken {
@@ -81,11 +88,17 @@ public final class ExtensionEnvironment: ObservableObject {
         observeProfileStatus()
         observeActiveContent()
         observeRuntimeSettings()
+        observeHostSettings()
         startMemoryPressureWatch()
         // Make sure the current state is honored even before the
         // observer's first event fires (e.g. app cold-launches with VPN
         // already connected from a previous session).
         applyStatus(profile.status)
+        // Sync the manager's on-demand state with whatever the user
+        // last persisted. No-op when the manager already matches; cheap
+        // even when not, and it covers the case where the user edits
+        // settings while the app was killed.
+        await applyAutoConnectFromStore()
     }
 
     // The host app process gets memory warnings from iOS too — not just
@@ -136,6 +149,32 @@ public final class ExtensionEnvironment: ObservableObject {
             Task { @MainActor in
                 await self?.reloadIfConnected()
             }
+        }
+    }
+
+    private func observeHostSettings() {
+        guard hostSettingsObserver == nil else { return }
+        hostSettingsObserver = NotificationCenter.default.addObserver(
+            forName: AppConfiguration.hostSettingsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.applyAutoConnectFromStore()
+            }
+        }
+    }
+
+    /// Reads the current `AutoConnectConfig` from the store and pushes
+    /// it onto the NETunnelProviderManager via `ExtensionProfile`.
+    /// Errors surface through `autoConnectError` so the UI can show an
+    /// alert; we never throw out of an observer callback.
+    private func applyAutoConnectFromStore() async {
+        let config = HostSettingsStore.shared.autoConnect
+        do {
+            try await profile.applyAutoConnect(config)
+        } catch {
+            autoConnectError = error.localizedDescription
         }
     }
 
