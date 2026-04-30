@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import os
 
 /// Single source of truth for host-only preferences (currently the
 /// Auto Connect feature; future iOS-side features land here too).
@@ -17,11 +16,14 @@ public final class HostSettingsStore: ObservableObject {
 
     @Published public var autoConnect: AutoConnectConfig
 
-    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "HostSettingsStore")
     private var bag = Set<AnyCancellable>()
 
     private init() {
-        let stored = Self.loadFromDisk()
+        let stored = JSONFileStore.load(
+            HostSettings.self,
+            at: FilePath.hostSettingsFilePath,
+            default: .defaults
+        )
         self.autoConnect = stored.autoConnect
 
         // dropFirst skips the publisher's "current value" replay so we
@@ -40,28 +42,15 @@ public final class HostSettingsStore: ObservableObject {
             .store(in: &bag)
     }
 
-    private static func loadFromDisk() -> HostSettings {
-        let path = FilePath.hostSettingsFilePath
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-            return .defaults
-        }
-        return (try? JSONDecoder().decode(HostSettings.self, from: data)) ?? .defaults
-    }
-
     private func persistAndBroadcast(snapshot: HostSettings) {
-        do {
-            let data = try JSONEncoder().encode(snapshot)
-            // Atomic write: a partial file would make us fall back to
-            // defaults on the next launch, which is worse than a stale
-            // file.
-            try data.write(to: URL(fileURLWithPath: FilePath.hostSettingsFilePath), options: .atomic)
-        } catch {
-            // Don't broadcast on failure: subscribers would re-apply
-            // from in-memory state while the persisted file still holds
-            // the old value, silently reverting on the next cold launch.
-            Self.logger.error("could not persist host settings: \(error.localizedDescription, privacy: .public)")
-            return
-        }
+        // Don't broadcast on failure: subscribers would re-apply from
+        // in-memory state while the persisted file still holds the old
+        // value, silently reverting on the next cold launch.
+        guard JSONFileStore.saveOrLog(
+            snapshot,
+            to: FilePath.hostSettingsFilePath,
+            category: "HostSettingsStore"
+        ) else { return }
         NotificationCenter.default.post(name: AppConfiguration.hostSettingsDidChange, object: self)
     }
 }

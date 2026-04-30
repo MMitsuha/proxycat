@@ -105,16 +105,8 @@ public struct ProfileListView: View {
                 }
             }
         }
-        .alert("Action failed", isPresented: .constant(actionError != nil)) {
-            Button("OK") { actionError = nil }
-        } message: {
-            Text(actionError ?? "")
-        }
-        .alert("Reload failed", isPresented: .constant(environment.reloadError != nil)) {
-            Button("OK") { environment.reloadError = nil }
-        } message: {
-            Text(environment.reloadError ?? "")
-        }
+        .errorAlert($actionError, title: "Action failed")
+        .errorAlert($environment.reloadError, title: "Reload failed")
     }
 
     /// Runs a throwing block and surfaces any thrown error in the alert.

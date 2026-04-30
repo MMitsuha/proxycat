@@ -94,19 +94,11 @@ public struct SavedLogsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
-            Text("No saved logs yet")
-                .foregroundStyle(.secondary)
-            Text("A new file is created each time the tunnel connects.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ContentUnavailableView(
+            "No saved logs yet",
+            systemImage: "doc.text.magnifyingglass",
+            description: Text("A new file is created each time the tunnel connects.")
+        )
     }
 }
 
@@ -126,15 +118,11 @@ struct SavedLogDetailView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let loadError {
-                VStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.orange)
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "exclamationmark.triangle")
+                } description: {
                     Text(loadError)
-                        .multilineTextAlignment(.center)
-                        .padding()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     Text(content)

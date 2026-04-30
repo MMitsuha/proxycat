@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/metacubex/mihomo/common/observable"
 	"github.com/metacubex/mihomo/log"
 )
 
@@ -23,14 +22,12 @@ import (
 type logFileSession struct {
 	path string
 	file *os.File
-	sub  observable.Subscription[log.Event]
-	stop chan struct{}
-	done chan struct{}
+	pump *logPump
 }
 
 var (
-	logFileMu      sync.Mutex
-	logFileDir     string
+	logFileDir     atomicString
+	sessionMu      sync.Mutex
 	currentSession *logFileSession
 )
 
@@ -39,9 +36,7 @@ var (
 // host app can also read the files. Pass "" to clear. Must be called
 // before StartLogFile.
 func SetLogFileDir(path string) {
-	logFileMu.Lock()
-	logFileDir = path
-	logFileMu.Unlock()
+	logFileDir.Store(path)
 }
 
 // StartLogFile opens a new timestamped log file in the configured
@@ -53,15 +48,15 @@ func SetLogFileDir(path string) {
 // reconnect happens, a `-N` suffix is appended so each session keeps
 // its own file.
 func StartLogFile() (string, error) {
-	logFileMu.Lock()
+	sessionMu.Lock()
 	if currentSession != nil {
 		path := currentSession.path
-		logFileMu.Unlock()
+		sessionMu.Unlock()
 		return path, nil
 	}
-	dir := logFileDir
-	logFileMu.Unlock()
+	sessionMu.Unlock()
 
+	dir := logFileDir.Load()
 	if dir == "" {
 		return "", fmt.Errorf("log file directory not set")
 	}
@@ -94,74 +89,54 @@ func StartLogFile() (string, error) {
 		return "", fmt.Errorf("could not create log file in %s", dir)
 	}
 
-	s := &logFileSession{
-		path: path,
-		file: f,
-		sub:  log.Subscribe(),
-		stop: make(chan struct{}),
-		done: make(chan struct{}),
-	}
-
-	// Re-check for a racing StartLogFile that won between our unlock
-	// above and the OpenFile call.
-	logFileMu.Lock()
+	// Claim ownership before subscribing to the log observable: if a
+	// racing StartLogFile won between our two locks, roll back the file
+	// without ever creating a stray subscription.
+	sessionMu.Lock()
 	if currentSession != nil {
 		existing := currentSession.path
-		logFileMu.Unlock()
-		log.UnSubscribe(s.sub)
+		sessionMu.Unlock()
 		_ = f.Close()
 		_ = os.Remove(path)
 		return existing, nil
 	}
-	currentSession = s
-	logFileMu.Unlock()
 
+	s := &logFileSession{path: path, file: f}
 	header := fmt.Sprintf("=== mihomo session started %s ===\n",
 		time.Now().Format(time.RFC3339))
 	_, _ = f.WriteString(header)
 
-	go s.pump()
-	return path, nil
-}
+	// Start the pump while still holding sessionMu so currentSession is
+	// never observed with a nil pump. log.Subscribe is essentially free
+	// (a slice append behind a mutex inside mihomo); the goroutine
+	// itself starts non-blocking.
+	s.pump = startLogPump(func(event log.Event) {
+		line := fmt.Sprintf(
+			"%s [%s] %s\n",
+			time.Now().Format("2006-01-02T15:04:05.000"),
+			event.LogLevel.String(),
+			event.Payload,
+		)
+		_, _ = s.file.WriteString(line)
+	})
+	currentSession = s
+	sessionMu.Unlock()
 
-func (s *logFileSession) pump() {
-	defer close(s.done)
-	defer func() {
-		// A faulty event must not crash the Network Extension.
-		recover()
-	}()
-	for {
-		select {
-		case <-s.stop:
-			return
-		case event, ok := <-s.sub:
-			if !ok {
-				return
-			}
-			line := fmt.Sprintf("%s [%s] %s\n",
-				time.Now().Format("2006-01-02T15:04:05.000"),
-				event.LogLevel.String(),
-				event.Payload,
-			)
-			_, _ = s.file.WriteString(line)
-		}
-	}
+	return path, nil
 }
 
 // StopLogFile flushes and closes the active log file. Safe to call
 // multiple times; also called automatically from Stop() so the file
 // always closes cleanly even if the host app forgets.
 func StopLogFile() {
-	logFileMu.Lock()
+	sessionMu.Lock()
 	s := currentSession
 	currentSession = nil
-	logFileMu.Unlock()
+	sessionMu.Unlock()
 	if s == nil {
 		return
 	}
-	close(s.stop)
-	log.UnSubscribe(s.sub)
-	<-s.done
+	s.pump.Close()
 	_, _ = fmt.Fprintf(s.file, "=== mihomo session ended %s ===\n",
 		time.Now().Format(time.RFC3339))
 	_ = s.file.Sync()
@@ -172,8 +147,8 @@ func StopLogFile() {
 // no session is currently being persisted. Surfaced so the host app's
 // "Saved Logs" UI can highlight the in-progress file.
 func CurrentLogFilePath() string {
-	logFileMu.Lock()
-	defer logFileMu.Unlock()
+	sessionMu.Lock()
+	defer sessionMu.Unlock()
 	if currentSession == nil {
 		return ""
 	}

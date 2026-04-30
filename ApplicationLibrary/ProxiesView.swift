@@ -11,14 +11,14 @@ public struct ProxiesView: View {
     public var body: some View {
         Group {
             if !profile.isConnected {
-                empty(
-                    symbol: "powerplug.portrait",
-                    title: String(localized: "Connect first to manage proxies")
+                ContentUnavailableView(
+                    "Connect first to manage proxies",
+                    systemImage: "powerplug.portrait"
                 )
             } else if settings.disableExternalController {
-                empty(
-                    symbol: "network.slash",
-                    title: String(localized: "Web Controller is off")
+                ContentUnavailableView(
+                    "Web Controller is off",
+                    systemImage: "network.slash"
                 )
             } else {
                 content
@@ -32,19 +32,14 @@ public struct ProxiesView: View {
     @ViewBuilder
     private var content: some View {
         if let err = store.loadError, store.groups.isEmpty {
-            VStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.title2)
-                    .foregroundStyle(.orange)
+            ContentUnavailableView {
+                Label("Could not load", systemImage: "exclamationmark.triangle")
+            } description: {
                 Text(err)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+            } actions: {
                 Button("Retry") { Task { await store.refresh() } }
                     .buttonStyle(.bordered)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if store.groups.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -91,17 +86,6 @@ public struct ProxiesView: View {
         }
     }
 
-    private func empty(symbol: String, title: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 }
 
 // MARK: - Group header

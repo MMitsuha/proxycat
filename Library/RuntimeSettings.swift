@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import os
 
 /// Single source of truth for runtime preferences shared between the host
 /// app and the Network Extension. Persists to `settings.json` in the App
@@ -18,11 +17,14 @@ public final class RuntimeSettings: ObservableObject {
     @Published public var disableExternalController: Bool
     @Published public var logLevel: Int
 
-    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "RuntimeSettings")
     private var bag = Set<AnyCancellable>()
 
     private init() {
-        let stored = Self.loadFromDisk()
+        let stored = JSONFileStore.load(
+            Snapshot.self,
+            at: FilePath.settingsFilePath,
+            default: .defaults
+        )
         self.disableExternalController = stored.disableExternalController
         self.logLevel = stored.logLevel
 
@@ -52,26 +54,12 @@ public final class RuntimeSettings: ObservableObject {
         public static let defaults = Snapshot(disableExternalController: false, logLevel: 2)
     }
 
-    private static func loadFromDisk() -> Snapshot {
-        let path = FilePath.settingsFilePath
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-            return .defaults
-        }
-        return (try? JSONDecoder().decode(Snapshot.self, from: data)) ?? .defaults
-    }
-
     private func persistAndBroadcast(snapshot: Snapshot) {
-        do {
-            // JSONEncoder produces stable output (no sortedKeys by default
-            // but the field order is deterministic per encoder); Go reads
-            // the same shape so we don't need a stricter schema here.
-            let data = try JSONEncoder().encode(snapshot)
-            // Atomic write: a partial file would make Go fall back to
-            // defaults mid-toggle, which is worse than a stale file.
-            try data.write(to: URL(fileURLWithPath: FilePath.settingsFilePath), options: .atomic)
-        } catch {
-            Self.logger.error("could not persist settings: \(error.localizedDescription, privacy: .public)")
-        }
+        // Always broadcast — the in-memory state has already changed and
+        // subscribers must mirror it. The disk write may have failed, in
+        // which case we'll re-persist on the next change; that's better
+        // than letting the UI desync from RuntimeSettings.shared.
+        JSONFileStore.saveOrLog(snapshot, to: FilePath.settingsFilePath, category: "RuntimeSettings")
         NotificationCenter.default.post(name: AppConfiguration.runtimeSettingsDidChange, object: self)
     }
 }

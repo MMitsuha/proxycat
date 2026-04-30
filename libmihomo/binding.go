@@ -45,17 +45,10 @@ var (
 	started   atomic.Bool
 	pendingFd int32
 
-	homeDirMu sync.Mutex
-	homeDir   string
-
-	socketPathMu sync.Mutex
-	socketPath   string
-
-	activePointerMu sync.RWMutex
-	activePointer   string
-
-	profilesDirMu sync.RWMutex
-	profilesDir   string
+	homeDir       atomicString
+	socketPath    atomicString
+	activePointer atomicString
+	profilesDir   atomicString
 
 	// runtimeLogLevel is the wrapper's source of truth for the mihomo
 	// log filter. Initialised to WARNING (2) so YAML profiles that ship
@@ -77,15 +70,7 @@ func init() {
 // Must point at a path inside an App Group container so the host app
 // can connect. Pass "" to disable the server. Call before Start.
 func SetCommandSocketPath(path string) {
-	socketPathMu.Lock()
-	socketPath = path
-	socketPathMu.Unlock()
-}
-
-func commandSocketPath() string {
-	socketPathMu.Lock()
-	defer socketPathMu.Unlock()
-	return socketPath
+	socketPath.Store(path)
 }
 
 // SetHomeDir tells mihomo where to keep cache.db, downloaded providers, the
@@ -93,9 +78,7 @@ func commandSocketPath() string {
 // is the App Group container; pass that here BEFORE Start. Calling after a
 // successful Start has no effect on already-loaded files.
 func SetHomeDir(path string) {
-	homeDirMu.Lock()
-	homeDir = path
-	homeDirMu.Unlock()
+	homeDir.Store(path)
 	C.SetHomeDir(path)
 }
 
@@ -104,9 +87,7 @@ func SetHomeDir(path string) {
 // lets Start / Reload load the active profile YAML themselves so the
 // extension never has to read or forward it.
 func SetActiveProfilePointer(path string) {
-	activePointerMu.Lock()
-	activePointer = path
-	activePointerMu.Unlock()
+	activePointer.Store(path)
 }
 
 // SetProfilesDir tells the wrapper where the host app's `Profiles/`
@@ -114,9 +95,7 @@ func SetActiveProfilePointer(path string) {
 // Combined with SetActiveProfilePointer this lets Start / Reload load
 // the active profile YAML on demand.
 func SetProfilesDir(path string) {
-	profilesDirMu.Lock()
-	profilesDir = path
-	profilesDirMu.Unlock()
+	profilesDir.Store(path)
 }
 
 // profileEntry is the subset of Library/Profile.swift's `Profile` shape
@@ -136,12 +115,8 @@ type profileEntry struct {
 // extension surfaces them as the `reload` reply payload so the host UI
 // can show a precise message instead of "reload failed".
 func loadActiveYAML() ([]byte, error) {
-	activePointerMu.RLock()
-	pointer := activePointer
-	activePointerMu.RUnlock()
-	profilesDirMu.RLock()
-	dir := profilesDir
-	profilesDirMu.RUnlock()
+	pointer := activePointer.Load()
+	dir := profilesDir.Load()
 
 	if pointer == "" || dir == "" {
 		return nil, fmt.Errorf("profile paths not configured (call SetActiveProfilePointer + SetProfilesDir)")
@@ -206,7 +181,7 @@ func Start() error {
 
 	hub.ApplyConfig(cfg)
 	startOOMKiller()
-	if path := commandSocketPath(); path != "" {
+	if path := socketPath.Load(); path != "" {
 		if err := StartCommandServer(path); err != nil {
 			log.Warnln("[command] start server: %v", err)
 		}
@@ -256,10 +231,7 @@ func Reload() error {
 // toggle, log level) on top of whatever the YAML carried. The caller
 // drives the actual hub.ApplyConfig.
 func prepareConfig(yamlConfig []byte) (*config.Config, error) {
-	homeDirMu.Lock()
-	hd := homeDir
-	homeDirMu.Unlock()
-	if hd != "" {
+	if hd := homeDir.Load(); hd != "" {
 		C.SetHomeDir(hd)
 	}
 
@@ -269,90 +241,97 @@ func prepareConfig(yamlConfig []byte) (*config.Config, error) {
 	}
 
 	settings := loadSettings()
-	// Sync the runtime atomic so SetLogLevel callers and the pumped
-	// log.SetLevel below see the same value the host has written. The
-	// YAML's own `log-level:` is intentionally discarded — the host app
-	// owns this setting at runtime through settings.json, and we don't
-	// want a profile import to silently re-enable debug logging.
-	runtimeLogLevel.Store(int32(settings.LogLevel))
-	log.SetLevel(log.LogLevel(settings.LogLevel))
-	cfg.General.LogLevel = log.LogLevel(settings.LogLevel)
+	applyLogLevel(cfg, settings.LogLevel)
+	applyControllerPolicy(cfg, settings.DisableExternalController)
+	applyIOSDefaults(cfg)
+	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
+		applyTunFd(cfg, int(fd))
+	}
+	return cfg, nil
+}
 
+// applyLogLevel forces the log filter to whatever the host wrote into
+// settings.json. The YAML's own `log-level:` is intentionally discarded
+// — the host app owns this setting at runtime, and we don't want a
+// profile import to silently re-enable debug logging. The runtime
+// atomic stays in sync so SetLogLevel callers see the same value.
+func applyLogLevel(cfg *config.Config, level int) {
+	runtimeLogLevel.Store(int32(level))
+	log.SetLevel(log.LogLevel(level))
+	cfg.General.LogLevel = log.LogLevel(level)
+}
+
+// applyIOSDefaults asserts the few cfg fields that the YAML must not be
+// allowed to override on iOS. Profile state is persisted to disk so the
+// user's manual proxy selection survives reloads; the geodata loader is
+// cleared so mihomo doesn't try to fetch external geo files at startup
+// (we ship them bundled).
+func applyIOSDefaults(cfg *config.Config) {
 	cfg.DNS.Enable = true
 	cfg.DNS.EnhancedMode = C.DNSMapping
-	if settings.DisableExternalController {
-		// Clear every listener field too, so a YAML that asks for a
-		// controller (HTTP / TLS / Unix / named-pipe) can't sneak one
-		// back up while the user thinks it's off.
+	cfg.General.GeodataLoader = ""
+	cfg.Profile.StoreSelected = true
+	cfg.Profile.StoreFakeIP = true
+}
+
+// applyControllerPolicy honors the user's "disable external controller"
+// toggle. When disabled, every listener form (HTTP/TLS/Unix/pipe) is
+// cleared so a YAML that asks for a controller can't sneak one back up.
+// When enabled, we bind only to loopback and tighten CORS — mihomo's
+// default permits any browser origin, which combined with the loopback
+// listener creates a cross-site read primitive.
+func applyControllerPolicy(cfg *config.Config, disabled bool) {
+	if disabled {
 		cfg.Controller.ExternalController = ""
 		cfg.Controller.ExternalControllerTLS = ""
 		cfg.Controller.ExternalControllerUnix = ""
 		cfg.Controller.ExternalControllerPipe = ""
 		cfg.Controller.ExternalUI = ""
 		cfg.Controller.Secret = ""
-	} else {
-		cfg.Controller.ExternalController = "127.0.0.1:9090"
-		cfg.Controller.Secret = ""
-		cfg.Controller.ExternalUI = "ui"
-		// Mihomo's default is AllowOrigins=["*"] / AllowPrivateNetwork=true, which
-		// lets any page the user visits in any browser reach the controller via
-		// CORS and read responses. The controller is bound to loopback already,
-		// so restricting CORS to loopback origins closes the cross-site hole
-		// without affecting the bundled UI (same-origin) or local debugging UIs.
-		cfg.Controller.Cors.AllowOrigins = []string{
-			"http://127.0.0.1:*",
-			"http://[::1]:*",
-			"http://localhost:*",
-		}
-		cfg.Controller.Cors.AllowPrivateNetwork = false
+		return
 	}
-	cfg.General.GeodataLoader = ""
-	cfg.Profile.StoreSelected = true
-	cfg.Profile.StoreFakeIP = true
-
-	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
-		// Inject the fd. Force the TUN to look the way iOS expects.
-		cfg.General.Tun.Enable = true
-		cfg.General.Tun.FileDescriptor = int(fd)
-		cfg.General.Tun.Device = "" // don't try to open by name
-		// gVisor netstack is the only stack that works inside the iOS
-		// Network Extension sandbox. The "System" stack tries to make
-		// real kernel-level socket calls that the NE entitlement doesn't
-		// permit and silently drops responses.
-		cfg.General.Tun.Stack = C.TunGvisor
-		// Routing is owned by NEPacketTunnelNetworkSettings on iOS, and
-		// AutoDetectInterface picks the TUN itself (since utun is the
-		// default route once NE is up) which loops DIRECT outbound back
-		// onto the tunnel.
-		cfg.General.Tun.AutoRoute = false
-		cfg.General.Tun.AutoDetectInterface = false
-		cfg.General.Tun.AutoRedirect = false
-		cfg.General.Tun.StrictRoute = false
-		// Same reason: don't let mihomo bind DIRECT outbound sockets to
-		// any interface — iOS NE already exempts the extension's own
-		// sockets from the tunnel it provides.
-		cfg.General.Interface = ""
-		cfg.General.RoutingMark = 0
-		// Provide a deterministic virtual address pair so sing-tun's
-		// gvisor netstack accepts packets. Must match what
-		// PacketTunnelProvider.configureNetworkSettings installs on the
-		// host side; otherwise the kernel's utun delivers packets the
-		// virtual stack rejects.
-		cfg.General.Tun.Inet4Address = []netip.Prefix{tunInet4}
-		cfg.General.Tun.Inet6Address = []netip.Prefix{tunInet6}
-		// User-supplied route filters from the YAML are usually about
-		// kernel routing on Linux/macOS — irrelevant in fd-mode.
-		cfg.General.Tun.Inet4RouteAddress = nil
-		cfg.General.Tun.Inet6RouteAddress = nil
-		cfg.General.Tun.Inet4RouteExcludeAddress = nil
-		cfg.General.Tun.Inet6RouteExcludeAddress = nil
-		cfg.General.Tun.RouteAddress = nil
-		cfg.General.Tun.RouteAddressSet = nil
-		cfg.General.Tun.RouteExcludeAddress = nil
-		cfg.General.Tun.RouteExcludeAddressSet = nil
+	cfg.Controller.ExternalController = "127.0.0.1:9090"
+	cfg.Controller.Secret = ""
+	cfg.Controller.ExternalUI = "ui"
+	cfg.Controller.Cors.AllowOrigins = []string{
+		"http://127.0.0.1:*",
+		"http://[::1]:*",
+		"http://localhost:*",
 	}
+	cfg.Controller.Cors.AllowPrivateNetwork = false
+}
 
-	return cfg, nil
+// applyTunFd injects the kernel-supplied utun file descriptor and
+// rewrites every Tun field that the YAML profile might have set.
+// Routing/interface fields are cleared because NEPacketTunnelNetworkSettings
+// owns those on iOS; the gvisor stack is forced because the "System"
+// stack makes kernel socket calls the Network Extension entitlement
+// doesn't permit. Inet4/Inet6 addresses must match what
+// PacketTunnelProvider.configureNetworkSettings installs, otherwise the
+// kernel utun delivers packets the virtual stack rejects.
+func applyTunFd(cfg *config.Config, fd int) {
+	cfg.General.Tun.Enable = true
+	cfg.General.Tun.FileDescriptor = fd
+	cfg.General.Tun.Device = "" // don't try to open by name
+	cfg.General.Tun.Stack = C.TunGvisor
+	cfg.General.Tun.AutoRoute = false
+	cfg.General.Tun.AutoDetectInterface = false
+	cfg.General.Tun.AutoRedirect = false
+	cfg.General.Tun.StrictRoute = false
+	cfg.General.Interface = ""
+	cfg.General.RoutingMark = 0
+	cfg.General.Tun.Inet4Address = []netip.Prefix{tunInet4}
+	cfg.General.Tun.Inet6Address = []netip.Prefix{tunInet6}
+	// User-supplied route filters from the YAML are usually about
+	// kernel routing on Linux/macOS — irrelevant in fd-mode.
+	cfg.General.Tun.Inet4RouteAddress = nil
+	cfg.General.Tun.Inet6RouteAddress = nil
+	cfg.General.Tun.Inet4RouteExcludeAddress = nil
+	cfg.General.Tun.Inet6RouteExcludeAddress = nil
+	cfg.General.Tun.RouteAddress = nil
+	cfg.General.Tun.RouteAddressSet = nil
+	cfg.General.Tun.RouteExcludeAddress = nil
+	cfg.General.Tun.RouteExcludeAddressSet = nil
 }
 
 // Stop halts mihomo cleanly. Safe to call multiple times.
@@ -406,10 +385,7 @@ func Validate(yamlConfig []byte) error {
 		return fmt.Errorf("config is empty")
 	}
 
-	homeDirMu.Lock()
-	hd := homeDir
-	homeDirMu.Unlock()
-	if hd != "" {
+	if hd := homeDir.Load(); hd != "" {
 		C.SetHomeDir(hd)
 	}
 

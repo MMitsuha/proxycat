@@ -143,15 +143,12 @@ public final class ConnectionsStore: ObservableObject {
         guard streamTask == nil else { return }
         streamTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            var backoffMs: UInt64 = 200
+            var backoff = ExponentialBackoff()
             while !Task.isCancelled {
                 let ok = await self.runOnce()
                 if Task.isCancelled { break }
-                if ok {
-                    backoffMs = 200
-                }
-                try? await Task.sleep(nanoseconds: backoffMs * NSEC_PER_MSEC)
-                backoffMs = min(backoffMs * 2, 5_000)
+                if ok { backoff.reset() }
+                await backoff.sleep()
             }
             self.isStreaming = false
         }

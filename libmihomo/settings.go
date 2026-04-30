@@ -3,7 +3,6 @@ package libmihomo
 import (
 	"encoding/json"
 	"os"
-	"sync"
 
 	"github.com/metacubex/mihomo/log"
 )
@@ -30,18 +29,13 @@ func defaultSettings() RuntimeSettings {
 	}
 }
 
-var (
-	settingsPathMu sync.RWMutex
-	settingsPath   string
-)
+var settingsPath atomicString
 
 // SetSettingsPath tells the Go core where the host app's settings.json
 // lives. Pass the App Group container path. Calling with "" disables the
 // reader — Start / Reload then fall back to defaultSettings().
 func SetSettingsPath(path string) {
-	settingsPathMu.Lock()
-	settingsPath = path
-	settingsPathMu.Unlock()
+	settingsPath.Store(path)
 }
 
 // loadSettings reads settings.json. A missing file or parse error returns
@@ -49,11 +43,8 @@ func SetSettingsPath(path string) {
 // Start before the host app has written anything, and a partial / corrupt
 // file shouldn't prevent the tunnel from coming up.
 func loadSettings() RuntimeSettings {
-	settingsPathMu.RLock()
-	path := settingsPath
-	settingsPathMu.RUnlock()
-
 	s := defaultSettings()
+	path := settingsPath.Load()
 	if path == "" {
 		return s
 	}

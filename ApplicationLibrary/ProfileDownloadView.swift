@@ -79,11 +79,7 @@ public struct ProfileDownloadView: View {
                 }
             }
         }
-        .alert("Save failed", isPresented: .constant(saveError != nil)) {
-            Button("OK") { saveError = nil }
-        } message: {
-            Text(saveError ?? "")
-        }
+        .errorAlert($saveError, title: "Save failed")
     }
 
     private var hasValidURL: Bool { parsedURL != nil }

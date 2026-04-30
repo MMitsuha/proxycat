@@ -15,14 +15,14 @@ public struct ConnectionsView: View {
     public var body: some View {
         Group {
             if !profile.isConnected {
-                empty(
-                    symbol: "powerplug.portrait",
-                    title: String(localized: "Connect first to view connections")
+                ContentUnavailableView(
+                    "Connect first to view connections",
+                    systemImage: "powerplug.portrait"
                 )
             } else if settings.disableExternalController {
-                empty(
-                    symbol: "network.slash",
-                    title: String(localized: "Web Controller is off")
+                ContentUnavailableView(
+                    "Web Controller is off",
+                    systemImage: "network.slash"
                 )
             } else {
                 content
@@ -56,31 +56,18 @@ public struct ConnectionsView: View {
         VStack(spacing: 0) {
             summaryBar
             if let err = store.loadError, store.connections.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.title2)
-                        .foregroundStyle(.orange)
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "exclamationmark.triangle")
+                } description: {
                     Text(err)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if store.connections.isEmpty {
-                VStack(spacing: 8) {
-                    if store.isStreaming {
-                        Image(systemName: "tray")
-                            .font(.title)
-                            .foregroundStyle(.secondary)
-                        Text("No active connections")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ProgressView()
-                    }
+                if store.isStreaming {
+                    ContentUnavailableView("No active connections", systemImage: "tray")
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(filtered) { conn in
@@ -153,18 +140,6 @@ public struct ConnectionsView: View {
             if conn.chains.contains(where: { $0.lowercased().contains(needle) }) { return true }
             return false
         }
-    }
-
-    private func empty(symbol: String, title: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

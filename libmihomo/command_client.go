@@ -106,12 +106,26 @@ func (c *CommandClient) Connect(socketPath string) error {
 	subscribed := false
 	if c.options.SubscribeStatus {
 		c.wg.Add(1)
-		go c.runStatus(ctx, cli)
+		stream, err := cli.SubscribeStatus(ctx, &pb.StatusRequest{IntervalMs: c.options.StatusIntervalMs})
+		go runStream(c, stream, err, func(msg *pb.StatusMessage) {
+			c.handler.WriteStatus(&Status{
+				Up:             msg.Up,
+				Down:           msg.Down,
+				UpTotal:        msg.UpTotal,
+				DownTotal:      msg.DownTotal,
+				Connections:    msg.Connections,
+				MemoryResident: msg.MemoryResident,
+				MemoryBudget:   msg.MemoryBudget,
+			})
+		})
 		subscribed = true
 	}
 	if c.options.SubscribeLogs {
 		c.wg.Add(1)
-		go c.runLogs(ctx, cli)
+		stream, err := cli.SubscribeLogs(ctx, &pb.LogRequest{})
+		go runStream(c, stream, err, func(msg *pb.LogMessage) {
+			c.handler.WriteLog(int(msg.Level), msg.Payload)
+		})
 		subscribed = true
 	}
 	// Pure plumbing client (neither stream subscribed): there's nothing
@@ -145,11 +159,21 @@ func (c *CommandClient) Disconnect() {
 	c.fireDisconnect(nil)
 }
 
-func (c *CommandClient) runStatus(ctx context.Context, cli pb.CommandClient) {
+// runStream is the shared body of every server-streaming subscription:
+// drain Recv into dispatch until the stream errors, signalling
+// connected on the first frame and disconnected on any error or open
+// failure. The stream type stays at the call site (gomobile-friendly
+// proto types) and we constrain it via an inline interface so the
+// generic compiles without listing every gRPC client interface.
+func runStream[Msg any](
+	c *CommandClient,
+	stream interface{ Recv() (*Msg, error) },
+	openErr error,
+	dispatch func(*Msg),
+) {
 	defer c.wg.Done()
-	stream, err := cli.SubscribeStatus(ctx, &pb.StatusRequest{IntervalMs: c.options.StatusIntervalMs})
-	if err != nil {
-		c.fireDisconnect(err)
+	if openErr != nil {
+		c.fireDisconnect(openErr)
 		return
 	}
 	for {
@@ -159,33 +183,7 @@ func (c *CommandClient) runStatus(ctx context.Context, cli pb.CommandClient) {
 			return
 		}
 		c.fireConnected()
-		c.handler.WriteStatus(&Status{
-			Up:             msg.Up,
-			Down:           msg.Down,
-			UpTotal:        msg.UpTotal,
-			DownTotal:      msg.DownTotal,
-			Connections:    msg.Connections,
-			MemoryResident: msg.MemoryResident,
-			MemoryBudget:   msg.MemoryBudget,
-		})
-	}
-}
-
-func (c *CommandClient) runLogs(ctx context.Context, cli pb.CommandClient) {
-	defer c.wg.Done()
-	stream, err := cli.SubscribeLogs(ctx, &pb.LogRequest{})
-	if err != nil {
-		c.fireDisconnect(err)
-		return
-	}
-	for {
-		msg, err := stream.Recv()
-		if err != nil {
-			c.fireDisconnect(err)
-			return
-		}
-		c.fireConnected()
-		c.handler.WriteLog(int(msg.Level), msg.Payload)
+		dispatch(msg)
 	}
 }
 

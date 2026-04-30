@@ -79,11 +79,7 @@ public struct SettingsView: View {
         } message: {
             Text("Profiles are kept. If the tunnel is running, the freed space won't be visible until the next reconnect.")
         }
-        .alert("Clear failed", isPresented: .constant(clearError != nil)) {
-            Button("OK") { clearError = nil }
-        } message: {
-            Text(clearError ?? "")
-        }
+        .errorAlert($clearError, title: "Clear failed")
     }
 
     private func refreshCacheSize() async {

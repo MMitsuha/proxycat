@@ -168,14 +168,10 @@ private struct LogStreamList: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
-            Text(isConnected ? String(localized: "No matching logs") : String(localized: "Service not started"))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ContentUnavailableView(
+            isConnected ? "No matching logs" : "Service not started",
+            systemImage: "doc.text.magnifyingglass"
+        )
     }
 }
 

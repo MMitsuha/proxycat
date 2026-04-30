@@ -85,17 +85,16 @@ public final class CommandClient: ObservableObject {
         reconnectTask?.cancel()
         reconnectTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            var backoffMs: UInt64 = 200
+            var backoff = ExponentialBackoff()
             while !Task.isCancelled, self.shouldRun {
                 let connected = await self.attemptConnect()
                 if connected {
-                    backoffMs = 200
+                    backoff.reset()
                     // Wait until the bridge signals disconnection.
                     await self.waitForDisconnect()
                     if !self.shouldRun { return }
                 }
-                try? await Task.sleep(nanoseconds: backoffMs * NSEC_PER_MSEC)
-                backoffMs = min(backoffMs * 2, 5_000)
+                await backoff.sleep()
             }
         }
     }
