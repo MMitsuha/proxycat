@@ -55,6 +55,11 @@ public struct SettingsView: View {
 
             Section {
                 NavigationLink {
+                    AutoConnectSettingsView()
+                } label: {
+                    Label("Auto Connect", systemImage: "wifi.circle")
+                }
+                NavigationLink {
                     AdvancedSettingsView()
                 } label: {
                     Label("Advanced", systemImage: "wrench.and.screwdriver")
