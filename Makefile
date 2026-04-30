@@ -1,4 +1,4 @@
-.PHONY: all libmihomo project version clean build sim help \
+.PHONY: all libmihomo libmihomo-obf project version clean build sim help \
         assets geo-assets ui-assets clean-assets \
         mihomo-init mihomo-upgrade
 
@@ -10,6 +10,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  make libmihomo      build Frameworks/Libmihomo.xcframework via gomobile"
+	@echo "  make libmihomo-obf  same, but routed through garble (App Store submissions)"
 	@echo "  make project        run xcodegen (auto-fills version from VERSION + git)"
 	@echo "  make version        print the marketing version + build number"
 	@echo "  make all            libmihomo + project (run after first checkout)"
@@ -26,8 +27,11 @@ help:
 	@echo "Prereqs:"
 	@echo "  brew install xcodegen"
 	@echo "  go install golang.org/x/mobile/cmd/gomobile@latest && gomobile init"
+	@echo "  go install mvdan.cc/garble@master   # only for libmihomo-obf (need post-v0.16.0 fix)"
 
 all: mihomo-init libmihomo project
+
+all-obf: mihomo-init libmihomo-obf project
 
 mihomo-init:
 	@if [ ! -f mihomo/go.mod ]; then \
@@ -49,6 +53,9 @@ mihomo-upgrade:
 
 libmihomo:
 	./scripts/build-libmihomo.sh
+
+libmihomo-obf:
+	LIBMIHOMO_OBFUSCATE=1 ./scripts/build-libmihomo.sh
 
 project:
 	XCODEGEN=$(XCODEGEN) ./scripts/generate-project.sh

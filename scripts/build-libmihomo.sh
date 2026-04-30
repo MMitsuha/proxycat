@@ -6,10 +6,15 @@
 #   go install golang.org/x/mobile/cmd/gomobile@latest
 #   go install golang.org/x/mobile/cmd/gobind@latest
 #   gomobile init
+#   # only for LIBMIHOMO_OBFUSCATE=1:
+#   go install mvdan.cc/garble@master  # v0.16.0 panics on Go 1.26 generics; PR #1028 (post-tag) fixes it
 #
 # Usage:
 #   ./scripts/build-libmihomo.sh           # device + simulator slices
 #   ./scripts/build-libmihomo.sh sim       # simulator-only (faster iteration)
+#
+# Env:
+#   LIBMIHOMO_OBFUSCATE=1   build through garble (see `make libmihomo-obf`)
 
 set -euo pipefail
 
@@ -27,6 +32,56 @@ go mod tidy
 TARGETS="ios,iossimulator"
 if [[ "${1-}" == "sim" ]]; then
   TARGETS="iossimulator"
+fi
+
+# Optional garble obfuscation. App Store "Design - Spam" rejections happen
+# when the binary similarity hash matches other apps embedding mihomo; garble
+# renames symbols/packages and (with -literals) scrambles string literals so
+# the binary diverges from every other mihomo-based shipper. gomobile bind
+# itself has no obfuscation hook, so we substitute a `go` shim into PATH that
+# routes `go build`/`go install` through garble while letting `go env`,
+# `go list`, `go mod`, etc. fall through to the real toolchain. Garble
+# itself spawns `go` via PATH lookup — see the SHIM heredoc for the loop
+# break.
+OBFUSCATE="${LIBMIHOMO_OBFUSCATE:-0}"
+if [[ "$OBFUSCATE" == "1" ]]; then
+  if ! command -v garble >/dev/null 2>&1; then
+    echo "error: LIBMIHOMO_OBFUSCATE=1 but 'garble' is not on PATH" >&2
+    echo "       install: go install mvdan.cc/garble@master" >&2
+    exit 1
+  fi
+  LIBMIHOMO_REAL_GO="$(command -v go)"
+  LIBMIHOMO_GARBLE_BIN="$(command -v garble)"
+  LIBMIHOMO_SHIM_DIR="$(mktemp -d -t libmihomo-shim-XXXXXX)"
+  trap 'rm -rf "$LIBMIHOMO_SHIM_DIR"' EXIT
+  cat >"$LIBMIHOMO_SHIM_DIR/go" <<'SHIM'
+#!/usr/bin/env bash
+# Installed by scripts/build-libmihomo.sh when LIBMIHOMO_OBFUSCATE=1.
+# Forward only build/install through garble; the rest stay on real go so
+# gomobile's `go env`, `go list`, `go mod tidy`, `go version`, etc. behave
+# normally. Garble's own internal `go` invocations resolve via PATH, so we
+# must drop the shim dir from PATH before exec'ing garble — otherwise we
+# loop (gomobile → shim → garble → shim → garble → …, growing -toolexec).
+case "${1-}" in
+  build|install)
+    PATH="$LIBMIHOMO_REAL_PATH" exec "$LIBMIHOMO_GARBLE_BIN" $LIBMIHOMO_GARBLE_FLAGS "$@"
+    ;;
+  *)
+    exec "$LIBMIHOMO_REAL_GO" "$@"
+    ;;
+esac
+SHIM
+  chmod +x "$LIBMIHOMO_SHIM_DIR/go"
+  export LIBMIHOMO_REAL_GO LIBMIHOMO_GARBLE_BIN
+  # -literals obfuscates strings/numbers — biggest contributor to binary
+  # diversity vs other mihomo apps. Skip -tiny so log[level=warning]
+  # stack frames stay readable (runtime.Caller would otherwise return
+  # zero PCs, making field bug reports useless).
+  export LIBMIHOMO_GARBLE_FLAGS="-literals"
+  export LIBMIHOMO_REAL_PATH="$PATH"
+  export PATH="$LIBMIHOMO_SHIM_DIR:$PATH"
+  echo "==> Obfuscated build via $("$LIBMIHOMO_GARBLE_BIN" version | head -1)"
+  echo "    GARBLE_FLAGS=$LIBMIHOMO_GARBLE_FLAGS"
 fi
 
 # Tags chosen to keep the binary small for the NE jetsam ceiling
@@ -50,7 +105,9 @@ LDFLAGS="-s -w"
 LDFLAGS+=" -X 'github.com/metacubex/mihomo/constant.Version=$MIHOMO_VERSION'"
 LDFLAGS+=" -X 'github.com/metacubex/mihomo/constant.BuildTime=$BUILD_TIME'"
 LDFLAGS+=" -X 'github.com/proxycat/libmihomo.wrapperBuildTime=$BUILD_TIME'"
-LDFLAGS+=" -X 'github.com/proxycat/libmihomo.wrapperBuildTag=$BUILD_TAGS'"
+WRAPPER_TAG="$BUILD_TAGS"
+[[ "$OBFUSCATE" == "1" ]] && WRAPPER_TAG="$WRAPPER_TAG +obfuscated"
+LDFLAGS+=" -X 'github.com/proxycat/libmihomo.wrapperBuildTag=$WRAPPER_TAG'"
 LDFLAGS+=" -X 'github.com/proxycat/libmihomo.mihomoCommit=$MIHOMO_COMMIT'"
 
 echo "==> gomobile bind target=$TARGETS tags=$BUILD_TAGS"
