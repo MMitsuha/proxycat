@@ -7,10 +7,10 @@
 
 ## 截图
 
-| Dashboard | Profiles | Logs | Settings |
-|:---:|:---:|:---:|:---:|
-| <img src="assets/IMG_2721.png" width="200"> | <img src="assets/IMG_2722.png" width="200"> | <img src="assets/IMG_2723.png" width="200"> | <img src="assets/IMG_2725.png" width="200"> |
-| 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | 隐私 / 存储 / Auto Connect / 诊断 |
+| Dashboard | Profiles | Logs | Settings | Auto Connect |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="assets/IMG_2721.png" width="200"> | <img src="assets/IMG_2722.png" width="200"> | <img src="assets/IMG_2723.png" width="200"> | <img src="assets/IMG_2725.png" width="200"> | <img src="assets/IMG_2749.png" width="200"> |
+| 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | 隐私 / 存储 / Auto Connect / 诊断 | SSID / 蜂窝 / 默认动作 |
 
 ## 目录结构
 
