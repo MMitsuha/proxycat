@@ -51,9 +51,6 @@ brew install xcodegen
 go install golang.org/x/mobile/cmd/gomobile@latest
 go install golang.org/x/mobile/cmd/gobind@latest
 gomobile init
-
-# 仅当需要做混淆构建（App Store 提交）时再装：
-go install mvdan.cc/garble@master
 ```
 
 mihomo 源码以 git submodule 形式 vendored 在 `proxycat/mihomo/`，跟踪上游 `Alpha` 分支。`libmihomo/go.mod` 中的 `replace` 指向该子模块。
@@ -89,7 +86,6 @@ open ProxyCat.xcodeproj
 | target            | 说明                                                   |
 |-------------------|--------------------------------------------------------|
 | `make libmihomo`      | 仅重建 `Frameworks/Libmihomo.xcframework`              |
-| `make libmihomo-obf`  | 用 `garble` 走混淆构建（App Store 提交用）             |
 | `make project`        | 运行 `xcodegen` 并自动注入版本号（见下）               |
 | `make version`        | 打印下一次 `make project` 会写入的版本/编号            |
 | `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
