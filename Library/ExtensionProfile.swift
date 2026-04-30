@@ -112,6 +112,10 @@ public final class ExtensionProfile: ObservableObject {
         manager.isOnDemandEnabled = config.enabled
         manager.onDemandRules = Self.buildOnDemandRules(from: config)
         try await manager.saveToPreferences()
+        // Re-read so the in-memory manager mirrors what the system
+        // actually persisted (saveToPreferences can normalize fields).
+        // Mirrors the save+load pattern in load() and start().
+        try await manager.loadFromPreferences()
     }
 
     private static func buildOnDemandRules(from c: AutoConnectConfig) -> [NEOnDemandRule] {

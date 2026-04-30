@@ -56,7 +56,11 @@ public final class HostSettingsStore: ObservableObject {
             // file.
             try data.write(to: URL(fileURLWithPath: FilePath.hostSettingsFilePath), options: .atomic)
         } catch {
+            // Don't broadcast on failure: subscribers would re-apply
+            // from in-memory state while the persisted file still holds
+            // the old value, silently reverting on the next cold launch.
             Self.logger.error("could not persist host settings: \(error.localizedDescription, privacy: .public)")
+            return
         }
         NotificationCenter.default.post(name: AppConfiguration.hostSettingsDidChange, object: self)
     }
