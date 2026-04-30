@@ -724,6 +724,18 @@
         }
       }
     },
+    "Go" : {
+      "comment" : "Row label in Advanced Settings → Runtime, paired with the Go toolchain version used to build mihomo.",
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go"
+          }
+        }
+      }
+    },
     "Host" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -817,6 +829,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "内存"
+          }
+        }
+      }
+    },
+    "Meta" : {
+      "comment" : "Row label in Advanced Settings → mihomo Core, paired with a checkmark when this build is the Meta variant.",
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meta"
           }
         }
       }
@@ -1355,7 +1379,14 @@
       }
     },
     "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Applies immediately while connected." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "阻止 mihomo 的 HTTP 控制器与内置网页 UI 绑定监听。宿主应用通过其私有连接继续工作。已连接时立即生效。"
+          }
+        }
+      }
     },
     "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Takes effect on next connect." : {
       "extractionState" : "stale",
