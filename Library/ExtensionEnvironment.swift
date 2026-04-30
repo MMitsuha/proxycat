@@ -26,6 +26,7 @@ public final class ExtensionEnvironment: ObservableObject {
     private var statusObservation: AnyCancellable?
     private var activeContentObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
+    private var logLevelObserver: NSObjectProtocol?
     private var hostSettingsObserver: NSObjectProtocol?
     private var memoryObserverToken: UUID?
     /// Surfaces the most recent reload error to the UI so taps on a
@@ -52,6 +53,9 @@ public final class ExtensionEnvironment: ObservableObject {
             NotificationCenter.default.removeObserver(token)
         }
         if let token = settingsObserver {
+            NotificationCenter.default.removeObserver(token)
+        }
+        if let token = logLevelObserver {
             NotificationCenter.default.removeObserver(token)
         }
         if let token = hostSettingsObserver {
@@ -88,6 +92,7 @@ public final class ExtensionEnvironment: ObservableObject {
         observeProfileStatus()
         observeActiveContent()
         observeRuntimeSettings()
+        observeRuntimeLogLevel()
         observeHostSettings()
         startMemoryPressureWatch()
         // Make sure the current state is honored even before the
@@ -149,6 +154,35 @@ public final class ExtensionEnvironment: ObservableObject {
             Task { @MainActor in
                 await self?.reloadIfConnected()
             }
+        }
+    }
+
+    /// Fast path for log-level toggles. Sends a "setLogLevel:N" provider
+    /// message that lands at `log.SetLevel` in the extension's mihomo,
+    /// skipping the heavyweight `hub.ApplyConfig` reload that the
+    /// settings-changed observer above triggers. Falls back silently
+    /// when disconnected — the next `start()` reads the new level from
+    /// settings.json that RuntimeSettings just persisted.
+    private func observeRuntimeLogLevel() {
+        guard logLevelObserver == nil else { return }
+        logLevelObserver = NotificationCenter.default.addObserver(
+            forName: AppConfiguration.runtimeLogLevelDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let level = note.userInfo?["level"] as? Int else { return }
+            Task { @MainActor in
+                await self?.applyLogLevelIfConnected(level)
+            }
+        }
+    }
+
+    private func applyLogLevelIfConnected(_ level: Int) async {
+        guard profile.isConnected else { return }
+        do {
+            try await profile.setLogLevel(level)
+        } catch {
+            reloadError = error.localizedDescription
         }
     }
 

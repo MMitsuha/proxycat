@@ -43,10 +43,17 @@ public enum LibmihomoBridge {
         LibmihomoStop()
     }
 
-    /// Push a runtime log filter without going through Reload. Used as a
-    /// no-restart hook for tests / direct callers; the host app normally
-    /// drives this by writing settings.json + asking the extension to
-    /// `reload()`, which re-reads the file and lands in the same place.
+    /// Push a runtime log filter directly into mihomo, bypassing the
+    /// heavyweight reload path. Levels: 0=DEBUG 1=INFO 2=WARNING
+    /// 3=ERROR 4=SILENT. Out-of-range values are clamped on the Go side.
+    ///
+    /// Called locally in two places:
+    ///   * In the host process by `RuntimeSettings`, so host-side log
+    ///     emissions (e.g. from `validate()`) honor the user's choice.
+    ///   * In the extension by `PacketTunnelProvider` when handling the
+    ///     `setLogLevel:N` provider message — that's how a UI toggle
+    ///     reaches the running mihomo without triggering
+    ///     `hub.ApplyConfig`.
     public static func setLogLevel(_ level: Int) {
         LibmihomoSetLogLevel(level)
     }

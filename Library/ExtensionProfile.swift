@@ -79,10 +79,29 @@ public final class ExtensionProfile: ObservableObject {
     /// YAML on disk). The caller decides whether to surface that to the
     /// user or fall back to disconnect+reconnect.
     public func reload() async throws {
+        try await sendCommand("reload", failureLabel: "Reload failed")
+    }
+
+    /// Pushes a runtime log-level change to the extension without going
+    /// through the heavyweight reload path. Mihomo's filter is just one
+    /// atomic; rebuilding proxies/listeners/rules to update it would be
+    /// gratuitous (mihomo's own /configs PATCH handler also updates the
+    /// level by calling `log.SetLevel` directly).
+    ///
+    /// Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Out-of-range
+    /// values are clamped on the Go side.
+    ///
+    /// No-op when disconnected; the next `start()` reads the new level
+    /// from settings.json.
+    public func setLogLevel(_ level: Int) async throws {
+        try await sendCommand("setLogLevel:\(level)", failureLabel: "Log level update failed")
+    }
+
+    private func sendCommand(_ command: String, failureLabel: String) async throws {
         guard isConnected, let session = manager?.connection as? NETunnelProviderSession else {
             return
         }
-        guard let payload = "reload".data(using: .utf8) else { return }
+        guard let payload = command.data(using: .utf8) else { return }
 
         let response: Data? = try await withCheckedThrowingContinuation { cont in
             do {
@@ -95,7 +114,7 @@ public final class ExtensionProfile: ObservableObject {
         }
 
         if let response, !response.isEmpty {
-            let message = String(data: response, encoding: .utf8) ?? "Reload failed"
+            let message = String(data: response, encoding: .utf8) ?? failureLabel
             throw ExtensionProfileError.reloadFailed(message)
         }
     }

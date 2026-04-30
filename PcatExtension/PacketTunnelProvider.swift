@@ -112,21 +112,40 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     override func handleAppMessage(_ messageData: Data) async -> Data? {
         // Streaming status / logs go through the gRPC channel, not here.
-        // This surface carries one signal: "reload". The host sends it
-        // when the active profile changes OR when the user toggles a
-        // runtime setting; Go re-reads everything from disk either way,
-        // so a single message type covers both flows.
+        // This surface carries small control signals from the host:
+        //   * "reload" — full re-read of YAML + settings.json, used for
+        //     profile switches, YAML edits, or `disableExternalController`
+        //     toggles.
+        //   * "setLogLevel:N" — fast path for log level changes; calls
+        //     `log.SetLevel` directly, no hub.ApplyConfig.
+        //   * "ping" — connectivity probe.
         guard let cmd = String(data: messageData, encoding: .utf8) else {
             return nil
         }
-        switch cmd {
-        case "ping":
+        if cmd == "ping" {
             return "pong".data(using: .utf8)
-        case "reload":
-            return await handleReload()
-        default:
-            return nil
         }
+        if cmd == "reload" {
+            return await handleReload()
+        }
+        if let level = parseSetLogLevel(cmd) {
+            return handleSetLogLevel(level)
+        }
+        return nil
+    }
+
+    private func parseSetLogLevel(_ cmd: String) -> Int? {
+        let prefix = "setLogLevel:"
+        guard cmd.hasPrefix(prefix) else { return nil }
+        return Int(cmd.dropFirst(prefix.count))
+    }
+
+    /// Pushes a runtime log filter change without disturbing the running
+    /// mihomo config. Returns nil on success; an error string on bad input.
+    private func handleSetLogLevel(_ level: Int) -> Data? {
+        LibmihomoBridge.setLogLevel(level)
+        Self.logger.info("setLogLevel \(level, privacy: .public)")
+        return nil
     }
 
     /// Hot-swap mihomo to whatever the host has currently marked active

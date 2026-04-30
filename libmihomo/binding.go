@@ -32,6 +32,12 @@ import (
 	"github.com/metacubex/mihomo/log"
 )
 
+// Mihomo log level bounds: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
+const (
+	logLevelMin = 0
+	logLevelMax = 4
+)
+
 // Virtual TUN addresses installed in fd-mode. They MUST match the
 // NEPacketTunnelNetworkSettings configured by PacketTunnelProvider so
 // gvisor's netstack recognises incoming packets as locally addressed.
@@ -49,20 +55,13 @@ var (
 	socketPath    atomicString
 	activePointer atomicString
 	profilesDir   atomicString
-
-	// runtimeLogLevel is the wrapper's source of truth for the mihomo
-	// log filter. Initialised to WARNING (2) so YAML profiles that ship
-	// with `log-level: debug` or `info` don't flood the host app's log
-	// stream by default. SetLogLevel updates this atomically; every
-	// Start / Reload re-applies it on top of the parsed config so the
-	// YAML's own `log-level:` is always ignored. Reload also re-reads
-	// settings.json into this field so the host app can change the
-	// runtime level just by writing the JSON.
-	runtimeLogLevel atomic.Int32
 )
 
+// Default the log filter to WARNING so a fresh install (no settings.json
+// yet) and YAML profiles shipping with `log-level: debug|info` don't
+// flood the host app's log stream. Start / Reload override this from
+// settings.json; mid-session SetLogLevel updates it directly.
 func init() {
-	runtimeLogLevel.Store(int32(log.WARNING))
 	log.SetLevel(log.WARNING)
 }
 
@@ -253,12 +252,10 @@ func prepareConfig(yamlConfig []byte) (*config.Config, error) {
 // applyLogLevel forces the log filter to whatever the host wrote into
 // settings.json. The YAML's own `log-level:` is intentionally discarded
 // — the host app owns this setting at runtime, and we don't want a
-// profile import to silently re-enable debug logging. The runtime
-// atomic stays in sync so SetLogLevel callers see the same value.
+// profile import to silently re-enable debug logging.
 func applyLogLevel(cfg *config.Config, level int) {
-	runtimeLogLevel.Store(int32(level))
-	log.SetLevel(log.LogLevel(level))
-	cfg.General.LogLevel = log.LogLevel(level)
+	log.SetLevel(log.LogLevel(clampLogLevel(level)))
+	cfg.General.LogLevel = log.Level()
 }
 
 // applyIOSDefaults asserts the few cfg fields that the YAML must not be
@@ -393,25 +390,26 @@ func Validate(yamlConfig []byte) error {
 	return err
 }
 
-// SetLogLevel changes the runtime log filter. Levels: 0=DEBUG 1=INFO 2=WARNING
-// 3=ERROR 4=SILENT. Provided as a no-restart hook for tests / direct callers;
-// the host app normally drives this by writing settings.json + asking the
-// extension to Reload, which re-reads the file and lands here via
-// prepareConfig.
+// SetLogLevel changes the runtime log filter without rebuilding the
+// running mihomo config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR
+// 4=SILENT. Wired up to the host app's "setLogLevel" provider message
+// so a Logs-tab toggle takes effect immediately in the extension's
+// mihomo without going through hub.ApplyConfig.
+//
+// Mirrors mihomo's own /configs PATCH handler in hub/route/configs.go,
+// which also updates the level by calling log.SetLevel directly.
 func SetLogLevel(level int) {
-	if level < 0 {
-		level = 0
-	}
-	if level > 4 {
-		level = 4
-	}
-	runtimeLogLevel.Store(int32(level))
-	log.SetLevel(log.LogLevel(level))
+	log.SetLevel(log.LogLevel(clampLogLevel(level)))
 }
 
-// LogLevel returns the current log level.
-func LogLevel() int {
-	return int(log.Level())
+func clampLogLevel(level int) int {
+	if level < logLevelMin {
+		return logLevelMin
+	}
+	if level > logLevelMax {
+		return logLevelMax
+	}
+	return level
 }
 
 // Wrapper-level build identifiers. Populated by `go build -ldflags -X` at
