@@ -100,6 +100,53 @@ public final class ExtensionProfile: ObservableObject {
         }
     }
 
+    /// Pushes the user's Auto Connect configuration onto the
+    /// NETunnelProviderManager: flips `isOnDemandEnabled` and rebuilds
+    /// the `onDemandRules` array, then persists. Idempotent — if the
+    /// derived state already matches what the manager has, the
+    /// `saveToPreferences` is still cheap. Safe to call while
+    /// connected; iOS picks up the new rules on the next network
+    /// change without restarting the tunnel.
+    public func applyAutoConnect(_ config: AutoConnectConfig) async throws {
+        guard let manager else { return }
+        manager.isOnDemandEnabled = config.enabled
+        manager.onDemandRules = Self.buildOnDemandRules(from: config)
+        try await manager.saveToPreferences()
+    }
+
+    private static func buildOnDemandRules(from c: AutoConnectConfig) -> [NEOnDemandRule] {
+        var rules: [NEOnDemandRule] = []
+
+        // SSID-specific rules first; first-match wins, so they always
+        // override the cellular and fallback rules below.
+        for r in c.ssidRules where !r.ssid.isEmpty {
+            let rule = makeOnDemandRule(for: r.action)
+            rule.interfaceTypeMatch = .wiFi
+            rule.ssidMatch = [r.ssid]
+            rules.append(rule)
+        }
+
+        let cell = makeOnDemandRule(for: c.cellular)
+        cell.interfaceTypeMatch = .cellular
+        rules.append(cell)
+
+        // Final fallback — `.any` matches anything not yet matched,
+        // including Wi-Fi networks the user has not named.
+        let fallback = makeOnDemandRule(for: c.fallback)
+        fallback.interfaceTypeMatch = .any
+        rules.append(fallback)
+
+        return rules
+    }
+
+    private static func makeOnDemandRule(for action: AutoConnectAction) -> NEOnDemandRule {
+        switch action {
+        case .connect:    return NEOnDemandRuleConnect()
+        case .disconnect: return NEOnDemandRuleDisconnect()
+        case .ignore:     return NEOnDemandRuleIgnore()
+        }
+    }
+
     private func attachObserver(_ manager: NETunnelProviderManager) {
         if let token = statusObserver {
             NotificationCenter.default.removeObserver(token)
