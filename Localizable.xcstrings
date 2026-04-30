@@ -768,6 +768,17 @@
         }
       }
     },
+    "Import failed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入失败"
+          }
+        }
+      }
+    },
     "Import YAML" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -775,16 +786,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导入 YAML"
-          }
-        }
-      }
-    },
-    "Import failed" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入失败"
           }
         }
       }
