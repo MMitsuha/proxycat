@@ -72,6 +72,14 @@ public enum FilePath {
         sharedDirectory.appendingPathComponent(AppConfiguration.settingsFileName).path
     }
 
+    /// Path of the host-only settings JSON. Sits next to
+    /// `settings.json` in the App Group root so the same set of paths
+    /// configures every persistence consumer. Read/written only by the
+    /// host app; the Go core never touches it.
+    public static var hostSettingsFilePath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.hostSettingsFileName).path
+    }
+
     private static func ensureSubdirectory(_ name: String) -> URL {
         let url = sharedDirectory.appendingPathComponent(name, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

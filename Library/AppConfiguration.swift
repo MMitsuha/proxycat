@@ -16,8 +16,20 @@ public enum AppConfiguration {
     /// extension stay in lock-step without shuttling values through IPC.
     public static let settingsFileName = "settings.json"
 
+    /// Filename of the host-only settings JSON. Written by the host app
+    /// for features the iOS side owns alone (e.g. on-demand rules
+    /// configured on `NETunnelProviderManager`). The Go core never
+    /// reads this file.
+    public static let hostSettingsFileName = "host_settings.json"
+
     /// Posted by RuntimeSettings whenever the user changes a runtime
     /// preference. Subscribers (ExtensionEnvironment) react by asking
     /// the running tunnel to re-read settings.json and hot-apply.
     public static let runtimeSettingsDidChange = Notification.Name("io.proxycat.RuntimeSettings.didChange")
+
+    /// Posted by HostSettingsStore whenever the user changes a
+    /// host-only preference. Subscribers (ExtensionEnvironment) react by
+    /// re-applying the relevant configuration to the
+    /// NETunnelProviderManager (e.g. on-demand rules).
+    public static let hostSettingsDidChange = Notification.Name("io.proxycat.HostSettings.didChange")
 }
