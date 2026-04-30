@@ -6,10 +6,8 @@
 """
 Renders the 1024x1024 App Store icon for ProxyCat.
 
-Concept: a stylized cat face with a third eye in the forehead. The third
-eye references mihomo's namesake (the three-eyed mythological beast in
-Chinese folklore the project is named after); the cat references the
-"Cat" in ProxyCat. Pure shapes — no fonts, no external assets.
+Concept: a stylized cat face on an Apple-style blue-to-white gradient.
+Pure shapes — no fonts, no external assets.
 
 Run it from the repo root:
 
@@ -37,10 +35,10 @@ def render() -> Image.Image:
     img = Image.new("RGB", (SIZE, SIZE), "white")
     draw = ImageDraw.Draw(img)
 
-    # Vertical gradient: deep indigo at top, vivid magenta at bottom.
+    # Vertical gradient: Apple system blue at top, white at bottom.
     # iOS auto-rounds the corners so we paint full-bleed.
-    top = (49, 46, 129)        # indigo-900
-    bottom = (190, 24, 93)     # pink-700
+    top = (10, 132, 255)       # #0A84FF
+    bottom = (255, 255, 255)   # white
     for y in range(SIZE):
         t = y / (SIZE - 1)
         draw.line([(0, y), (SIZE, y)], fill=lerp(top, bottom, t))
@@ -51,7 +49,6 @@ def render() -> Image.Image:
     cream = (255, 250, 240)
     inner_ear = (244, 114, 182)   # pink-400
     eye = (15, 23, 42)            # slate-900
-    third = (34, 211, 238)        # cyan-400
 
     # Outer ears: filled triangles. Bases overlap the face top so the
     # join reads as one silhouette.
@@ -74,22 +71,13 @@ def render() -> Image.Image:
         fill=cream,
     )
 
-    # Two regular eyes — almond shape, slight tilt suggested via aspect ratio.
+    # Two eyes — almond shape, slight tilt suggested via aspect ratio.
     eye_dx, eye_dy = 145, -5
     eye_w, eye_h = 46, 70
     for sign in (-1, 1):
         ex = cx + sign * eye_dx
         ey = cy + eye_dy
         draw.ellipse([(ex - eye_w, ey - eye_h), (ex + eye_w, ey + eye_h)], fill=eye)
-
-    # Third eye: cyan iris in the forehead, slightly larger than the
-    # other eyes so it reads even at small sizes. Dark pupil + cream
-    # highlight gives it dimension.
-    third_x, third_y = cx, cy - 130
-    iw, ih = 50, 72
-    draw.ellipse([(third_x - iw, third_y - ih), (third_x + iw, third_y + ih)], fill=third)
-    draw.ellipse([(third_x - 18, third_y - 30), (third_x + 18, third_y + 30)], fill=eye)
-    draw.ellipse([(third_x - 14, third_y - 32), (third_x + 2, third_y - 14)], fill=cream)
 
     # Nose: small downward triangle, same pink as inner ears.
     nose = [(cx - 32, cy + 90), (cx + 32, cy + 90), (cx, cy + 130)]
