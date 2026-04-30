@@ -126,12 +126,10 @@ public struct AutoConnectSettingsView: View {
     private var ssidSection: some View {
         Section {
             ForEach($store.autoConnect.ssidRules) { $rule in
-                HStack {
+                actionPicker(selection: $rule.action) {
                     Text(rule.ssid)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Spacer()
-                    actionPicker(selection: $rule.action)
                 }
             }
             .onDelete { offsets in
@@ -152,20 +150,16 @@ public struct AutoConnectSettingsView: View {
 
     private var cellularSection: some View {
         Section {
-            HStack {
+            actionPicker(selection: $store.autoConnect.cellular) {
                 Text("Cellular")
-                Spacer()
-                actionPicker(selection: $store.autoConnect.cellular)
             }
         }
     }
 
     private var fallbackSection: some View {
         Section {
-            HStack {
+            actionPicker(selection: $store.autoConnect.fallback) {
                 Text("Default")
-                Spacer()
-                actionPicker(selection: $store.autoConnect.fallback)
             }
         } footer: {
             Text("Used for any network not matched above.")
@@ -182,14 +176,23 @@ public struct AutoConnectSettingsView: View {
 
     // MARK: - Helpers
 
-    private func actionPicker(selection: Binding<AutoConnectAction>) -> some View {
-        Picker("Action", selection: selection) {
+    /// A Form-native label + menu Picker. Uses Picker's own label
+    /// parameter rather than a manual HStack so each row matches the
+    /// system's standard Form row height (the manual layout was
+    /// noticeably taller).
+    @ViewBuilder
+    private func actionPicker<Label: View>(
+        selection: Binding<AutoConnectAction>,
+        @ViewBuilder label: () -> Label
+    ) -> some View {
+        Picker(selection: selection) {
             Text("Connect").tag(AutoConnectAction.connect)
             Text("Disconnect").tag(AutoConnectAction.disconnect)
             Text("Ignore").tag(AutoConnectAction.ignore)
+        } label: {
+            label()
         }
         .pickerStyle(.menu)
-        .labelsHidden()
     }
 
     private func commitNewSSID() {
