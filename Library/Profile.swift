@@ -141,6 +141,23 @@ public final class ProfileStore: ObservableObject {
         return profile
     }
 
+    /// Imports a YAML profile from a file URL, handling iOS security-scoped
+    /// resource access. Used by both the in-app `.fileImporter` and the
+    /// share-sheet `.onOpenURL` entry point.
+    ///
+    /// `startAccessingSecurityScopedResource()` returning `false` is not
+    /// treated as fatal — iOS reports `false` for URLs already accessible
+    /// to the app (e.g. files inside the app's own container). Letting
+    /// `String(contentsOf:)` decide produces a more accurate error.
+    @discardableResult
+    public func importYAML(from url: URL) throws -> Profile {
+        let didStart = url.startAccessingSecurityScopedResource()
+        defer { if didStart { url.stopAccessingSecurityScopedResource() } }
+        let content = try String(contentsOf: url, encoding: .utf8)
+        let name = url.deletingPathExtension().lastPathComponent
+        return try importYAML(content, name: name)
+    }
+
     /// Re-downloads `profile.remoteURL`, overwrites the on-disk YAML, and
     /// bumps `lastUpdated`. Throws if the profile has no remote URL.
     public func refreshRemote(_ profile: Profile) async throws {
