@@ -29,11 +29,18 @@ public final class RuntimeSettings: ObservableObject {
         // dropFirst skips the publisher's "current value" replay so we
         // don't immediately re-write what we just loaded; subsequent
         // changes from a SwiftUI binding flow through persistAndBroadcast.
+        //
+        // Persist from the tuple the publisher hands us, not from the
+        // stored properties: @Published emits in willSet, so reading
+        // self.* here returns the *previous* value and disk would lag
+        // one toggle behind in-memory state.
         Publishers.CombineLatest($disableExternalController, $logLevel)
             .dropFirst()
             .removeDuplicates(by: { $0 == $1 })
-            .sink { [weak self] _ in
-                self?.persistAndBroadcast()
+            .sink { [weak self] disable, level in
+                self?.persistAndBroadcast(
+                    snapshot: Snapshot(disableExternalController: disable, logLevel: level)
+                )
             }
             .store(in: &bag)
     }
@@ -53,11 +60,7 @@ public final class RuntimeSettings: ObservableObject {
         return (try? JSONDecoder().decode(Snapshot.self, from: data)) ?? .defaults
     }
 
-    private func persistAndBroadcast() {
-        let snapshot = Snapshot(
-            disableExternalController: disableExternalController,
-            logLevel: logLevel
-        )
+    private func persistAndBroadcast(snapshot: Snapshot) {
         do {
             // JSONEncoder produces stable output (no sortedKeys by default
             // but the field order is deterministic per encoder); Go reads
