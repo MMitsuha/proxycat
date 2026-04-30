@@ -13,7 +13,28 @@
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
     </dict>
-    <key>UTImportedTypeDeclarations</key>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Mihomo Profile</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>io.proxycat.profile.yaml</string>
+                <string>public.yaml</string>
+            </array>
+        </dict>
+    </array>
+    <!-- We import-and-copy: iOS hands us a sandboxed Inbox copy and the
+         source file is never modified. Explicit `false` matches that
+         intent and silences the LSSupportsOpeningDocumentsInPlace warning. -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <false/>
+    <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
             <key>UTTypeIdentifier</key>
