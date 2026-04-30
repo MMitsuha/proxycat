@@ -88,12 +88,7 @@ public struct ProfileListView: View {
             switch result {
             case let .success(urls):
                 guard let url = urls.first else { return }
-                _ = url.startAccessingSecurityScopedResource()
-                defer { url.stopAccessingSecurityScopedResource() }
-                run {
-                    let content = try String(contentsOf: url, encoding: .utf8)
-                    try profileStore.importYAML(content, name: url.deletingPathExtension().lastPathComponent)
-                }
+                run { _ = try profileStore.importYAML(from: url) }
             case let .failure(error):
                 actionError = error.localizedDescription
             }
