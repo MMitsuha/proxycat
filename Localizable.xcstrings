@@ -1,18 +1,23 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@" : {},
-    "%@ active" : {},
-    "%@ chars" : {
+    "[truncated — showing last %lld of %lld bytes]\n\n" : {
+      "comment" : "Banner prepended to a saved log file's body when only the tail is shown. %1$lld is the number of bytes shown; %2$lld is the file's full size.",
       "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 字符"
+            "value" : "[已截断 — 仅显示末尾 %1$lld / %2$lld 字节]\n\n"
           }
         }
       }
+    },
+    "%@" : {
+
+    },
+    "%@ active" : {
+
     },
     "%@ line%@ on the clipboard." : {
       "localizations" : {
@@ -20,23 +25,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ line%2$@ on the clipboard."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已将 %1$@ 行复制到剪贴板。"
-          }
-        }
-      }
-    },
-    "%lld chars" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 字符"
           }
         }
       }
@@ -103,6 +91,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "操作"
+          }
+        }
+      }
+    },
+    "active" : {
+      "comment" : "Caption under the active-connections counter on the dashboard.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动"
           }
         }
       }
@@ -654,17 +653,6 @@
         }
       }
     },
-    "Download Profile" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下载配置"
-          }
-        }
-      }
-    },
     "Download from URL" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -672,6 +660,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从链接下载"
+          }
+        }
+      }
+    },
+    "Download Profile" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载配置"
           }
         }
       }
@@ -839,17 +838,6 @@
         }
       }
     },
-    "Import YAML" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入 YAML"
-          }
-        }
-      }
-    },
     "Import a YAML config or paste one in." : {
       "localizations" : {
         "zh-Hans" : {
@@ -871,6 +859,17 @@
         }
       }
     },
+    "Import YAML" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入 YAML"
+          }
+        }
+      }
+    },
     "Info" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -878,6 +877,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "信息"
+          }
+        }
+      }
+    },
+    "iOS evaluates SSIDs case-sensitively. The first matching rule wins; networks not listed fall through to the Default action below." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 区分大小写匹配 SSID。优先匹配最先命中的规则;未列出的网络将使用下方的“默认”操作。"
+          }
+        }
+      }
+    },
+    "iOS only auto-connects after you have tapped Connect on the Dashboard at least once on this device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在本设备上至少在仪表盘点击一次“连接”后,iOS 才会启用自动连接。"
           }
         }
       }
@@ -933,6 +954,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meta"
+          }
+        }
+      }
+    },
+    "mihomo Core" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mihomo 内核"
+          }
+        }
+      }
+    },
+    "mihomo on GitHub" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 上查看 mihomo"
           }
         }
       }
@@ -1003,6 +1046,7 @@
       }
     },
     "No active connections" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1067,6 +1111,7 @@
       }
     },
     "No saved logs yet" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1108,7 +1153,9 @@
         }
       }
     },
-    "Paste or type YAML here…" : {},
+    "Paste or type YAML here…" : {
+
+    },
     "Pause" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1238,6 +1285,7 @@
       }
     },
     "ProxyCat on GitHub" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1334,17 +1382,6 @@
         }
       }
     },
-    "SNI" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SNI"
-          }
-        }
-      }
-    },
     "Save" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1389,17 +1426,6 @@
         }
       }
     },
-    "Server returned HTTP %lld" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务器返回 HTTP %lld"
-          }
-        }
-      }
-    },
     "Server returned an empty body" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1407,6 +1433,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器返回空内容"
+          }
+        }
+      }
+    },
+    "Server returned HTTP %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器返回 HTTP %lld"
           }
         }
       }
@@ -1455,6 +1492,17 @@
         }
       }
     },
+    "SNI" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SNI"
+          }
+        }
+      }
+    },
     "Source" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1487,17 +1535,6 @@
         }
       }
     },
-    "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Takes effect on next connect." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "阻止 mihomo 的 HTTP 控制器与内置网页 UI 绑定监听。宿主应用通过其私有连接继续工作。下次连接时生效。"
-          }
-        }
-      }
-    },
     "Storage" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1515,17 +1552,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "标签"
-          }
-        }
-      }
-    },
-    "Tap **Validate** before saving. Mihomo's parser will run on this YAML." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存前请点击 **校验**。mihomo 解析器会在此 YAML 上运行。"
           }
         }
       }
@@ -1563,14 +1589,7 @@
       }
     },
     "This removes every %@ file and cannot be undone. The active session, if any, is preserved." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这将删除全部 %@ 个文件且无法撤销。当前活动的会话（如有）会被保留。"
-          }
-        }
-      }
+
     },
     "This removes every %lld file and cannot be undone. The active session, if any, is preserved." : {
       "extractionState" : "stale",
@@ -1605,28 +1624,6 @@
         }
       }
     },
-    "URL" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接"
-          }
-        }
-      }
-    },
-    "URL is not valid" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接无效"
-          }
-        }
-      }
-    },
     "Unknown" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1649,6 +1646,28 @@
         }
       }
     },
+    "URL" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接"
+          }
+        }
+      }
+    },
+    "URL is not valid" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接无效"
+          }
+        }
+      }
+    },
     "Used for any network not matched above." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1656,17 +1675,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用于上方未匹配的任何网络。"
-          }
-        }
-      }
-    },
-    "VPN configuration not loaded" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPN 配置尚未加载"
           }
         }
       }
@@ -1689,6 +1697,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "版本"
+          }
+        }
+      }
+    },
+    "VPN configuration not loaded" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 配置尚未加载"
           }
         }
       }
@@ -1744,73 +1763,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "封装构建时间"
-          }
-        }
-      }
-    },
-    "[truncated — showing last %lld of %lld bytes]\n\n" : {
-      "comment" : "Banner prepended to a saved log file's body when only the tail is shown. %1$lld is the number of bytes shown; %2$lld is the file's full size.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "[已截断 — 仅显示末尾 %1$lld / %2$lld 字节]\n\n"
-          }
-        }
-      }
-    },
-    "active" : {
-      "comment" : "Caption under the active-connections counter on the dashboard.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "活动"
-          }
-        }
-      }
-    },
-    "iOS evaluates SSIDs case-sensitively. The first matching rule wins; networks not listed fall through to the Default action below." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS 区分大小写匹配 SSID。优先匹配最先命中的规则;未列出的网络将使用下方的“默认”操作。"
-          }
-        }
-      }
-    },
-    "iOS only auto-connects after you have tapped Connect on the Dashboard at least once on this device." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在本设备上至少在仪表盘点击一次“连接”后,iOS 才会启用自动连接。"
-          }
-        }
-      }
-    },
-    "mihomo Core" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mihomo 内核"
-          }
-        }
-      }
-    },
-    "mihomo on GitHub" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 GitHub 上查看 mihomo"
           }
         }
       }
