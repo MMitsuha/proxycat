@@ -779,6 +779,16 @@
         }
       }
     },
+    "Import failed" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入失败"
+          }
+        }
+      }
+    },
     "Info" : {
       "extractionState" : "stale",
       "localizations" : {
