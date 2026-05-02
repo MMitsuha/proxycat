@@ -158,3 +158,19 @@ targets:
         INFOPLIST_FILE: PcatExtension/Info.plist
         CODE_SIGN_ENTITLEMENTS: PcatExtension/PcatExtension.entitlements
         INFOPLIST_KEY_CFBundleDisplayName: "ProxyCat Tunnel"
+
+  LibraryTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/LibraryTests
+    dependencies:
+      - target: Library
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.proxycat.LibraryTests
+        GENERATE_INFOPLIST_FILE: YES
+        # Tests run on a simulator; the App Group entitlement is not
+        # available unsigned, so we point FilePath at a per-process
+        # fallback (Documents). Tests don't exercise IPC anyway.
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"

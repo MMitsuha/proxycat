@@ -7,10 +7,9 @@ public struct DashboardView: View {
     @EnvironmentObject private var profile: ExtensionProfile
     @EnvironmentObject private var commandClient: CommandClient
     @EnvironmentObject private var profileStore: ProfileStore
+    @EnvironmentObject private var settings: RuntimeSettings
 
     @State private var connectError: String?
-
-    @ObservedObject private var settings = RuntimeSettings.shared
 
     public init() {}
 

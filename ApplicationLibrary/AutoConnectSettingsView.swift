@@ -6,7 +6,7 @@ import SwiftUI
 /// rules, cellular, default) only render when enabled is true so the
 /// user has a clear visual signal that nothing is in effect.
 public struct AutoConnectSettingsView: View {
-    @ObservedObject private var store = HostSettingsStore.shared
+    @EnvironmentObject private var store: HostSettingsStore
     @EnvironmentObject private var profileStore: ProfileStore
     @EnvironmentObject private var environment: ExtensionEnvironment
 

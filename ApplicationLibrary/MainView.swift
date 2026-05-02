@@ -38,6 +38,11 @@ public struct MainView: View {
         .environmentObject(environment.profile)
         .environmentObject(environment.commandClient)
         .environmentObject(ProfileStore.shared)
+        // Inject the singletons once so child views don't each instantiate
+        // their own @ObservedObject reference. Same observable identity,
+        // visible in the dependency graph instead of hidden in each file.
+        .environmentObject(RuntimeSettings.shared)
+        .environmentObject(HostSettingsStore.shared)
         .task { await environment.bootstrap() }
         .onOpenURL { url in handleIncomingFile(url) }
         .alert("Import failed", isPresented: .constant(importError != nil)) {

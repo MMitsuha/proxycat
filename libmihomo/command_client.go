@@ -165,6 +165,12 @@ func (c *CommandClient) Disconnect() {
 // failure. The stream type stays at the call site (gomobile-friendly
 // proto types) and we constrain it via an inline interface so the
 // generic compiles without listing every gRPC client interface.
+//
+// On any error we cancel the shared context before firing the
+// disconnect callback. That stops the *other* stream goroutine from
+// dispatching frames after the host has already moved on to a new
+// reconnect cycle — which would surface as phantom traffic readings
+// for one tick after every reconnect.
 func runStream[Msg any](
 	c *CommandClient,
 	stream interface{ Recv() (*Msg, error) },
@@ -173,17 +179,30 @@ func runStream[Msg any](
 ) {
 	defer c.wg.Done()
 	if openErr != nil {
+		c.cancelContext()
 		c.fireDisconnect(openErr)
 		return
 	}
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
+			c.cancelContext()
 			c.fireDisconnect(err)
 			return
 		}
 		c.fireConnected()
 		dispatch(msg)
+	}
+}
+
+// cancelContext nudges every other stream goroutine sharing this
+// client's context to exit the next time it returns from Recv. Idempotent.
+func (c *CommandClient) cancelContext() {
+	c.mu.Lock()
+	cancel := c.cancel
+	c.mu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 

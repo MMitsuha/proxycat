@@ -6,15 +6,7 @@ public struct SettingsView: View {
     @State private var showClearConfirm = false
     @State private var clearError: String?
 
-    @ObservedObject private var settings = RuntimeSettings.shared
-
-    // ByteCountFormatter spells "Zero KB" by default; we want "0 KB".
-    private static let byteFormatter: ByteCountFormatter = {
-        let f = ByteCountFormatter()
-        f.countStyle = .file
-        f.allowsNonnumericFormatting = false
-        return f
-    }()
+    @EnvironmentObject private var settings: RuntimeSettings
 
     public init() {}
 
@@ -30,7 +22,7 @@ public struct SettingsView: View {
 
             Section {
                 LabeledContent("Cache size") {
-                    Text(Self.byteFormatter.string(fromByteCount: cacheBytes))
+                    Text(ByteFormatter.fileSize(cacheBytes))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

@@ -106,12 +106,18 @@ public final class ProfileStore: ObservableObject {
         return try String(contentsOf: url, encoding: .utf8)
     }
 
-    /// Overwrites a profile's YAML and bumps its `lastUpdated`.
-    public func updateContent(of profile: Profile, yaml: String) throws {
+    /// Overwrites a profile's YAML and bumps its `lastUpdated`. If
+    /// `name` is provided and differs from the current entry, renames
+    /// in the same persist so the editor's "save YAML + rename" path
+    /// can't half-succeed.
+    public func updateContent(of profile: Profile, yaml: String, name: String? = nil) throws {
         let url = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
         try yaml.write(to: url, atomically: true, encoding: .utf8)
         if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
             profiles[idx].lastUpdated = .init()
+            if let name, !name.isEmpty, name != profiles[idx].name {
+                profiles[idx].name = name
+            }
             try persist()
         }
         if profile.id == activeProfileID {
@@ -184,6 +190,11 @@ public final class ProfileStore: ObservableObject {
                 try setActive(next)
             } else {
                 try? FileManager.default.removeItem(at: activePointer)
+                // Tunnel may be running with the now-deleted profile.
+                // Posting the same notification ExtensionEnvironment
+                // listens for makes it surface a reload error rather
+                // than silently keep serving the old in-memory config.
+                NotificationCenter.default.post(name: Self.activeContentDidChange, object: self)
             }
         }
         try persist()

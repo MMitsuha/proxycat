@@ -59,7 +59,7 @@ public struct LogView: View {
         .alert("Copied", isPresented: $model.justCopied) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("\(model.lastCopyCount) line\(model.lastCopyCount == 1 ? "" : "s") on the clipboard.")
+            Text("\(model.lastCopyCount) lines copied to clipboard.")
         }
     }
 }

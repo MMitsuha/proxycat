@@ -3,7 +3,7 @@ import SwiftUI
 
 public struct ConnectionsView: View {
     @EnvironmentObject private var profile: ExtensionProfile
-    @ObservedObject private var settings = RuntimeSettings.shared
+    @EnvironmentObject private var settings: RuntimeSettings
 
     @StateObject private var store = ConnectionsStore()
     @State private var query: String = ""
@@ -108,7 +108,9 @@ public struct ConnectionsView: View {
     private var summaryBar: some View {
         HStack(spacing: 16) {
             Label {
-                Text("\(store.connections.count) active")
+                // "\(Int) active" auto-extracts to key "%lld active",
+                // and the catalog has a translation under that key.
+                Text("\(store.connections.count) active connections")
                     .font(.subheadline.weight(.medium))
             } icon: {
                 Circle()

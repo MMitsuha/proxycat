@@ -3,7 +3,7 @@ import SwiftUI
 
 public struct ProxiesView: View {
     @EnvironmentObject private var profile: ExtensionProfile
-    @ObservedObject private var settings = RuntimeSettings.shared
+    @EnvironmentObject private var settings: RuntimeSettings
     @StateObject private var store = ProxiesStore()
 
     public init() {}

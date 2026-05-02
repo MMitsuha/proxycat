@@ -57,7 +57,7 @@ public struct ProfileEditorView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .task { loadInitial() }
+        .task { await loadInitial() }
         .alert("Save failed", isPresented: .constant(saveError != nil)) {
             Button("OK") { saveError = nil }
         } message: {
@@ -177,12 +177,24 @@ public struct ProfileEditorView: View {
         return true
     }
 
-    private func loadInitial() {
+    /// Reads the YAML off disk on a background queue. Synchronously
+    /// reading on the main actor would freeze the UI for large configs
+    /// (especially under filesystem contention from the running NE) —
+    /// matches the same Task.detached pattern SavedLogDetailView uses.
+    private func loadInitial() async {
         guard case let .edit(profile) = mode else { return }
-        do {
-            yaml = try store.loadContent(of: profile)
-        } catch {
-            loadError = error.localizedDescription
+        let fileName = profile.fileName
+        let result: Result<String, Error> = await Task.detached(priority: .userInitiated) {
+            let url = FilePath.profilesDirectory.appendingPathComponent(fileName)
+            do {
+                return .success(try String(contentsOf: url, encoding: .utf8))
+            } catch {
+                return .failure(error)
+            }
+        }.value
+        switch result {
+        case let .success(text): yaml = text
+        case let .failure(error): loadError = error.localizedDescription
         }
     }
 
@@ -213,12 +225,10 @@ public struct ProfileEditorView: View {
             case .create:
                 try store.importYAML(yaml, name: name)
             case let .edit(profile):
-                try store.updateContent(of: profile, yaml: yaml)
-                if profile.name != name {
-                    var updated = profile
-                    updated.name = name
-                    try store.rename(updated)
-                }
+                // Single persist: the previous two-call form could leave
+                // the YAML saved and the rename failed, with the in-memory
+                // and on-disk index disagreeing on the profile's name.
+                try store.updateContent(of: profile, yaml: yaml, name: name)
             }
             dismiss()
         } catch {

@@ -104,10 +104,17 @@ public final class CommandClient: ObservableObject {
         // Otherwise its goroutines + gRPC connection leak across each
         // reconnect cycle and the bridge's stale signal can race the
         // new bridge.
+        //
+        // We MUST NOT await the disconnect: Go's wg.Wait() can take up
+        // to 500ms, and awaiting a detached Task with .value would
+        // suspend the main actor for that whole window, freezing
+        // SwiftUI updates and user touches every reconnect. The new
+        // bridge owns its own one-shot signal, so the old goroutines
+        // shutting down in the background can't race it.
         if let old = goClient {
             goClient = nil
             bridge = nil
-            await Task.detached { old.disconnect() }.value
+            Task.detached { old.disconnect() }
         }
 
         let options = LibmihomoCommandClientOptions()

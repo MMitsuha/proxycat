@@ -2,13 +2,6 @@ import Library
 import SwiftUI
 
 struct AdvancedSettingsView: View {
-    private static let byteFormatter: ByteCountFormatter = {
-        let f = ByteCountFormatter()
-        f.countStyle = .file
-        f.allowsNonnumericFormatting = false
-        return f
-    }()
-
     var body: some View {
         let v = LibmihomoBridge.version
 
@@ -66,7 +59,7 @@ struct AdvancedSettingsView: View {
                                 .padding(.vertical, 2)
                                 .background(.secondary.opacity(0.15), in: Capsule())
                                 .foregroundStyle(.secondary)
-                            Text(Self.byteFormatter.string(fromByteCount: asset.bundledSize))
+                            Text(ByteFormatter.fileSize(asset.bundledSize))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

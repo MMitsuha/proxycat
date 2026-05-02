@@ -142,15 +142,11 @@ public final class ConnectionsStore: ObservableObject {
     public func start() {
         guard streamTask == nil else { return }
         streamTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            var backoff = ExponentialBackoff()
-            while !Task.isCancelled {
-                let ok = await self.runOnce()
-                if Task.isCancelled { break }
-                if ok { backoff.reset() }
-                await backoff.sleep()
+            await RetryLoop.run { [weak self] in
+                guard let self else { return true }
+                return await self.runOnce()
             }
-            self.isStreaming = false
+            self?.isStreaming = false
         }
     }
 
@@ -172,12 +168,11 @@ public final class ConnectionsStore: ObservableObject {
     /// next snapshot frame, so we don't optimistically remove it locally
     /// — that would cause a row to flash back if the close fails.
     public func close(id: String) async {
-        var components = URLComponents(
-            url: baseURL.appendingPathComponent("connections/\(id)"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = nil
-        var req = URLRequest(url: components.url!)
+        // mihomo IDs are UUIDs, but escape anyway so a future server
+        // change (or a synthetic test) can't smuggle path traversal in.
+        let escaped = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        let url = baseURL.appendingPathComponent("connections/\(escaped)")
+        var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.timeoutInterval = 5
         do {

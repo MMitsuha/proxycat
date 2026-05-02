@@ -62,7 +62,10 @@ public struct SavedLogsView: View {
             Button("Delete All", role: .destructive) { model.deleteAll() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This removes every \(model.entries.count) file and cannot be undone. The active session, if any, is preserved.")
+            // Single concrete sentence — avoids the previous %lld/%@
+            // duplicate-key mess in the string catalog and matches a
+            // Chinese form that doesn't need a plural marker either.
+            Text("This deletes \(model.entries.count) saved log files. The active session is preserved.")
         }
         .onAppear { model.reload() }
     }
@@ -85,7 +88,7 @@ public struct SavedLogsView: View {
                 Text(entry.fileName)
                     .font(.system(.caption2, design: .monospaced))
                 Spacer()
-                Text(SavedLogEntry.byteFormatter.string(fromByteCount: entry.size))
+                Text(ByteFormatter.fileSize(entry.size))
                     .font(.caption2)
             }
             .foregroundStyle(.secondary)
@@ -272,13 +275,6 @@ struct SavedLogEntry: Identifiable, Hashable {
         df.dateStyle = .medium
         df.timeStyle = .medium
         return df
-    }()
-
-    static let byteFormatter: ByteCountFormatter = {
-        let f = ByteCountFormatter()
-        f.countStyle = .file
-        f.allowsNonnumericFormatting = false
-        return f
     }()
 }
 

@@ -97,25 +97,65 @@ public final class ExtensionProfile: ObservableObject {
         try await sendCommand("setLogLevel:\(level)", failureLabel: "Log level update failed")
     }
 
+    /// How long to wait for the extension to reply to a provider
+    /// message before giving up. The extension's handlers are short —
+    /// a `reload` runs `hub.ApplyConfig` which historically completes
+    /// in well under 1s. A 10s ceiling surfaces a hung extension as a
+    /// proper error rather than a UI that just freezes.
+    private static let providerMessageTimeout: Duration = .seconds(10)
+
     private func sendCommand(_ command: String, failureLabel: String) async throws {
         guard isConnected, let session = manager?.connection as? NETunnelProviderSession else {
             return
         }
         guard let payload = command.data(using: .utf8) else { return }
 
-        let response: Data? = try await withCheckedThrowingContinuation { cont in
-            do {
-                try session.sendProviderMessage(payload) { data in
-                    cont.resume(returning: data)
-                }
-            } catch {
-                cont.resume(throwing: error)
-            }
+        let response = try await withTimeout(Self.providerMessageTimeout) {
+            try await Self.sendProviderMessage(payload, on: session)
         }
 
         if let response, !response.isEmpty {
             let message = String(data: response, encoding: .utf8) ?? failureLabel
             throw ExtensionProfileError.reloadFailed(message)
+        }
+    }
+
+    private static func sendProviderMessage(
+        _ payload: Data,
+        on session: NETunnelProviderSession
+    ) async throws -> Data? {
+        try await withCheckedThrowingContinuation { cont in
+            // Resume exactly once. A continuation with both the timeout
+            // path and sendProviderMessage's completion handler racing
+            // would otherwise crash with "resumed more than once" if the
+            // OS delivered the reply just as we were giving up.
+            let resumed = ManagedResume(continuation: cont)
+            do {
+                try session.sendProviderMessage(payload) { data in
+                    resumed.resume(returning: data)
+                }
+            } catch {
+                resumed.resume(throwing: error)
+            }
+        }
+    }
+
+    private func withTimeout<T: Sendable>(
+        _ duration: Duration,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(for: duration)
+                throw ExtensionProfileError.timeout
+            }
+            // First child to finish wins; cancel the remaining one.
+            guard let first = try await group.next() else {
+                throw ExtensionProfileError.timeout
+            }
+            group.cancelAll()
+            return first
         }
     }
 
@@ -197,11 +237,42 @@ public final class ExtensionProfile: ObservableObject {
 public enum ExtensionProfileError: LocalizedError {
     case notLoaded
     case reloadFailed(String)
+    case timeout
 
     public var errorDescription: String? {
         switch self {
         case .notLoaded: return String(localized: "VPN configuration not loaded", bundle: .main)
         case let .reloadFailed(message): return message
+        case .timeout: return String(localized: "Extension did not respond in time", bundle: .main)
         }
+    }
+}
+
+/// One-shot guard around a `CheckedContinuation` so callers can race
+/// timeout against a callback without risking a double-resume crash.
+private final class ManagedResume<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<T, Error>?
+
+    init(continuation: CheckedContinuation<T, Error>) {
+        self.continuation = continuation
+    }
+
+    func resume(returning value: T) {
+        guard let cont = take() else { return }
+        cont.resume(returning: value)
+    }
+
+    func resume(throwing error: Error) {
+        guard let cont = take() else { return }
+        cont.resume(throwing: error)
+    }
+
+    private func take() -> CheckedContinuation<T, Error>? {
+        lock.lock()
+        defer { lock.unlock() }
+        let c = continuation
+        continuation = nil
+        return c
     }
 }
