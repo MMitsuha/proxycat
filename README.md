@@ -10,7 +10,7 @@
 | Dashboard | Profiles | Logs | Settings | Auto Connect |
 |:---:|:---:|:---:|:---:|:---:|
 | <img src="assets/IMG_2721.png" width="200"> | <img src="assets/IMG_2722.png" width="200"> | <img src="assets/IMG_2723.png" width="200"> | <img src="assets/IMG_2725.png" width="200"> | <img src="assets/IMG_2749.png" width="200"> |
-| 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | 隐私 / 存储 / Auto Connect / 诊断 | SSID / 蜂窝 / 默认动作 |
+| 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | 隐私 / 存储 / 统计 / Auto Connect / 诊断 | SSID / 蜂窝 / 默认动作 |
 
 ## 目录结构
 
@@ -32,16 +32,18 @@ proxycat/
 ├── Library/                共享 Swift framework：
 │                           LibmihomoBridge / ExtensionProfile / ExtensionEnvironment /
 │                           CommandClient / RuntimeSettings / HostSettingsStore /
-│                           AutoConnect / Profile / ProxiesStore / ConnectionsStore /
+│                           DailyUsageStore / AutoConnect / Profile /
+│                           ProxiesStore / ConnectionsStore /
 │                           MemoryMonitor / FilePath（AppGroup 路径辅助）
 ├── ApplicationLibrary/     SwiftUI 视图：Dashboard / Profiles (含编辑器与下载) /
 │                           Logs (含 SavedLogs) / Connections / Proxies /
-│                           Settings (含 AutoConnect / Advanced)
+│                           Settings (含 Statistics / AutoConnect / Advanced)
 ├── Pcat/                   iOS App target（入口、Info.plist、entitlements）
 ├── PcatExtension/          Network Extension target（PacketTunnelProvider）
 ├── Tests/LibraryTests/     XCTest 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
-│                           AutoConnect / MemoryStats / TrafficSnapshot / ByteFormatter /
-│                           LogEntry / Profile codable，运行: `xcodebuild test -scheme LibraryTests`
+│                           AutoConnect / DailyUsage / MemoryStats / TrafficSnapshot /
+│                           ByteFormatter / LogEntry / Profile codable，
+│                           运行: `xcodebuild test -scheme LibraryTests`
 ├── project.yml             XcodeGen 描述文件 — 用于（重新）生成 ProxyCat.xcodeproj
 ├── Makefile                构建编排
 └── sample-profile.yaml     最小可用的 mihomo 配置示例
@@ -171,6 +173,16 @@ mihomo 自身的 REST 控制器（`external-controller`）默认绑定到 `127.0
 3. **复制全部**：把 `viewModel.visible` 一次性写入 `UIPasteboard.general`（即当前等级 + 搜索过滤后剩下的内容），并以 alert 报告复制行数。
 
 `Pause / Resume` 冻结快照，便于不被自动滚动顶到底部。`Clear` 同时清空内存环形缓冲区。会话级日志另由 `libmihomo/log_persist.go` 写入 App Group 的滚动文件，可在 Logs 标签页右上角进入 `SavedLogsView` 查看。
+
+## 每日流量统计
+
+Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift Charts 堆叠柱状图 + 列表），数据由 `Library/DailyUsageStore.swift` 在宿主 App 内聚合：
+
+- `ExtensionEnvironment` 把 `CommandClient.$traffic` 的每帧推送给 store；store 在内存里持有上一次观测到的 `upTotal / downTotal`，对每个新样本计算 delta 加到当天的 bucket。
+- 扩展重启会让累计计数清零；store 检测到 `nextTotal < previousTotal` 时改用新值本身作 delta，避免负数；首帧只播种基线、不计入流量，防止跨进程重启时把已经计过的字节再加一遍。
+- 持久化到 App Group 容器的 `daily_usage.json`，写入由 5 秒 Combine 节流 + `scenePhase` 退出活跃时强制 flush 兜底，避免每秒一写徒增 NAND 写放大。
+- 仅保留最近 30 天；UI 列表用本地日历的 `YYYY-MM-DD` key（POSIX locale 防漂移）。"Reset statistics" 会清空 JSON 与基线。
+- mihomo 自身的 REST API 不导出 per-day 数据，因此这一份统计完全是宿主 App 计算 + 持有的——扩展进程对它无感知。
 
 ## 配置文件
 

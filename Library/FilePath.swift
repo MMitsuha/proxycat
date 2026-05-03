@@ -80,6 +80,12 @@ public enum FilePath {
         sharedDirectory.appendingPathComponent(AppConfiguration.hostSettingsFileName).path
     }
 
+    /// Path of the rolling daily-traffic log JSON. Read/written only by
+    /// the host app's `DailyUsageStore`.
+    public static var dailyUsageFilePath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.dailyUsageFileName).path
+    }
+
     private static func ensureSubdirectory(_ name: String) -> URL {
         let url = sharedDirectory.appendingPathComponent(name, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

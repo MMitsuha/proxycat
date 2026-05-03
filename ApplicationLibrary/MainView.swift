@@ -5,6 +5,7 @@ public struct MainView: View {
     @StateObject private var environment = ExtensionEnvironment()
     @State private var selection: Tab = .dashboard
     @State private var importError: String?
+    @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
 
@@ -43,8 +44,17 @@ public struct MainView: View {
         // visible in the dependency graph instead of hidden in each file.
         .environmentObject(RuntimeSettings.shared)
         .environmentObject(HostSettingsStore.shared)
+        .environmentObject(DailyUsageStore.shared)
         .task { await environment.bootstrap() }
         .onOpenURL { url in handleIncomingFile(url) }
+        .onChange(of: scenePhase) { _, phase in
+            // Persist any buffered daily-usage deltas before the system
+            // freezes or kills us. Other stores write synchronously on
+            // mutation, so they don't need a flush hook.
+            if phase != .active {
+                DailyUsageStore.shared.flushNow()
+            }
+        }
         .alert("Import failed", isPresented: .constant(importError != nil)) {
             Button("OK") { importError = nil }
         } message: {

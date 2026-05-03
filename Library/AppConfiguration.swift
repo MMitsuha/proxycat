@@ -22,6 +22,11 @@ public enum AppConfiguration {
     /// reads this file.
     public static let hostSettingsFileName = "host_settings.json"
 
+    /// Filename of the rolling daily-traffic log written by
+    /// `DailyUsageStore`. Sits in the App Group root next to the other
+    /// host-side JSONs; the Go core never touches it.
+    public static let dailyUsageFileName = "daily_usage.json"
+
     /// Posted by RuntimeSettings when the user changes a runtime
     /// preference *other than* log level (or when log level changes
     /// alongside another field). Subscribers (ExtensionEnvironment)

@@ -24,6 +24,7 @@ public final class ExtensionEnvironment: ObservableObject {
     @Published public var logSearchText: String = ""
 
     private var statusObservation: AnyCancellable?
+    private var trafficObservation: AnyCancellable?
     private var activeContentObserver: NSObjectProtocol?
     private var settingsObserver: NSObjectProtocol?
     private var logLevelObserver: NSObjectProtocol?
@@ -90,6 +91,7 @@ public final class ExtensionEnvironment: ObservableObject {
             // Profile load failure is non-fatal; the user can retry from UI.
         }
         observeProfileStatus()
+        observeTrafficSamples()
         observeActiveContent()
         observeRuntimeSettings()
         observeRuntimeLogLevel()
@@ -232,6 +234,32 @@ public final class ExtensionEnvironment: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] status in
                 self?.applyStatus(status)
+            }
+    }
+
+    /// Forwards each Status frame the gRPC bridge publishes into the
+    /// daily-usage aggregator. The store handles its own delta /
+    /// counter-reset bookkeeping, so this is a one-line forwarder.
+    ///
+    /// `dropFirst()` skips Combine's replay of the @Published current
+    /// value on subscribe — at host launch that value is always
+    /// `TrafficSnapshot.zero`, and feeding it to the store would look
+    /// like an extension counter reset (newTotal < persisted lastTotal),
+    /// reseeding the baseline at 0. The next real frame would then be
+    /// credited as a delta from 0, double-counting bytes the previous
+    /// host session already wrote to disk.
+    ///
+    /// `removeDuplicates` then suppresses identical consecutive frames
+    /// (1 Hz ticks while idle).
+    private func observeTrafficSamples() {
+        guard trafficObservation == nil else { return }
+        trafficObservation = commandClient.$traffic
+            .dropFirst()
+            .removeDuplicates()
+            .sink { snapshot in
+                Task { @MainActor in
+                    DailyUsageStore.shared.record(snapshot: snapshot)
+                }
             }
     }
 

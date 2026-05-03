@@ -34,6 +34,42 @@
         }
       }
     },
+    "14 days" : {
+      "comment" : "Statistics range picker: 14-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 天"
+          }
+        }
+      }
+    },
+    "30 days" : {
+      "comment" : "Statistics range picker: 30-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 天"
+          }
+        }
+      }
+    },
+    "7 days" : {
+      "comment" : "Statistics range picker: 7-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 天"
+          }
+        }
+      }
+    },
     "A new file is created each time the tunnel connects." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -411,6 +447,18 @@
         }
       }
     },
+    "Connect the tunnel to start collecting daily usage." : {
+      "comment" : "Statistics empty state subtitle.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接隧道以开始收集每日流量记录。"
+          }
+        }
+      }
+    },
     "Connecting" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -520,6 +568,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法保存"
+          }
+        }
+      }
+    },
+    "Daily traffic" : {
+      "comment" : "Statistics chart card title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日流量"
           }
         }
       }
@@ -707,6 +767,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将 GeoIP / GeoSite / MMDB 文件放入 BundledAssets/geo/，将外部 UI 目录放入 BundledAssets/ui/，然后重新运行 xcodegen 并重新构建以在编译时嵌入。"
+          }
+        }
+      }
+    },
+    "Drops the locally stored daily totals. Live traffic counters on the dashboard are unaffected." : {
+      "comment" : "Confirmation message before resetting the Statistics page.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除本地保存的每日流量记录。仪表板的实时流量计数不受影响。"
           }
         }
       }
@@ -1101,6 +1173,18 @@
         }
       }
     },
+    "No daily totals yet." : {
+      "comment" : "Statistics: empty list when no daily entries have been recorded.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无每日流量记录。"
+          }
+        }
+      }
+    },
     "No assets bundled with this build." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1163,6 +1247,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无已保存的日志"
+          }
+        }
+      }
+    },
+    "No traffic recorded yet." : {
+      "comment" : "Statistics: empty chart state.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无流量记录。"
           }
         }
       }
@@ -1354,6 +1450,18 @@
         }
       }
     },
+    "Range" : {
+      "comment" : "Statistics range picker accessibility label.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "范围"
+          }
+        }
+      }
+    },
     "Reasserting" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1361,6 +1469,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重连中"
+          }
+        }
+      }
+    },
+    "Recent days" : {
+      "comment" : "Statistics list section title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "近期"
           }
         }
       }
@@ -1395,6 +1515,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移除规则提供方缓存、已下载的 GeoIP / GeoSite 数据库及外部 UI。mihomo 将在下次启动时重新获取。内置资源会被保留。"
+          }
+        }
+      }
+    },
+    "Reset" : {
+      "comment" : "Confirmation button on the Reset Statistics dialog.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
+    },
+    "Reset statistics" : {
+      "comment" : "Statistics: button that clears the on-device daily totals.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置统计"
+          }
+        }
+      }
+    },
+    "Reset statistics?" : {
+      "comment" : "Confirmation dialog title for the Reset Statistics action.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置统计？"
           }
         }
       }
@@ -1597,6 +1753,18 @@
         }
       }
     },
+    "Statistics" : {
+      "comment" : "Settings → Statistics navigation link.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "统计"
+          }
+        }
+      }
+    },
     "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Applies immediately while connected." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1685,6 +1853,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这将删除 %lld 个已保存的日志文件。当前活动会话会被保留。"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "Statistics row label for the current day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
+          }
+        }
+      }
+    },
+    "Total" : {
+      "comment" : "Statistics summary column for combined upload + download bytes.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "总计"
           }
         }
       }
@@ -1850,6 +2042,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "封装构建时间"
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "comment" : "Statistics row label for the previous day.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨天"
           }
         }
       }

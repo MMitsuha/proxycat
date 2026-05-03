@@ -48,6 +48,11 @@ public struct SettingsView: View {
 
             Section {
                 NavigationLink {
+                    StatisticsView()
+                } label: {
+                    Label("Statistics", systemImage: "chart.bar.xaxis")
+                }
+                NavigationLink {
                     AutoConnectSettingsView()
                 } label: {
                     Label("Auto Connect", systemImage: "wifi.circle")
