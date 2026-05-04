@@ -126,7 +126,7 @@ public struct ProfileDownloadView: View {
         }
         do {
             let trimmedName = name.trimmingCharacters(in: .whitespaces)
-            try store.importYAML(yaml, name: trimmedName, remoteURL: url)
+            try await store.importYAML(yaml, name: trimmedName, remoteURL: url)
             dismiss()
         } catch {
             saveError = error.localizedDescription

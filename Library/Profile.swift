@@ -110,9 +110,13 @@ public final class ProfileStore: ObservableObject {
     /// `name` is provided and differs from the current entry, renames
     /// in the same persist so the editor's "save YAML + rename" path
     /// can't half-succeed.
-    public func updateContent(of profile: Profile, yaml: String, name: String? = nil) throws {
-        let url = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
-        try yaml.write(to: url, atomically: true, encoding: .utf8)
+    ///
+    /// The YAML write itself runs on a detached task: profile YAMLs can
+    /// be 100KB–1MB for large rule sets, and a synchronous write on the
+    /// MainActor would visibly hitch the editor's save action.
+    public func updateContent(of profile: Profile, yaml: String, name: String? = nil) async throws {
+        let fileName = profile.fileName
+        try await Self.writeYAML(yaml, fileName: fileName)
         if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
             profiles[idx].lastUpdated = .init()
             if let name, !name.isEmpty, name != profiles[idx].name {
@@ -126,11 +130,10 @@ public final class ProfileStore: ObservableObject {
     }
 
     @discardableResult
-    public func importYAML(_ content: String, name: String, remoteURL: URL? = nil) throws -> Profile {
+    public func importYAML(_ content: String, name: String, remoteURL: URL? = nil) async throws -> Profile {
         let id = UUID()
         let fileName = id.uuidString + ".yaml"
-        let url = FilePath.profilesDirectory.appendingPathComponent(fileName)
-        try content.write(to: url, atomically: true, encoding: .utf8)
+        try await Self.writeYAML(content, fileName: fileName)
 
         let profile = Profile(
             id: id,
@@ -156,12 +159,14 @@ public final class ProfileStore: ObservableObject {
     /// to the app (e.g. files inside the app's own container). Letting
     /// `String(contentsOf:)` decide produces a more accurate error.
     @discardableResult
-    public func importYAML(from url: URL) throws -> Profile {
+    public func importYAML(from url: URL) async throws -> Profile {
         let didStart = url.startAccessingSecurityScopedResource()
         defer { if didStart { url.stopAccessingSecurityScopedResource() } }
-        let content = try String(contentsOf: url, encoding: .utf8)
+        let content = try await Task.detached(priority: .userInitiated) {
+            try String(contentsOf: url, encoding: .utf8)
+        }.value
         let name = url.deletingPathExtension().lastPathComponent
-        return try importYAML(content, name: name)
+        return try await importYAML(content, name: name)
     }
 
     /// Re-downloads `profile.remoteURL`, overwrites the on-disk YAML, and
@@ -169,7 +174,17 @@ public final class ProfileStore: ObservableObject {
     public func refreshRemote(_ profile: Profile) async throws {
         guard let url = profile.remoteURL else { throw ProfileError.notRemote }
         let content = try await RemoteProfileFetcher.fetch(url)
-        try updateContent(of: profile, yaml: content)
+        try await updateContent(of: profile, yaml: content)
+    }
+
+    /// Writes a YAML payload to the profiles directory off the MainActor.
+    /// Centralizes the disk-write pattern so importYAML and updateContent
+    /// share one I/O path.
+    private static func writeYAML(_ content: String, fileName: String) async throws {
+        let url = FilePath.profilesDirectory.appendingPathComponent(fileName)
+        try await Task.detached(priority: .userInitiated) {
+            try content.write(to: url, atomically: true, encoding: .utf8)
+        }.value
     }
 
     /// Updates the in-memory profile and persists the index. Caller is

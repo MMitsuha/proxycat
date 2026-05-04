@@ -223,12 +223,12 @@ public struct ProfileEditorView: View {
         do {
             switch mode {
             case .create:
-                try store.importYAML(yaml, name: name)
+                try await store.importYAML(yaml, name: name)
             case let .edit(profile):
                 // Single persist: the previous two-call form could leave
                 // the YAML saved and the rename failed, with the in-memory
                 // and on-disk index disagreeing on the profile's name.
-                try store.updateContent(of: profile, yaml: yaml, name: name)
+                try await store.updateContent(of: profile, yaml: yaml, name: name)
             }
             dismiss()
         } catch {

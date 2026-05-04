@@ -11,12 +11,20 @@ public struct StatisticsView: View {
     public init() {}
 
     public var body: some View {
-        ScrollView {
+        // Build the windowed slice and chart series once per body
+        // evaluation. Three downstream cards (summary / chart / list) all
+        // need the same window, and SwiftUI re-evaluates body on every
+        // dailyUsage publish; threading the precomputed values through
+        // avoids repeating the dictionary build and reduce three times
+        // per redraw.
+        let bucketed = bucketedEntries()
+        let series = chartSeries()
+        return ScrollView {
             VStack(spacing: 14) {
                 rangePicker
-                summaryCard
-                chartCard
-                listCard
+                summaryCard(bucketed: bucketed)
+                chartCard(series: series)
+                listCard(bucketed: bucketed)
                 resetButton
             }
             .padding(.horizontal, 16)
@@ -49,8 +57,7 @@ public struct StatisticsView: View {
         .pickerStyle(.segmented)
     }
 
-    private var summaryCard: some View {
-        let bucketed = bucketedEntries()
+    private func summaryCard(bucketed: [DailyUsageEntry]) -> some View {
         let totalUp = bucketed.reduce(into: Int64(0)) { $0 &+= $1.up }
         let totalDown = bucketed.reduce(into: Int64(0)) { $0 &+= $1.down }
         let total = totalUp &+ totalDown
@@ -100,19 +107,18 @@ public struct StatisticsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var chartCard: some View {
+    private func chartCard(series: [ChartPoint]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Daily traffic")
                 .font(.subheadline.weight(.semibold))
-            chartContent
+            chartContent(series: series)
                 .frame(height: 180)
         }
         .card()
     }
 
     @ViewBuilder
-    private var chartContent: some View {
-        let series = chartSeries()
+    private func chartContent(series: [ChartPoint]) -> some View {
         if series.allSatisfy({ $0.bytes == 0 }) {
             emptyChart
         } else {
@@ -171,13 +177,13 @@ public struct StatisticsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var listCard: some View {
+    private func listCard(bucketed: [DailyUsageEntry]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Recent days")
                 .font(.subheadline.weight(.semibold))
                 .padding(.bottom, 8)
 
-            let recent = recentEntriesForList()
+            let recent = Array(bucketed.reversed())
             if recent.isEmpty {
                 Text("No daily totals yet.")
                     .font(.subheadline)
@@ -255,12 +261,6 @@ public struct StatisticsView: View {
             )
         }
         return points
-    }
-
-    private func recentEntriesForList() -> [DailyUsageEntry] {
-        // Show the same window the chart uses, but newest-first since
-        // a vertical list reads top-down better as "most recent first".
-        bucketedEntries().reversed()
     }
 
     // MARK: - Types

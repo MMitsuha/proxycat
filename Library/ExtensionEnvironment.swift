@@ -5,15 +5,12 @@ import NetworkExtension
 /// Single object injected as @EnvironmentObject so views can reach the VPN
 /// profile and the streaming command client without prop-drilling.
 ///
-/// Owns the lifetime of the gRPC `CommandClient`: starts it as soon as the
-/// VPN reaches `.connecting` / `.connected` and stops it on disconnect.
-/// Views just read `@Published` traffic/memory/logs — none of them need to
-/// call `connect()` themselves any more.
-///
-/// Also bridges the host app's runtime-settings store to the running
-/// tunnel: any change to `RuntimeSettings.shared` posts
-/// `runtimeSettingsDidChange`, which we react to by asking the extension
-/// to reload (Go re-reads `settings.json` from disk and hot-applies).
+/// Acts as a thin orchestrator over four coordinators (see
+/// `ExtensionCoordinators.swift`): VPN lifecycle, settings reloads,
+/// auto connect, traffic accounting. Each coordinator owns its own
+/// observations; this type only wires their error callbacks back into
+/// `@Published` UI surfaces and exposes the underlying profile +
+/// command client for views.
 @MainActor
 public final class ExtensionEnvironment: ObservableObject {
     public let profile: ExtensionProfile
@@ -23,13 +20,6 @@ public final class ExtensionEnvironment: ObservableObject {
     /// survives navigation. Mirrors sing-box-for-apple's logSearchText.
     @Published public var logSearchText: String = ""
 
-    private var statusObservation: AnyCancellable?
-    private var trafficObservation: AnyCancellable?
-    private var activeContentObserver: NSObjectProtocol?
-    private var settingsObserver: NSObjectProtocol?
-    private var logLevelObserver: NSObjectProtocol?
-    private var hostSettingsObserver: NSObjectProtocol?
-    private var memoryObserverToken: UUID?
     /// Surfaces the most recent reload error to the UI so taps on a
     /// profile while the tunnel is up don't fail silently.
     @Published public var reloadError: String?
@@ -37,31 +27,31 @@ public final class ExtensionEnvironment: ObservableObject {
     /// Auto Connect sub view can show an alert.
     @Published public var autoConnectError: String?
 
-    public init() {
-        Self.bootstrapMihomoPaths()
-        self.profile = ExtensionProfile()
-        self.commandClient = CommandClient()
+    private let lifecycle: VPNLifecycleCoordinator
+    private let settings: SettingsChangeCoordinator
+    private let autoConnect: AutoConnectCoordinator
+    private let traffic: TrafficCoordinator
+
+    private var memoryObserverToken: UUID?
+
+    public convenience init() {
+        self.init(
+            profile: ExtensionProfile(),
+            commandClient: CommandClient()
+        )
     }
 
     public init(profile: ExtensionProfile, commandClient: CommandClient) {
         Self.bootstrapMihomoPaths()
         self.profile = profile
         self.commandClient = commandClient
+        self.lifecycle = VPNLifecycleCoordinator(profile: profile, commandClient: commandClient)
+        self.settings = SettingsChangeCoordinator(profile: profile)
+        self.autoConnect = AutoConnectCoordinator(profile: profile, store: HostSettingsStore.shared)
+        self.traffic = TrafficCoordinator(commandClient: commandClient, usageStore: DailyUsageStore.shared)
     }
 
     deinit {
-        if let token = activeContentObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
-        if let token = settingsObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
-        if let token = logLevelObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
-        if let token = hostSettingsObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
         if let token = memoryObserverToken {
             MemoryMonitor.shared.remove(token)
         }
@@ -90,22 +80,24 @@ public final class ExtensionEnvironment: ObservableObject {
         } catch {
             // Profile load failure is non-fatal; the user can retry from UI.
         }
-        observeProfileStatus()
-        observeTrafficSamples()
-        observeActiveContent()
-        observeRuntimeSettings()
-        observeRuntimeLogLevel()
-        observeHostSettings()
+
+        settings.onError = { [weak self] message in
+            self?.reloadError = message
+        }
+        autoConnect.onError = { [weak self] message in
+            self?.autoConnectError = message
+        }
+
+        lifecycle.start()
+        settings.start()
+        autoConnect.start()
+        traffic.start()
         startMemoryPressureWatch()
-        // Make sure the current state is honored even before the
-        // observer's first event fires (e.g. app cold-launches with VPN
-        // already connected from a previous session).
-        applyStatus(profile.status)
+
         // Sync the manager's on-demand state with whatever the user
-        // last persisted. No-op when the manager already matches; cheap
-        // even when not, and it covers the case where the user edits
-        // settings while the app was killed.
-        await applyAutoConnectFromStore()
+        // last persisted. Covers the case where the user edits settings
+        // while the app was killed.
+        await autoConnect.applyFromStore()
     }
 
     // The host app process gets memory warnings from iOS too — not just
@@ -130,147 +122,6 @@ public final class ExtensionEnvironment: ObservableObject {
             return
         case .warning, .critical:
             commandClient.clearLogs()
-        }
-    }
-
-    private func observeActiveContent() {
-        guard activeContentObserver == nil else { return }
-        activeContentObserver = NotificationCenter.default.addObserver(
-            forName: ProfileStore.activeContentDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.reloadIfConnected()
-            }
-        }
-    }
-
-    private func observeRuntimeSettings() {
-        guard settingsObserver == nil else { return }
-        settingsObserver = NotificationCenter.default.addObserver(
-            forName: AppConfiguration.runtimeSettingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.reloadIfConnected()
-            }
-        }
-    }
-
-    /// Fast path for log-level toggles. Sends a "setLogLevel:N" provider
-    /// message that lands at `log.SetLevel` in the extension's mihomo,
-    /// skipping the heavyweight `hub.ApplyConfig` reload that the
-    /// settings-changed observer above triggers. Falls back silently
-    /// when disconnected — the next `start()` reads the new level from
-    /// settings.json that RuntimeSettings just persisted.
-    private func observeRuntimeLogLevel() {
-        guard logLevelObserver == nil else { return }
-        logLevelObserver = NotificationCenter.default.addObserver(
-            forName: AppConfiguration.runtimeLogLevelDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let level = note.userInfo?["level"] as? Int else { return }
-            Task { @MainActor in
-                await self?.applyLogLevelIfConnected(level)
-            }
-        }
-    }
-
-    private func applyLogLevelIfConnected(_ level: Int) async {
-        guard profile.isConnected else { return }
-        do {
-            try await profile.setLogLevel(level)
-        } catch {
-            reloadError = error.localizedDescription
-        }
-    }
-
-    private func observeHostSettings() {
-        guard hostSettingsObserver == nil else { return }
-        hostSettingsObserver = NotificationCenter.default.addObserver(
-            forName: AppConfiguration.hostSettingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.applyAutoConnectFromStore()
-            }
-        }
-    }
-
-    /// Reads the current `AutoConnectConfig` from the store and pushes
-    /// it onto the NETunnelProviderManager via `ExtensionProfile`.
-    /// Errors surface through `autoConnectError` so the UI can show an
-    /// alert; we never throw out of an observer callback.
-    private func applyAutoConnectFromStore() async {
-        let config = HostSettingsStore.shared.autoConnect
-        do {
-            try await profile.applyAutoConnect(config)
-        } catch {
-            autoConnectError = error.localizedDescription
-        }
-    }
-
-    /// Fires `ExtensionProfile.reload()` when the tunnel is up so that
-    /// switching profiles, editing the active YAML, or toggling a
-    /// runtime setting hot-applies without requiring the user to
-    /// disconnect and reconnect by hand. No-ops while disconnected —
-    /// the next `start()` already reads everything fresh from disk.
-    private func reloadIfConnected() async {
-        guard profile.isConnected else { return }
-        do {
-            try await profile.reload()
-        } catch {
-            reloadError = error.localizedDescription
-        }
-    }
-
-    private func observeProfileStatus() {
-        guard statusObservation == nil else { return }
-        statusObservation = profile.$status
-            .receive(on: RunLoop.main)
-            .sink { [weak self] status in
-                self?.applyStatus(status)
-            }
-    }
-
-    /// Forwards each Status frame the gRPC bridge publishes into the
-    /// daily-usage aggregator. The store handles its own delta /
-    /// counter-reset bookkeeping, so this is a one-line forwarder.
-    ///
-    /// `dropFirst()` skips Combine's replay of the @Published current
-    /// value on subscribe — at host launch that value is always
-    /// `TrafficSnapshot.zero`, and feeding it to the store would look
-    /// like an extension counter reset (newTotal < persisted lastTotal),
-    /// reseeding the baseline at 0. The next real frame would then be
-    /// credited as a delta from 0, double-counting bytes the previous
-    /// host session already wrote to disk.
-    ///
-    /// `removeDuplicates` then suppresses identical consecutive frames
-    /// (1 Hz ticks while idle).
-    private func observeTrafficSamples() {
-        guard trafficObservation == nil else { return }
-        trafficObservation = commandClient.$traffic
-            .dropFirst()
-            .removeDuplicates()
-            .sink { snapshot in
-                Task { @MainActor in
-                    DailyUsageStore.shared.record(snapshot: snapshot)
-                }
-            }
-    }
-
-    private func applyStatus(_ status: NEVPNStatus) {
-        switch status {
-        case .connecting, .connected, .reasserting:
-            commandClient.connect()
-        case .disconnecting, .disconnected, .invalid:
-            commandClient.disconnect()
-        @unknown default:
-            commandClient.disconnect()
         }
     }
 }

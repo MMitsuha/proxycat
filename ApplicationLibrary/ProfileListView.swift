@@ -53,6 +53,7 @@ public struct ProfileListView: View {
             }
         }
         .navigationTitle("Profiles")
+        .refreshable { await refreshAllRemote() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -88,7 +89,13 @@ public struct ProfileListView: View {
             switch result {
             case let .success(urls):
                 guard let url = urls.first else { return }
-                run { _ = try profileStore.importYAML(from: url) }
+                Task {
+                    do {
+                        _ = try await profileStore.importYAML(from: url)
+                    } catch {
+                        actionError = error.localizedDescription
+                    }
+                }
             case let .failure(error):
                 actionError = error.localizedDescription
             }
@@ -124,6 +131,26 @@ public struct ProfileListView: View {
             } catch {
                 actionError = error.localizedDescription
             }
+        }
+    }
+
+    /// Re-downloads every profile that has a `remoteURL`. Errors from
+    /// individual refreshes are collected so a single failure doesn't
+    /// abort the rest — the user sees the first failure in the alert
+    /// and can swipe-refresh again to retry.
+    private func refreshAllRemote() async {
+        let remotes = profileStore.profiles.filter { $0.remoteURL != nil }
+        guard !remotes.isEmpty else { return }
+        var firstError: String?
+        for profile in remotes {
+            do {
+                try await profileStore.refreshRemote(profile)
+            } catch {
+                if firstError == nil { firstError = error.localizedDescription }
+            }
+        }
+        if let firstError {
+            actionError = firstError
         }
     }
 

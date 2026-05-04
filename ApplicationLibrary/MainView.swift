@@ -5,6 +5,7 @@ public struct MainView: View {
     @StateObject private var environment = ExtensionEnvironment()
     @State private var selection: Tab = .dashboard
     @State private var importError: String?
+    @State private var showImportError = false
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -46,7 +47,9 @@ public struct MainView: View {
         .environmentObject(HostSettingsStore.shared)
         .environmentObject(DailyUsageStore.shared)
         .task { await environment.bootstrap() }
-        .onOpenURL { url in handleIncomingFile(url) }
+        .onOpenURL { url in
+            Task { await handleIncomingFile(url) }
+        }
         .onChange(of: scenePhase) { _, phase in
             // Persist any buffered daily-usage deltas before the system
             // freezes or kills us. Other stores write synchronously on
@@ -55,10 +58,13 @@ public struct MainView: View {
                 DailyUsageStore.shared.flushNow()
             }
         }
-        .alert("Import failed", isPresented: .constant(importError != nil)) {
-            Button("OK") { importError = nil }
+        .alert("Import failed", isPresented: $showImportError) {
+            Button("OK") {}
         } message: {
             Text(importError ?? "")
+        }
+        .onChange(of: showImportError) { _, isShowing in
+            if !isShowing { importError = nil }
         }
     }
 
@@ -66,12 +72,14 @@ public struct MainView: View {
     /// AirDrop, etc.) and switches to the Profiles tab on success. Errors
     /// surface in the alert and leave the current tab untouched so the
     /// user is not yanked away from where they were.
-    private func handleIncomingFile(_ url: URL) {
+    @MainActor
+    private func handleIncomingFile(_ url: URL) async {
         do {
-            _ = try ProfileStore.shared.importYAML(from: url)
+            _ = try await ProfileStore.shared.importYAML(from: url)
             selection = .profiles
         } catch {
             importError = error.localizedDescription
+            showImportError = true
         }
     }
 

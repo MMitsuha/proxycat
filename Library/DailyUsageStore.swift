@@ -166,12 +166,22 @@ public final class DailyUsageStore: ObservableObject {
             lastObservedUpTotal: lastObservedUpTotal,
             lastObservedDownTotal: lastObservedDownTotal
         )
-        if JSONFileStore.saveOrLog(
-            snapshot,
-            to: FilePath.dailyUsageFilePath,
-            category: "DailyUsageStore"
-        ) {
-            dirty = false
+        // Optimistically clear `dirty`; any record() arriving while the
+        // detached write is in flight will set it back to true and the
+        // next scheduled flush will pick the new state up. On write
+        // failure we re-mark dirty so the data isn't silently lost.
+        dirty = false
+        Task.detached(priority: .utility) { [weak self] in
+            let ok = JSONFileStore.saveOrLog(
+                snapshot,
+                to: FilePath.dailyUsageFilePath,
+                category: "DailyUsageStore"
+            )
+            if !ok { await self?.markDirty() }
         }
+    }
+
+    private func markDirty() {
+        dirty = true
     }
 }

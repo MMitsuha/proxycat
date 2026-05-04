@@ -77,6 +77,17 @@ public final class ConnectionsStore: ObservableObject {
     @Published public private(set) var isStreaming: Bool = false
     @Published public private(set) var loadError: String?
 
+    /// User's search box content. Two-way: the view binds it to a
+    /// `.searchable` field; the store debounces it before recomputing
+    /// `filteredConnections`.
+    @Published public var searchQuery: String = ""
+
+    /// `connections` filtered by `searchQuery` (debounced). Views read
+    /// this directly rather than re-running the predicate on every body
+    /// pass — under heavy traffic that ran the 6-field match across
+    /// hundreds of rows on every redraw, even when the query was empty.
+    @Published public private(set) var filteredConnections: [Connection] = []
+
     /// `chain → bytes/sec` aggregate, mirroring metacubexd's
     /// `speedGroupByName`. Useful for color-coding rows by outbound.
     @Published public private(set) var speedByChain: [String: Int64] = [:]
@@ -137,6 +148,36 @@ public final class ConnectionsStore: ObservableObject {
     ) {
         self.baseURL = baseURL
         self.session = session
+        // Debounce the typing burst before re-filtering. CombineLatest
+        // also fires the pipeline on every WS frame so newly arriving
+        // connections show up under the active filter without a typing
+        // event. `assign(to: &$published)` self-manages the cancellable
+        // for the lifetime of the publisher (no cancellable storage
+        // needed).
+        $searchQuery
+            .debounce(for: .milliseconds(150), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .combineLatest($connections)
+            .map { query, connections in
+                Self.applyFilter(query: query, to: connections)
+            }
+            .receive(on: RunLoop.main)
+            .assign(to: &$filteredConnections)
+    }
+
+    private static func applyFilter(query: String, to connections: [Connection]) -> [Connection] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return connections }
+        let needle = trimmed.lowercased()
+        return connections.filter { conn in
+            if conn.metadata.host.lowercased().contains(needle) { return true }
+            if conn.metadata.destinationIP.contains(needle) { return true }
+            if conn.metadata.sourceIP.contains(needle) { return true }
+            if conn.metadata.process.lowercased().contains(needle) { return true }
+            if conn.rule.lowercased().contains(needle) { return true }
+            if conn.chains.contains(where: { $0.lowercased().contains(needle) }) { return true }
+            return false
+        }
     }
 
     public func start() {

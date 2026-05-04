@@ -47,7 +47,15 @@ public struct ProxiesView: View {
                 ForEach(store.groups, id: \.name) { group in
                     Section {
                         if !store.isCollapsed(group.name) {
-                            ForEach(group.all ?? [], id: \.self) { name in
+                            // Stable per-position id keeps row identity tied
+                            // to the slot rather than the proxy name. Names
+                            // within a group are unique today, but the
+                            // offset-based id is robust against future relay
+                            // groups that may surface the same name twice
+                            // and avoids row recreation when only the
+                            // selected node changes.
+                            let entries = Array((group.all ?? []).enumerated())
+                            ForEach(entries, id: \.offset) { _, name in
                                 ProxyRow(
                                     name: name,
                                     node: store.nodeMap[name],

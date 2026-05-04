@@ -22,6 +22,13 @@ public final class CommandClient: ObservableObject {
 
     public static let maxLogBuffer = 1500
 
+    /// Soft cap above which we trim back down to `maxLogBuffer`. Trimming
+    /// every append at exactly the cap is `removeFirst(1)` — O(n) on an
+    /// `Array` of 1500 entries, paid every single log frame. Letting the
+    /// buffer overshoot by 25% before a single bulk trim amortizes the
+    /// memmove across ~375 appends, turning the per-append cost into O(1).
+    private static let trimThreshold = maxLogBuffer + maxLogBuffer / 4
+
     /// Logs from the gRPC stream are kept on the host side only while a
     /// LogView is on screen. Off by default so a host app that never
     /// visits the Logs tab pays no buffer cost over a long session.
@@ -171,7 +178,7 @@ public final class CommandClient: ObservableObject {
     fileprivate func didReceive(log entry: LogEntry) {
         guard logBufferingEnabled else { return }
         logs.append(entry)
-        if logs.count > Self.maxLogBuffer {
+        if logs.count > Self.trimThreshold {
             logs.removeFirst(logs.count - Self.maxLogBuffer)
         }
     }

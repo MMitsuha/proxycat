@@ -6,7 +6,6 @@ public struct ConnectionsView: View {
     @EnvironmentObject private var settings: RuntimeSettings
 
     @StateObject private var store = ConnectionsStore()
-    @State private var query: String = ""
     @State private var confirmCloseAll: Bool = false
     @State private var detail: Connection?
 
@@ -52,7 +51,6 @@ public struct ConnectionsView: View {
 
     @ViewBuilder
     private var content: some View {
-        let filtered = filteredConnections
         VStack(spacing: 0) {
             summaryBar
             if let err = store.loadError, store.connections.isEmpty {
@@ -70,7 +68,7 @@ public struct ConnectionsView: View {
                 }
             } else {
                 List {
-                    ForEach(filtered) { conn in
+                    ForEach(store.filteredConnections) { conn in
                         ConnectionRow(connection: conn)
                             .contentShape(Rectangle())
                             .onTapGesture { detail = conn }
@@ -84,7 +82,7 @@ public struct ConnectionsView: View {
                     }
                 }
                 .listStyle(.plain)
-                .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always))
+                .searchable(text: $store.searchQuery, placement: .navigationBarDrawer(displayMode: .always))
             }
         }
         .toolbar {
@@ -130,19 +128,6 @@ public struct ConnectionsView: View {
         .background(Color(uiColor: .secondarySystemGroupedBackground))
     }
 
-    private var filteredConnections: [Connection] {
-        guard !query.isEmpty else { return store.connections }
-        let needle = query.lowercased()
-        return store.connections.filter { conn in
-            if conn.metadata.host.lowercased().contains(needle) { return true }
-            if conn.metadata.destinationIP.contains(needle) { return true }
-            if conn.metadata.sourceIP.contains(needle) { return true }
-            if conn.metadata.process.lowercased().contains(needle) { return true }
-            if conn.rule.lowercased().contains(needle) { return true }
-            if conn.chains.contains(where: { $0.lowercased().contains(needle) }) { return true }
-            return false
-        }
-    }
 }
 
 // MARK: - Row

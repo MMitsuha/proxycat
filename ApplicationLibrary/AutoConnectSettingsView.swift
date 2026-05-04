@@ -10,35 +10,10 @@ public struct AutoConnectSettingsView: View {
     @EnvironmentObject private var profileStore: ProfileStore
     @EnvironmentObject private var environment: ExtensionEnvironment
 
-    /// What kind of alert is currently being shown. Both flows share
-    /// one alert modifier because stacking multiple
-    /// `.alert(isPresented:)` modifiers on the same view is brittle —
-    /// SwiftUI honors only one alert at a time and the resolution
-    /// order is implementation-defined.
-    private enum AlertKind {
-        case addSSID(error: String?)
-        case saveFailed(message: String)
-    }
-
-    @State private var alertKind: AlertKind?
     @State private var newSSIDText = ""
-
-    private var alertIsPresented: Binding<Bool> {
-        Binding(
-            get: { alertKind != nil },
-            set: { isShowing in
-                if !isShowing {
-                    if case .saveFailed = alertKind {
-                        // The user dismissed a save-error alert; clear
-                        // the upstream error so the alert doesn't
-                        // immediately re-fire on the next state change.
-                        environment.autoConnectError = nil
-                    }
-                    alertKind = nil
-                }
-            }
-        )
-    }
+    @State private var showAddSSID = false
+    @State private var addSSIDError: String?
+    @State private var saveErrorMessage: String?
 
     public init() {}
 
@@ -53,58 +28,44 @@ public struct AutoConnectSettingsView: View {
             footerSection
         }
         .navigationTitle("Auto Connect")
-        .alert(alertTitle, isPresented: alertIsPresented) {
-            alertActions
-        } message: {
-            alertMessage
-        }
-        .onChange(of: environment.autoConnectError) { _, newValue in
-            // Surface any save failure as an alert. If the user is
-            // already in the middle of the Add-SSID flow, defer until
-            // they dismiss it to avoid stomping the in-progress input.
-            if let message = newValue, alertKind == nil {
-                alertKind = .saveFailed(message: message)
-            }
-        }
-    }
-
-    private var alertTitle: LocalizedStringKey {
-        switch alertKind {
-        case .saveFailed: return "Could not save"
-        default:          return "Add SSID"
-        }
-    }
-
-    @ViewBuilder
-    private var alertActions: some View {
-        switch alertKind {
-        case .saveFailed:
-            Button("OK", role: .cancel) {}
-        default:
+        .alert("Add SSID", isPresented: $showAddSSID) {
             TextField("Network name", text: $newSSIDText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
             Button("Add") { commitNewSSID() }
             Button("Cancel", role: .cancel) { resetSSIDInput() }
-        }
-    }
-
-    @ViewBuilder
-    private var alertMessage: some View {
-        switch alertKind {
-        case let .saveFailed(message):
-            Text(message)
-        case let .addSSID(error):
-            if let error {
-                Text(error)
+        } message: {
+            if let addSSIDError {
+                Text(addSSIDError)
             } else {
                 Text("Enter the exact Wi-Fi name. iOS matches case-sensitively.")
             }
-        case .none:
-            // SwiftUI invokes the message builder once before the
-            // alert presents; supply a placeholder so the type-checker
-            // is happy.
-            EmptyView()
+        }
+        .alert(
+            "Could not save",
+            isPresented: Binding(
+                get: { saveErrorMessage != nil },
+                set: { isShowing in
+                    if !isShowing {
+                        saveErrorMessage = nil
+                        // Clear the upstream error too so the alert
+                        // doesn't immediately re-fire on the next
+                        // observation.
+                        environment.autoConnectError = nil
+                    }
+                }
+            ),
+            presenting: saveErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
+        }
+        .onChange(of: environment.autoConnectError) { _, newValue in
+            // Defer the save-error alert if the Add-SSID alert is still
+            // up so the user's in-progress input is not stomped.
+            guard let message = newValue, !showAddSSID else { return }
+            saveErrorMessage = message
         }
     }
 
@@ -137,7 +98,8 @@ public struct AutoConnectSettingsView: View {
             }
             Button {
                 resetSSIDInput()
-                alertKind = .addSSID(error: nil)
+                addSSIDError = nil
+                showAddSSID = true
             } label: {
                 Label("Add SSID", systemImage: "plus.circle.fill")
             }
@@ -218,7 +180,8 @@ public struct AutoConnectSettingsView: View {
     /// settle first.
     private func scheduleAddSSIDError(_ message: String) {
         Task { @MainActor in
-            alertKind = .addSSID(error: message)
+            addSSIDError = message
+            showAddSSID = true
         }
     }
 
