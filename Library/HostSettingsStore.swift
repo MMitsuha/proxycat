@@ -15,6 +15,7 @@ public final class HostSettingsStore: ObservableObject {
     public static let shared = HostSettingsStore()
 
     @Published public var autoConnect: AutoConnectConfig
+    @Published public var logRetention: LogRetention
 
     private var bag = Set<AnyCancellable>()
 
@@ -25,19 +26,34 @@ public final class HostSettingsStore: ObservableObject {
             default: .defaults
         )
         self.autoConnect = stored.autoConnect
+        self.logRetention = stored.logRetention
 
-        // dropFirst skips the publisher's "current value" replay so we
-        // don't immediately re-write what we just loaded; subsequent
-        // changes from a SwiftUI binding flow through persistAndBroadcast.
-        //
-        // Persist from the value the publisher emits, not from
-        // self.autoConnect: @Published emits in willSet, so reading
-        // self.* here returns the *previous* value.
-        $autoConnect
+        // Persist whenever any field changes. Build the snapshot from
+        // the publishers' emitted values rather than `self.*` — @Published
+        // emits in willSet, so reading `self.<other>` here would capture
+        // the previous value if both fields were set in the same tick.
+        // dropFirst skips the replay of values we just loaded.
+        Publishers.CombineLatest($autoConnect, $logRetention)
+            .dropFirst()
+            .removeDuplicates(by: ==)
+            .sink { [weak self] config, policy in
+                self?.persistAndBroadcast(snapshot: HostSettings(
+                    autoConnect: config,
+                    logRetention: policy
+                ))
+            }
+            .store(in: &bag)
+
+        // Apply retention immediately so the user sees old files
+        // disappear without waiting for the next view reload.
+        $logRetention
             .dropFirst()
             .removeDuplicates()
-            .sink { [weak self] config in
-                self?.persistAndBroadcast(snapshot: HostSettings(autoConnect: config))
+            .sink { policy in
+                FilePath.pruneSavedLogs(
+                    policy: policy,
+                    activePath: LibmihomoBridge.currentLogFilePath()
+                )
             }
             .store(in: &bag)
     }

@@ -2046,6 +2046,77 @@
         }
       }
     },
+    "Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "限制 Saved Logs 中保留的每会话日志文件数量。当前会话始终保留。修改此设置、应用进入前台或打开 Saved Logs 列表时会清理较旧的文件。"
+          }
+        }
+      }
+    },
+    "Forever" : {
+      "comment" : "Saved-log retention picker option that keeps every session log file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永久保留"
+          }
+        }
+      }
+    },
+    "Keep last 10 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 10 次会话"
+          }
+        }
+      }
+    },
+    "Keep last 50 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 50 次会话"
+          }
+        }
+      }
+    },
+    "Keep last 100 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 100 次会话"
+          }
+        }
+      }
+    },
+    "Retention" : {
+      "comment" : "Saved-log retention picker label in Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留策略"
+          }
+        }
+      }
+    },
     "Yesterday" : {
       "comment" : "Statistics row label for the previous day.",
       "extractionState" : "manual",

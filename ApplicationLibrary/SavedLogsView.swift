@@ -127,13 +127,7 @@ struct SavedLogDetailView: View {
                     Text(loadError)
                 }
             } else {
-                ScrollView {
-                    Text(content)
-                        .font(.system(.caption2, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                }
+                LogTextView(text: content)
             }
         }
         .navigationTitle(entry.displayDate)
@@ -170,14 +164,15 @@ struct SavedLogDetailView: View {
         loading = true
         loadError = nil
         // Reading large files synchronously freezes the UI, so go to a
-        // utility queue. Truncate to the last 1MB so we don't try to
-        // render a multi-megabyte string in a single Text view.
+        // utility queue. Truncate to the last 5MB to bound memory —
+        // UITextView handles that size smoothly, and the share-sheet
+        // exports the full file when more is needed.
         let url = entry.url
         let result: Result<String, Error> = await Task.detached(priority: .userInitiated) {
             do {
                 let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
                 let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
-                let limit: Int64 = 1_000_000
+                let limit: Int64 = 5_000_000
                 if size <= limit {
                     let data = try Data(contentsOf: url)
                     return .success(String(decoding: data, as: UTF8.self))
@@ -214,6 +209,12 @@ final class SavedLogsViewModel: ObservableObject {
     func reload() {
         let dir = FilePath.logsDirectory
         let active = LibmihomoBridge.currentLogFilePath()
+        // Apply user retention policy before listing so the user
+        // sees a fresh state. No-op when policy is .keepAll.
+        FilePath.pruneSavedLogs(
+            policy: HostSettingsStore.shared.logRetention,
+            activePath: active
+        )
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey],

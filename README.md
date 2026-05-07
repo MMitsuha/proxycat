@@ -174,6 +174,8 @@ mihomo 自身的 REST 控制器（`external-controller`）默认绑定到 `127.0
 
 `Pause / Resume` 冻结快照，便于不被自动滚动顶到底部。`Clear` 同时清空内存环形缓冲区。会话级日志另由 `libmihomo/log_persist.go` 写入 App Group 的滚动文件，可在 Logs 标签页右上角进入 `SavedLogsView` 查看。
 
+`SavedLogsView` 的明细页用 `LogTextView`（UITextView 包了一层 `UIViewRepresentable`）渲染——SwiftUI `Text` 在 MB 级文件上一次性测量整段文本会卡死或崩溃，UITextView 走 TextKit 的增量布局则可顺滑承载。打开时仅读取尾部 5 MB 进显示，需要完整文件用工具栏的 Share File。Settings → Logs → Retention 提供 `Forever / 10 / 50 / 100` 四档保留策略（默认 Forever，存于 `host_settings.json`），在设置变更、应用进入前台、以及打开 Saved Logs 列表三处由 `FilePath.pruneSavedLogs` 按修改时间清理；当前正在写入的会话文件始终保留。
+
 ## 每日流量统计
 
 Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift Charts 堆叠柱状图 + 列表），数据由 `Library/DailyUsageStore.swift` 在宿主 App 内聚合：

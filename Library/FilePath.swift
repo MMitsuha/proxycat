@@ -121,6 +121,52 @@ public enum FilePath {
         return total
     }
 
+    /// Enforce the user's saved-log retention policy. Counts only
+    /// `mihomo-*.log` files in `logsDirectory`, sorts newest-first by
+    /// mtime, and deletes everything past the policy's keep count.
+    /// The file the extension is currently writing to (`activePath`,
+    /// from `LibmihomoBridge.currentLogFilePath()`) is always
+    /// preserved — deleting an open inode silently keeps growing it.
+    /// Idempotent and cheap; safe to call from app foreground, view
+    /// reload, and settings-change sinks.
+    public static func pruneSavedLogs(policy: LogRetention, activePath: String?) {
+        let keep = policy.rawValue
+        guard keep > 0 else { return }
+
+        let dir = logsDirectory
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: dir,
+            includingPropertiesForKeys: keys,
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        let candidates: [(url: URL, modified: Date)] = urls.compactMap { url in
+            // Match the writer's naming scheme (mihomo-YYYYMMDD-HHMMSS.log).
+            // Anything else dropped in here — a future feature's file, a
+            // test artifact — is left alone instead of being silently
+            // counted against the retention budget.
+            guard url.pathExtension == "log",
+                  url.lastPathComponent.hasPrefix("mihomo-"),
+                  url.path != activePath,
+                  let values = try? url.resourceValues(forKeys: Set(keys)),
+                  values.isRegularFile == true
+            else { return nil }
+            return (url, values.contentModificationDate ?? .distantPast)
+        }
+
+        // Active file doesn't count against the keep budget — it's
+        // implicitly always kept, separate from the policy. So if
+        // policy=last10 and there are 11 inactive + 1 active, we keep
+        // 10 inactive + 1 active = 11 files total on disk.
+        guard candidates.count > keep else { return }
+
+        let sorted = candidates.sorted { $0.modified > $1.modified }
+        for entry in sorted.dropFirst(keep) {
+            try? FileManager.default.removeItem(at: entry.url)
+        }
+    }
+
     /// Removes everything inside `workingDirectory` so mihomo will
     /// re-fetch its caches on the next start. Profiles are untouched,
     /// and any compile-time bundled assets (see BundledAssets) are
