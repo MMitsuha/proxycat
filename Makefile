@@ -1,6 +1,6 @@
 .PHONY: all libmihomo libmihomo-obf project version clean build sim help \
         assets geo-assets ui-assets clean-assets \
-        mihomo-init mihomo-upgrade
+        mihomo-init mihomo-upgrade mihomo-checkout
 
 XCODEGEN ?= xcodegen
 GOMOBILE ?= gomobile
@@ -22,6 +22,9 @@ help:
 	@echo "  make clean-assets   empty BundledAssets/{geo,ui} (keeps .gitkeep)"
 	@echo "  make mihomo-init    init/refresh the mihomo submodule (run after clone)"
 	@echo "  make mihomo-upgrade pull latest mihomo Alpha tip + rebuild xcframework"
+	@echo "  make mihomo-checkout REF=<ref>"
+	@echo "                      pin mihomo to a tag/commit/branch + rebuild"
+	@echo "                      (e.g. REF=v1.19.5, REF=35d5d4e4, REF=Alpha)"
 	@echo "  make clean          wipe generated artifacts"
 	@echo ""
 	@echo "Prereqs:"
@@ -50,6 +53,39 @@ mihomo-upgrade:
 	@echo ""
 	@echo "Mihomo upgraded. Commit the new pointer with:"
 	@echo "  git add mihomo && git commit -m \"Bump mihomo to $$(git -C mihomo rev-parse --short=12 HEAD)\""
+
+mihomo-checkout:
+	@if [ -z "$(REF)" ]; then \
+		echo "error: REF is required" >&2; \
+		echo "  usage: make mihomo-checkout REF=<commit|tag|branch>" >&2; \
+		echo "  examples:" >&2; \
+		echo "    make mihomo-checkout REF=v1.19.5" >&2; \
+		echo "    make mihomo-checkout REF=35d5d4e44d7a" >&2; \
+		echo "    make mihomo-checkout REF=Alpha" >&2; \
+		exit 2; \
+	fi
+	@if [ ! -f mihomo/go.mod ]; then \
+		echo "==> Initializing mihomo submodule"; \
+		git submodule update --init --recursive mihomo; \
+	fi
+	@echo "==> Fetching mihomo refs from origin"
+	git -C mihomo fetch --tags --force origin
+	@echo "==> Checking out $(REF)"
+	@git -C mihomo rev-parse --verify --quiet "$(REF)^{commit}" >/dev/null \
+		|| git -C mihomo rev-parse --verify --quiet "origin/$(REF)^{commit}" >/dev/null \
+		|| { echo "error: '$(REF)' does not resolve to a commit in mihomo/" >&2; exit 1; }
+	@if git -C mihomo rev-parse --verify --quiet "refs/remotes/origin/$(REF)" >/dev/null \
+			&& ! git -C mihomo rev-parse --verify --quiet "refs/tags/$(REF)" >/dev/null; then \
+		git -C mihomo checkout --detach "origin/$(REF)"; \
+	else \
+		git -C mihomo checkout --detach "$(REF)"; \
+	fi
+	@printf "    now at %s (%s)\n" "$$(git -C mihomo rev-parse --short=12 HEAD)" "$$(git -C mihomo log -1 --format=%s)"
+	@echo "==> Rebuilding xcframework"
+	./scripts/build-libmihomo.sh
+	@echo ""
+	@echo "Mihomo pinned to $(REF). Commit the new pointer with:"
+	@echo "  git add mihomo && git commit -m \"Pin mihomo to $$(git -C mihomo rev-parse --short=12 HEAD) ($(REF))\""
 
 libmihomo:
 	./scripts/build-libmihomo.sh

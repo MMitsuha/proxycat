@@ -73,6 +73,17 @@ make mihomo-upgrade     # git submodule update --remote mihomo + ./scripts/build
 git add mihomo && git commit -m "Bump mihomo to <sha>"
 ```
 
+或者钉到指定的 tag / commit / 分支（不跟踪 Alpha tip）：
+
+```bash
+make mihomo-checkout REF=v1.19.5         # 锁定到一个稳定 tag
+make mihomo-checkout REF=35d5d4e44d7a    # 锁定到具体 commit
+make mihomo-checkout REF=Alpha           # 等效于 mihomo-upgrade（取 origin/Alpha 当前 tip）
+git add mihomo && git commit -m "Pin mihomo to <sha> (<ref>)"
+```
+
+`mihomo-checkout` 会先 `git fetch --tags origin`，再以 detached HEAD 方式 checkout 给定的 ref，最后调用 `./scripts/build-libmihomo.sh` 重建 xcframework。
+
 `libmihomo/tools.go` 显式 import 了 `golang.org/x/mobile/bind`。没有这个文件 `gomobile bind` 会报错 `unable to import bind: no Go package in golang.org/x/mobile/bind`，因为 `go mod tidy` 会把没有源码引用的依赖剪掉，而 `gobind` 只在临时目录里 import 它。
 
 ## 首次构建
@@ -96,6 +107,7 @@ open ProxyCat.xcodeproj
 | `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
 | `make mihomo-init`    | 初始化或刷新 `mihomo/` submodule                       |
 | `make mihomo-upgrade` | 拉取最新 Alpha tip 并重建 xcframework                  |
+| `make mihomo-checkout REF=<ref>` | 钉到指定 tag / commit / 分支并重建 xcframework |
 | `make assets`         | 下载 geo 资源与 metacubexd 到 `BundledAssets/`         |
 | `make geo-assets` / `ui-assets` / `clean-assets` | 仅刷新 / 清空对应子集 |
 | `make sim`            | 不签名地为 iOS 模拟器构建                              |
