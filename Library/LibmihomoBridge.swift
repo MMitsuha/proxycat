@@ -171,6 +171,19 @@ public enum LibmihomoBridge {
         LibmihomoCloseAllConnections()
     }
 
+    /// Tell mihomo that the OS default network interface has changed
+    /// (Wi-Fi → cellular, post-sleep reconnect, etc.). Flushes the
+    /// interface cache and resets DNS resolver upstream connections so
+    /// new traffic doesn't hang on stale TCP/QUIC sockets bound to the
+    /// previous route. No-op when the core isn't started.
+    ///
+    /// On iOS this has to be driven from a Swift NWPathMonitor because
+    /// mihomo's bundled DefaultInterfaceMonitor reads the kernel routing
+    /// table via AF_ROUTE — a syscall the NE sandbox blocks.
+    public static func notifyDefaultInterfaceChanged() {
+        LibmihomoNotifyDefaultInterfaceChanged()
+    }
+
     /// Identifying information about the embedded mihomo core. Cached
     /// since the underlying values are baked in at build time.
     public static let version: VersionInfo = .init(LibmihomoVersion())

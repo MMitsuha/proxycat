@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 import Library
 import Libmihomo
+import Network
 import NetworkExtension
 import os.log
 
@@ -15,6 +16,30 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let logger = Logger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
     private var memoryObserverToken: UUID?
+
+    private var pathMonitor: NWPathMonitor?
+    private let pathMonitorQueue = DispatchQueue(label: "io.proxycat.pcat.path", qos: .utility)
+    private var pathMonitorGeneration = 0
+    private var pathBaseline: PathBaselineState = .awaiting
+    private var pendingPathChangeWorkItem: DispatchWorkItem?
+
+    /// Whether NWPathMonitor has delivered a usable path yet. Suppresses
+    /// the very first satisfied callback because mihomo just started —
+    /// its caches are fresh, nothing is stale to flush. But if startup
+    /// first observed an unsatisfied path, the later satisfied callback
+    /// is a real offline→online transition and should refresh mihomo.
+    private enum PathBaselineState {
+        case awaiting
+        case sawUnsatisfied
+        case established
+    }
+
+    /// How long to coalesce NWPathMonitor updates before nudging mihomo.
+    /// iOS often emits two or three updates back-to-back during a single
+    /// transition (e.g. "Wi-Fi up but unsatisfied" → "cellular satisfied"
+    /// → "Wi-Fi satisfied" all within a second); collapse them so mihomo
+    /// only refreshes once per real-world transition.
+    private static let pathChangeDebounce: DispatchTimeInterval = .milliseconds(500)
 
     // MARK: - Lifecycle
 
@@ -86,11 +111,21 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //    apply error verbatim if either fails.
         try LibmihomoBridge.start()
 
+        // 6. Watch the OS default network path. iOS surfaces Wi-Fi ↔
+        //    cellular switches and post-sleep reconnects through
+        //    NWPathMonitor; mihomo's own DefaultInterfaceMonitor can't
+        //    run inside the NE sandbox (AF_ROUTE is blocked). Without
+        //    this, mihomo's interface cache and DNS upstream connections
+        //    silently go stale across a network change and the tunnel
+        //    appears alive but forwards nothing.
+        startPathMonitor()
+
         Self.logger.info("startTunnel done")
     }
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
         Self.logger.info("stopTunnel reason=\(reason.rawValue, privacy: .public)")
+        stopPathMonitor()
         // Flush before mihomo shuts down so the trailing "session ended"
         // marker reflects the real reason for stopping. (Stop() also
         // calls StopLogFile defensively, but doing it here is explicit.)
@@ -307,6 +342,75 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         case .critical:
             LibmihomoBridge.closeAllConnections()
         }
+    }
+
+    // MARK: - Network path
+
+    private func startPathMonitor() {
+        guard pathMonitor == nil else { return }
+        let generation: Int = pathMonitorQueue.sync {
+            resetPathMonitorState()
+            return pathMonitorGeneration
+        }
+
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            self?.handlePathUpdate(path, generation: generation)
+        }
+        monitor.start(queue: pathMonitorQueue)
+        pathMonitor = monitor
+    }
+
+    private func stopPathMonitor() {
+        pathMonitor?.cancel()
+        pathMonitor = nil
+        // Bump generation so any callback or work item still queued from
+        // the canceled monitor bails before reaching mihomo.
+        pathMonitorQueue.sync { resetPathMonitorState() }
+    }
+
+    /// Bumps the generation counter and clears pending work + baseline.
+    /// Must be called from `pathMonitorQueue`.
+    private func resetPathMonitorState() {
+        pathMonitorGeneration += 1
+        pendingPathChangeWorkItem?.cancel()
+        pendingPathChangeWorkItem = nil
+        pathBaseline = .awaiting
+    }
+
+    /// Routes each NWPathMonitor callback to either a debounced notify
+    /// or a baseline transition. We deliberately don't fingerprint the
+    /// path to detect "real" changes — same-name reconnects (Wi-Fi DHCP
+    /// renewal, cellular APN refresh, post-sleep gateway swap) keep the
+    /// same `(name, index)` while invalidating the underlying socket
+    /// bindings, and missing those is the whole class of bug this fix
+    /// exists to address. NWPathMonitor's own event coalescing plus the
+    /// 500ms debounce keep the call rate reasonable.
+    private func handlePathUpdate(_ path: Network.NWPath, generation: Int) {
+        guard generation == pathMonitorGeneration else { return }
+        pendingPathChangeWorkItem?.cancel()
+
+        switch pathBaseline {
+        case .established:
+            schedulePathChangeNotification()
+        case .awaiting:
+            pathBaseline = path.status == .satisfied ? .established : .sawUnsatisfied
+        case .sawUnsatisfied:
+            guard path.status == .satisfied else { return }
+            pathBaseline = .established
+            schedulePathChangeNotification()
+        }
+    }
+
+    private func schedulePathChangeNotification() {
+        let captured = pathMonitorGeneration
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, captured == self.pathMonitorGeneration else { return }
+            LibmihomoBridge.notifyDefaultInterfaceChanged()
+            Self.logger.info("notified mihomo of default interface change")
+        }
+        pendingPathChangeWorkItem = work
+        pathMonitorQueue.asyncAfter(deadline: .now() + Self.pathChangeDebounce, execute: work)
     }
 }
 
