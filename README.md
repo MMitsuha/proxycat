@@ -221,7 +221,7 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 
 `scripts/build-libmihomo.sh` 通过 `go build -ldflags -X` 注入构建期信息：
 
-- `mihomo` 语义版本（来自 `mihomo/constant/version.go`）
+- `mihomo` 版本字符串（沿用 mihomo 自身 `Makefile` 的约定：tag 命中即 `v1.19.24`，Alpha/Beta 通道分别为 `alpha-<short>` / `beta-<short>`，否则回退 `git describe --tags --always`；不读取 `constant/version.go` 里上游从未维护的 `1.10.0` 占位符）
 - mihomo 上游 commit 短哈希（来自 `git -C mihomo rev-parse`）
 - xcframework 打包时间
 - 启用的 build tags

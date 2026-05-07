@@ -98,9 +98,30 @@ BUILD_TAGS="with_gvisor with_low_memory"
 
 # Inject mihomo + wrapper build identifiers so the iOS Settings →
 # Diagnostics screen can show real values instead of "unknown time".
+# mihomo/constant/version.go pins "1.10.0" as a placeholder that the
+# upstream project never bumps — they always override via ldflags at
+# build time (see mihomo/Makefile). We mirror their convention so the
+# iOS app reports the same string `mihomo -v` would on a server: an
+# exact tag for tagged commits, "alpha-<short>" / "beta-<short>" for
+# pre-release channel tips, and `git describe --tags --always` as a
+# last-resort fallback. Submodule is always in detached HEAD after
+# `git submodule update`, so we probe ref reachability instead of
+# `git branch --show-current`.
 BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-MIHOMO_VERSION="$(grep -E '^\s*Version\s*=' "$ROOT/mihomo/constant/version.go" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)"
-MIHOMO_COMMIT="$(git -C "$ROOT/mihomo" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
+MIHOMO_GIT="$ROOT/mihomo"
+MIHOMO_SHORT="$(git -C "$MIHOMO_GIT" rev-parse --short HEAD 2>/dev/null || true)"
+MIHOMO_COMMIT="$(git -C "$MIHOMO_GIT" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
+if [[ -z "$MIHOMO_SHORT" ]]; then
+  MIHOMO_VERSION="unknown"
+elif EXACT_TAG="$(git -C "$MIHOMO_GIT" describe --tags --exact-match HEAD 2>/dev/null)"; then
+  MIHOMO_VERSION="$EXACT_TAG"
+elif git -C "$MIHOMO_GIT" merge-base --is-ancestor HEAD origin/Alpha 2>/dev/null; then
+  MIHOMO_VERSION="alpha-$MIHOMO_SHORT"
+elif git -C "$MIHOMO_GIT" merge-base --is-ancestor HEAD origin/Beta 2>/dev/null; then
+  MIHOMO_VERSION="beta-$MIHOMO_SHORT"
+else
+  MIHOMO_VERSION="$(git -C "$MIHOMO_GIT" describe --tags --always 2>/dev/null || echo "$MIHOMO_SHORT")"
+fi
 LDFLAGS="-s -w"
 LDFLAGS+=" -X 'github.com/metacubex/mihomo/constant.Version=$MIHOMO_VERSION'"
 LDFLAGS+=" -X 'github.com/metacubex/mihomo/constant.BuildTime=$BUILD_TIME'"
