@@ -143,7 +143,16 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // serving so the host app can still see status if it foregrounds.
     }
 
-    override func wake() {}
+    override func wake() {
+        // Belt-and-suspenders for the case where iOS quietly swapped the
+        // default route during deep sleep without letting our
+        // NWPathMonitor witness the transition. Treat every wake as a
+        // potential interface change — the notify is idempotent (cache
+        // flush + DNS upstream reset + tunneled-connection close) and a
+        // no-op if mihomo already saw the same path.
+        LibmihomoBridge.notifyDefaultInterfaceChanged()
+        Self.logger.info("wake → notified mihomo of possible interface change")
+    }
 
     override func handleAppMessage(_ messageData: Data) async -> Data? {
         // Streaming status / logs go through the gRPC channel, not here.
