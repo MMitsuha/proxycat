@@ -37,9 +37,19 @@ public struct ProfileDownloadView: View {
             }
 
             Section {
-                TextField("Profile name", text: $name)
-                    .autocorrectionDisabled()
-                    .onChange(of: name) { _, _ in nameEdited = true }
+                // Custom setter so the auto-derive in the URL onChange
+                // (which assigns `name` directly) doesn't flip
+                // `nameEdited` and prematurely lock further auto-fills.
+                // Only writes that come through this Binding — i.e. user
+                // typing in this field — count as a manual edit.
+                TextField("Profile name", text: Binding(
+                    get: { name },
+                    set: { newValue in
+                        name = newValue
+                        nameEdited = true
+                    }
+                ))
+                .autocorrectionDisabled()
             } header: {
                 Text("Name")
             } footer: {
