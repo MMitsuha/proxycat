@@ -206,8 +206,8 @@ public final class ConnectionsStore: ObservableObject {
         downloadTotal = 0
         speedByChain = [:]
         loadError = nil
-        prevByID.removeAll(keepingCapacity: false)
-        chainSpeedsBuf.removeAll(keepingCapacity: false)
+        prevByID.removeAll(keepingCapacity: true)
+        chainSpeedsBuf.removeAll(keepingCapacity: true)
     }
 
     deinit {
