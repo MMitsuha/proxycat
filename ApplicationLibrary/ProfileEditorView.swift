@@ -171,8 +171,12 @@ public struct ProfileEditorView: View {
         }
     }
 
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var canSave: Bool {
-        guard !name.isEmpty, !yaml.isEmpty else { return false }
+        guard !trimmedName.isEmpty, !yaml.isEmpty else { return false }
         if case .failed = validation { return false }
         return true
     }
@@ -220,15 +224,16 @@ public struct ProfileEditorView: View {
             saveError = msg
             return
         }
+        let finalName = trimmedName
         do {
             switch mode {
             case .create:
-                try await store.importYAML(yaml, name: name)
+                try await store.importYAML(yaml, name: finalName)
             case let .edit(profile):
                 // Single persist: the previous two-call form could leave
                 // the YAML saved and the rename failed, with the in-memory
                 // and on-disk index disagreeing on the profile's name.
-                try await store.updateContent(of: profile, yaml: yaml, name: name)
+                try await store.updateContent(of: profile, yaml: yaml, name: finalName)
             }
             dismiss()
         } catch {
