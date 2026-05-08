@@ -10,6 +10,13 @@ public struct DashboardView: View {
     @EnvironmentObject private var settings: RuntimeSettings
 
     @State private var connectError: String?
+    /// Held true between a Connect tap and the OS-level NEVPNStatus
+    /// finally moving off `.disconnected`. `ExtensionProfile.start()`
+    /// awaits a manager save before calling `startVPNTunnel`, so the
+    /// system status notification can lag behind the tap by a frame or
+    /// two — `isInTransition` alone leaves a window where a second tap
+    /// would queue another start and surface a confusing NE error.
+    @State private var isStarting: Bool = false
 
     public init() {}
 
@@ -25,6 +32,12 @@ public struct DashboardView: View {
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("ProxyCat")
         .navigationBarTitleDisplayMode(.large)
+        // Drop the local `isStarting` guard once the OS status moves;
+        // `isInTransition` (or the connected state) keeps the button
+        // disabled from there. Also covers the synchronous-failure
+        // case where status never moves — the catch block below clears
+        // `isStarting` directly so the button isn't permanently locked.
+        .onChange(of: profile.status) { _, _ in isStarting = false }
         .alert("Cannot connect", isPresented: .constant(connectError != nil)) {
             Button("OK") { connectError = nil }
         } message: {
@@ -62,7 +75,7 @@ public struct DashboardView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)
             .tint(profile.isConnected ? .red : .accentColor)
-            .disabled(profileStore.active == nil || isInTransition)
+            .disabled(profileStore.active == nil || isInTransition || isStarting)
 
             if profile.isConnected, !settings.disableExternalController, let url = URL(string: "http://127.0.0.1:9090/ui/") {
                 Link(destination: url) {
@@ -227,7 +240,7 @@ public struct DashboardView: View {
         // these statuses, but a stale tap before SwiftUI re-renders
         // would otherwise call start()/stop() against a transitioning
         // tunnel and surface confusing NEVPNError failures.
-        if isInTransition { return }
+        if isInTransition || isStarting { return }
         if profile.isConnected {
             profile.stop()
             return
@@ -236,6 +249,14 @@ public struct DashboardView: View {
             connectError = String(localized: "Pick a profile first.")
             return
         }
+        // Lock the button before kicking off the start task. The system
+        // status notification only fires after `ExtensionProfile.start()`
+        // finishes its manager save and `startVPNTunnel` reaches the
+        // extension; without this local guard, a second tap during that
+        // window queues a duplicate start and surfaces an NEVPN error.
+        // `.onChange(of: profile.status)` clears the flag once the OS
+        // takes over (or when a synchronous failure leaves status put).
+        isStarting = true
         // The Go core reads the active profile YAML and runtime settings
         // from the App Group container itself, so all the host has to do
         // is await the manager save inside ExtensionProfile.start().
@@ -243,6 +264,7 @@ public struct DashboardView: View {
             do {
                 try await profile.start()
             } catch {
+                isStarting = false
                 connectError = error.localizedDescription
             }
         }
