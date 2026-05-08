@@ -59,6 +59,14 @@ public final class CommandClient: ObservableObject {
         goClient = nil
         bridge = nil
         isConnected = false
+        // The last Status frame sticks around in `traffic`/`memory`
+        // otherwise, so the Dashboard would keep rendering a non-zero
+        // up/down rate and "N active" connections after disconnect —
+        // reads like the tunnel is still doing work even though it's
+        // gone. Zero them on teardown; the next reconnect will repopulate
+        // from a fresh frame.
+        traffic = .zero
+        memory = .zero
         // CommandClient.Disconnect() in Go calls wg.Wait() — gRPC stream
         // teardown can take 100–500ms on a Unix socket, so do it off the
         // main actor to keep the UI responsive.
