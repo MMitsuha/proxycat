@@ -211,8 +211,10 @@ public final class ConnectionsStore: ObservableObject {
     public func close(id: String) async {
         // mihomo IDs are UUIDs, but escape anyway so a future server
         // change (or a synthetic test) can't smuggle path traversal in.
-        let escaped = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
-        let url = baseURL.appendingPathComponent("connections/\(escaped)")
+        let url = MihomoController.makeURL(
+            baseURL: baseURL,
+            path: "connections/\(MihomoController.percentEncodeSegment(id))"
+        )
         var req = URLRequest(url: url)
         req.httpMethod = "DELETE"
         req.timeoutInterval = 5
@@ -228,7 +230,7 @@ public final class ConnectionsStore: ObservableObject {
 
     /// `DELETE /connections`.
     public func closeAll() async {
-        var req = URLRequest(url: baseURL.appendingPathComponent("connections"))
+        var req = URLRequest(url: MihomoController.makeURL(baseURL: baseURL, path: "connections"))
         req.httpMethod = "DELETE"
         req.timeoutInterval = 5
         do {
@@ -243,12 +245,15 @@ public final class ConnectionsStore: ObservableObject {
     private func runOnce() async -> Bool {
         // ws scheme on loopback. mihomo's binding (binding.go) forces the
         // controller secret empty for proxycat, so no auth header.
-        guard var components = URLComponents(
-            url: baseURL.appendingPathComponent("connections"),
-            resolvingAgainstBaseURL: false
-        ) else { return false }
+        let httpURL = MihomoController.makeURL(
+            baseURL: baseURL,
+            path: "connections",
+            queryItems: [URLQueryItem(name: "interval", value: "1000")]
+        )
+        guard var components = URLComponents(url: httpURL, resolvingAgainstBaseURL: false) else {
+            return false
+        }
         components.scheme = (baseURL.scheme == "https") ? "wss" : "ws"
-        components.queryItems = [URLQueryItem(name: "interval", value: "1000")]
         guard let wsURL = components.url else { return false }
 
         let task = session.webSocketTask(with: wsURL)

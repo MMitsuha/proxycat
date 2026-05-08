@@ -101,7 +101,7 @@ public struct MihomoController {
     /// `PUT /proxies/{group}` body `{"name": <node>}`. 204 on success.
     /// 400 if the group is not a Selector (URLTest/Fallback/LoadBalance).
     public func select(group: String, name: String) async throws {
-        var req = makeRequest(path: "proxies/\(escape(group))", timeout: 5)
+        var req = makeRequest(path: "proxies/\(Self.percentEncodeSegment(group))", timeout: 5)
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["name": name])
@@ -115,18 +115,17 @@ public struct MihomoController {
         url: String = defaultTestURL,
         timeoutMs: Int = defaultTimeoutMs
     ) async throws -> [String: Int] {
-        var components = URLComponents(
-            url: baseURL.appendingPathComponent("group/\(escape(name))/delay"),
-            resolvingAgainstBaseURL: false
-        )!
-        components.queryItems = [
-            URLQueryItem(name: "url", value: url),
-            URLQueryItem(name: "timeout", value: String(timeoutMs)),
-        ]
+        let target = makeURL(
+            path: "group/\(Self.percentEncodeSegment(name))/delay",
+            queryItems: [
+                URLQueryItem(name: "url", value: url),
+                URLQueryItem(name: "timeout", value: String(timeoutMs)),
+            ]
+        )
         // Give the request a hair more time than the per-node timeout
         // because the server runs them concurrently and still needs to
         // serialize the result.
-        var req = URLRequest(url: components.url!)
+        var req = URLRequest(url: target)
         req.timeoutInterval = TimeInterval(timeoutMs) / 1000 + 2
         let data = try await perform(req)
         do {
@@ -139,15 +138,45 @@ public struct MihomoController {
     // MARK: - Private
 
     private func makeRequest(path: String, timeout: TimeInterval) -> URLRequest {
-        var req = URLRequest(url: baseURL.appendingPathComponent(path))
+        var req = URLRequest(url: makeURL(path: path))
         req.timeoutInterval = timeout
         return req
     }
 
-    /// Percent-encode a path segment. mihomo's `parseProxyName` middleware
-    /// uses `getEscapeParam`, which round-trips a URL-encoded segment.
-    private func escape(_ s: String) -> String {
-        s.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? s
+    func makeURL(path: String, queryItems: [URLQueryItem] = []) -> URL {
+        Self.makeURL(baseURL: baseURL, path: path, queryItems: queryItems)
+    }
+
+    /// Compose a URL from `baseURL` plus a percent-encoded path. We set
+    /// `URLComponents.percentEncodedPath` directly because
+    /// `URL.appendingPathComponent` re-encodes `%` to `%25`, which would
+    /// turn `JP%2FTokyo` (one escaped segment) into `JP%252FTokyo`
+    /// (the literal text `JP%2FTokyo`).
+    static func makeURL(baseURL: URL, path: String, queryItems: [URLQueryItem] = []) -> URL {
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        var basePath = components.percentEncodedPath
+        if !basePath.hasSuffix("/") { basePath += "/" }
+        components.percentEncodedPath = basePath + path
+        if !queryItems.isEmpty {
+            components.queryItems = queryItems
+        }
+        return components.url!
+    }
+
+    /// `urlPathAllowed` minus `/`, so a name containing `/`
+    /// (e.g. proxy group `JP/Tokyo`) is encoded as one segment instead of two.
+    private static let pathSegmentAllowed: CharacterSet = {
+        var set = CharacterSet.urlPathAllowed
+        set.remove("/")
+        return set
+    }()
+
+    /// Percent-encode a single URL path segment. mihomo's `parseProxyName`
+    /// middleware (hub/route/common.go) round-trips the encoding via
+    /// `url.PathUnescape`, and chi's `{name}` token doesn't span `/`, so
+    /// any `/` inside the name must be `%2F` to land in the right route.
+    static func percentEncodeSegment(_ s: String) -> String {
+        s.addingPercentEncoding(withAllowedCharacters: pathSegmentAllowed) ?? s
     }
 
     private func perform(_ request: URLRequest) async throws -> Data {
