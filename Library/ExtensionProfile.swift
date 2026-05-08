@@ -20,11 +20,7 @@ public final class ExtensionProfile {
     public private(set) var status: NEVPNStatus = .invalid
     public private(set) var manager: NETunnelProviderManager?
 
-    // The token is opaque NSObjectProtocol (not Sendable). We only
-    // mutate it from MainActor methods, but deinit is nonisolated;
-    // nonisolated(unsafe) tells the compiler we've checked the
-    // race-freedom by inspection.
-    @ObservationIgnored nonisolated(unsafe) private var statusObserver: NSObjectProtocol?
+    @ObservationIgnored private var statusObservationTask: Task<Void, Never>?
 
     public init() {}
 
@@ -219,26 +215,18 @@ public final class ExtensionProfile {
     }
 
     private func attachObserver(_ manager: NETunnelProviderManager) {
-        if let token = statusObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
-        statusObserver = NotificationCenter.default.addObserver(
-            forName: .NEVPNStatusDidChange,
-            object: manager.connection,
-            queue: .main
-        ) { [weak self] note in
-            guard let conn = note.object as? NEVPNConnection else { return }
-            let status = conn.status
-            Task { @MainActor in
-                self?.status = status
+        statusObservationTask?.cancel()
+        let connection = manager.connection
+        statusObservationTask = Task { @MainActor [weak self] in
+            for await note in NotificationCenter.default.notifications(named: .NEVPNStatusDidChange, object: connection) {
+                guard let conn = note.object as? NEVPNConnection else { continue }
+                self?.status = conn.status
             }
         }
     }
 
     deinit {
-        if let token = statusObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
+        statusObservationTask?.cancel()
     }
 }
 

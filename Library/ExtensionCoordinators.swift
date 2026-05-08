@@ -8,9 +8,9 @@ import NetworkExtension
 /// previous 277-line ExtensionEnvironment to a thin wirer that holds
 /// the four concerns and forwards their errors to the UI.
 ///
-/// Each coordinator manages its own ObservationBag so cleanup is
-/// automatic on dealloc — there are no manually-tracked observer
-/// tokens to forget.
+/// Each coordinator owns its own observation Task(s); deinit
+/// cancels them so cleanup is automatic on dealloc — no manually
+/// tracked observer tokens to forget.
 
 // MARK: - VPN lifecycle
 
@@ -70,43 +70,44 @@ public final class SettingsChangeCoordinator {
     public var onError: ((String) -> Void)?
 
     private let profile: ExtensionProfile
-    private let bag = ObservationBag()
+    private var tasks: [Task<Void, Never>] = []
 
     public init(profile: ExtensionProfile) {
         self.profile = profile
     }
 
     public func start() {
+        for task in tasks { task.cancel() }
+        tasks.removeAll()
+
         let center = NotificationCenter.default
 
-        bag.add(center.addObserver(
-            forName: ProfileStore.activeContentDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.reloadIfConnected() }
+        tasks.append(Task { @MainActor [weak self] in
+            for await _ in center.notifications(named: ProfileStore.activeContentDidChange) {
+                await self?.reloadIfConnected()
+            }
         })
 
-        bag.add(center.addObserver(
-            forName: AppConfiguration.runtimeSettingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.reloadIfConnected() }
+        tasks.append(Task { @MainActor [weak self] in
+            for await _ in center.notifications(named: AppConfiguration.runtimeSettingsDidChange) {
+                await self?.reloadIfConnected()
+            }
         })
 
         // Fast path: a log-level change skips hub.ApplyConfig entirely
         // and lands at log.SetLevel inside the extension. Falls back
         // silently when disconnected — the next start() reads the new
         // level from settings.json.
-        bag.add(center.addObserver(
-            forName: AppConfiguration.runtimeLogLevelDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let level = note.userInfo?["level"] as? Int else { return }
-            Task { @MainActor in await self?.applyLogLevelIfConnected(level) }
+        tasks.append(Task { @MainActor [weak self] in
+            for await note in center.notifications(named: AppConfiguration.runtimeLogLevelDidChange) {
+                guard let level = note.userInfo?["level"] as? Int else { continue }
+                await self?.applyLogLevelIfConnected(level)
+            }
         })
+    }
+
+    deinit {
+        for task in tasks { task.cancel() }
     }
 
     private func reloadIfConnected() async {
@@ -141,7 +142,7 @@ public final class AutoConnectCoordinator {
 
     private let profile: ExtensionProfile
     private let store: HostSettingsStore
-    private let bag = ObservationBag()
+    private var observationTask: Task<Void, Never>?
 
     public init(profile: ExtensionProfile, store: HostSettingsStore) {
         self.profile = profile
@@ -149,13 +150,12 @@ public final class AutoConnectCoordinator {
     }
 
     public func start() {
-        bag.add(NotificationCenter.default.addObserver(
-            forName: AppConfiguration.hostSettingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.applyFromStore() }
-        })
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: AppConfiguration.hostSettingsDidChange) {
+                await self?.applyFromStore()
+            }
+        }
     }
 
     public func applyFromStore() async {
@@ -165,6 +165,10 @@ public final class AutoConnectCoordinator {
         } catch {
             onError?(error.localizedDescription)
         }
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 }
 
