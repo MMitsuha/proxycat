@@ -220,6 +220,10 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 
 `sample-profile.yaml` 是最小可运行的范本。
 
+## 代理组延迟测试
+
+Proxies 标签页里组头部的秒表按钮调用 mihomo 的 `/group/{name}/delay` 端点。对 URLTest / Fallback 组而言，该端点**会先清空当前的手动选择再跑组内健康检查**（见 `mihomo/hub/route/groups.go` 中的 `ForceSet("")`），属于 mihomo 自身的行为：如果你在 URLTest / Fallback 组里钉了某个节点，再点这颗秒表会把钉子抹掉，组重新回到自动择优。Selector 组不受影响。要只刷新当前选择的延迟而不动钉子,请下拉页面或直接点中那个节点重新选定。
+
 ## 构建标识与诊断
 
 `scripts/build-libmihomo.sh` 通过 `go build -ldflags -X` 注入构建期信息：
