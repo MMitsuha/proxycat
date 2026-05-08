@@ -69,8 +69,7 @@ public final class ProxiesStore: ObservableObject {
             self.loadError = nil
         } catch {
             guard gen == generation else { return }
-            self.loadError = (error as? LocalizedError)?.errorDescription
-                ?? error.localizedDescription
+            self.loadError = error.localizedDescription
         }
     }
 
@@ -93,8 +92,7 @@ public final class ProxiesStore: ObservableObject {
             await refresh()
         } catch {
             guard gen == generation else { return }
-            loadError = (error as? LocalizedError)?.errorDescription
-                ?? error.localizedDescription
+            loadError = error.localizedDescription
         }
     }
 
@@ -121,8 +119,7 @@ public final class ProxiesStore: ObservableObject {
             await refresh()
         } catch {
             guard gen == generation else { return }
-            loadError = (error as? LocalizedError)?.errorDescription
-                ?? error.localizedDescription
+            loadError = error.localizedDescription
         }
     }
 
