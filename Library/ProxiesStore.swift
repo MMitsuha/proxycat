@@ -21,6 +21,13 @@ public final class ProxiesStore: ObservableObject {
     private let defaults: UserDefaults
     private static let collapsedKey = "io.proxycat.proxies.collapsed"
 
+    /// Bumped by `reset()`. Async work captures the value at start and
+    /// discards its writes if the token has moved on, so a `/proxies`
+    /// or `/group/.../delay` response that returns after a disconnect
+    /// can't repopulate `groups` or surface a stale error against the
+    /// new controller state.
+    private var generation: Int = 0
+
     public init(
         controller: MihomoController = MihomoController(),
         defaults: UserDefaults = .standard
@@ -38,10 +45,16 @@ public final class ProxiesStore: ObservableObject {
     /// otherwise the order is whatever Go's map iteration produced this
     /// run, which would shuffle on every refresh.
     public func refresh() async {
+        let gen = generation
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            // Only clear the spinner if our generation is still current —
+            // otherwise reset() (or a follow-up refresh) owns this flag.
+            if gen == generation { isRefreshing = false }
+        }
         do {
             let proxies = try await controller.proxies()
+            guard gen == generation else { return }
             let sortIndex = (proxies["GLOBAL"]?.all ?? []) + ["GLOBAL"]
             let groupList = proxies.values
                 .filter { $0.isGroup && !($0.hidden ?? false) }
@@ -55,6 +68,7 @@ public final class ProxiesStore: ObservableObject {
             self.nodeMap = proxies
             self.loadError = nil
         } catch {
+            guard gen == generation else { return }
             self.loadError = (error as? LocalizedError)?.errorDescription
                 ?? error.localizedDescription
         }
@@ -67,13 +81,18 @@ public final class ProxiesStore: ObservableObject {
     /// is silent rather than surfacing a 400 the user has to read.
     public func select(group: Proxy, name: String) async {
         guard group.isSelectable else { return }
+        let gen = generation
         let key = selectingKey(group: group.name, node: name)
         selecting.insert(key)
-        defer { selecting.remove(key) }
+        defer {
+            if gen == generation { selecting.remove(key) }
+        }
         do {
             try await controller.select(group: group.name, name: name)
+            guard gen == generation else { return }
             await refresh()
         } catch {
+            guard gen == generation else { return }
             loadError = (error as? LocalizedError)?.errorDescription
                 ?? error.localizedDescription
         }
@@ -86,8 +105,11 @@ public final class ProxiesStore: ObservableObject {
     /// custom probe target on the profile is honored; falls back to the
     /// controller defaults only when the group leaves them unset.
     public func testGroup(_ group: Proxy) async {
+        let gen = generation
         groupTesting.insert(group.name)
-        defer { groupTesting.remove(group.name) }
+        defer {
+            if gen == generation { groupTesting.remove(group.name) }
+        }
         do {
             _ = try await controller.groupDelay(
                 name: group.name,
@@ -95,8 +117,10 @@ public final class ProxiesStore: ObservableObject {
                 timeoutMs: group.timeout,
                 expectedStatus: group.expectedStatus
             )
+            guard gen == generation else { return }
             await refresh()
         } catch {
+            guard gen == generation else { return }
             loadError = (error as? LocalizedError)?.errorDescription
                 ?? error.localizedDescription
         }
@@ -105,13 +129,16 @@ public final class ProxiesStore: ObservableObject {
     /// Drop cached groups and any error banner — used when the view
     /// transitions away from "connected + controller enabled" so the next
     /// time the user comes back the screen doesn't briefly show stale
-    /// rows targeting a torn-down controller.
+    /// rows targeting a torn-down controller. Bumps the generation token
+    /// so any in-flight refresh/select/testGroup discards its writes.
     public func reset() {
+        generation &+= 1
         groups = []
         nodeMap = [:]
         loadError = nil
         groupTesting = []
         selecting = []
+        isRefreshing = false
     }
 
     public func isSelecting(group: String, node: String) -> Bool {
