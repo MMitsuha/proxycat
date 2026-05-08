@@ -8,6 +8,18 @@ public struct ProxiesView: View {
 
     public init() {}
 
+    private var isReady: Bool {
+        profile.isConnected && !settings.disableExternalController
+    }
+
+    private func syncIfReady() async {
+        if isReady {
+            await store.refresh()
+        } else {
+            store.reset()
+        }
+    }
+
     public var body: some View {
         Group {
             if !profile.isConnected {
@@ -26,7 +38,15 @@ public struct ProxiesView: View {
         }
         .navigationTitle("Proxies")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await store.refresh() }
+        .task { await syncIfReady() }
+        // The view stays mounted across tunnel toggles and Web-Controller
+        // toggles (TabView keeps tabs alive). Without these the cached
+        // `store.groups` would persist after a disconnect, and a tap on
+        // re-enable would briefly fire actions against the previous
+        // controller state. Refresh on the rising edge, clear on the
+        // falling edge.
+        .onChange(of: profile.isConnected) { _, _ in Task { await syncIfReady() } }
+        .onChange(of: settings.disableExternalController) { _, _ in Task { await syncIfReady() } }
         // The empty-state ContentUnavailableView already covers the
         // first-load failure, but once `groups` has data, refresh /
         // select / testGroup failures only update `loadError` — which

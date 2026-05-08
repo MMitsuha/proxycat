@@ -102,6 +102,18 @@ public final class ProxiesStore: ObservableObject {
         }
     }
 
+    /// Drop cached groups and any error banner — used when the view
+    /// transitions away from "connected + controller enabled" so the next
+    /// time the user comes back the screen doesn't briefly show stale
+    /// rows targeting a torn-down controller.
+    public func reset() {
+        groups = []
+        nodeMap = [:]
+        loadError = nil
+        groupTesting = []
+        selecting = []
+    }
+
     public func isSelecting(group: String, node: String) -> Bool {
         selecting.contains(selectingKey(group: group, node: node))
     }
