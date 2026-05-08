@@ -549,6 +549,18 @@
         }
       }
     },
+    "Could not close all (HTTP %lld)" : {
+      "comment" : "Banner shown when DELETE /connections returns a non-2xx status.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法全部关闭 (HTTP %lld)"
+          }
+        }
+      }
+    },
     "Could not load" : {
       "comment" : "Empty-state title when a list cannot be loaded — saved log detail, proxies, connections.",
       "extractionState" : "manual",

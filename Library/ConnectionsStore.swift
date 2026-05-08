@@ -234,7 +234,10 @@ public final class ConnectionsStore: ObservableObject {
         req.httpMethod = "DELETE"
         req.timeoutInterval = 5
         do {
-            _ = try await session.data(for: req)
+            let (_, response) = try await session.data(for: req)
+            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                loadError = "Could not close all (HTTP \(http.statusCode))"
+            }
         } catch {
             loadError = error.localizedDescription
         }
