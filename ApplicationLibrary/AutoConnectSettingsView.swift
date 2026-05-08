@@ -6,9 +6,9 @@ import SwiftUI
 /// rules, cellular, default) only render when enabled is true so the
 /// user has a clear visual signal that nothing is in effect.
 public struct AutoConnectSettingsView: View {
-    @EnvironmentObject private var store: HostSettingsStore
-    @EnvironmentObject private var profileStore: ProfileStore
-    @EnvironmentObject private var environment: ExtensionEnvironment
+    @Environment(HostSettingsStore.self) private var store
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(ExtensionEnvironment.self) private var environment
 
     @State private var newSSIDText = ""
     @State private var showAddSSID = false
@@ -18,7 +18,9 @@ public struct AutoConnectSettingsView: View {
     public init() {}
 
     public var body: some View {
-        Form {
+        @Bindable var store = store
+        @Bindable var environment = environment
+        return Form {
             masterSection
             if store.autoConnect.enabled {
                 ssidSection
@@ -85,7 +87,8 @@ public struct AutoConnectSettingsView: View {
     // MARK: - Sections
 
     private var masterSection: some View {
-        Section {
+        @Bindable var store = store
+        return Section {
             // Only block *enabling* when no profile is loaded. If the
             // user previously turned this on and then deleted every
             // profile, they still need a way to turn it off — otherwise
@@ -103,7 +106,8 @@ public struct AutoConnectSettingsView: View {
     }
 
     private var ssidSection: some View {
-        Section {
+        @Bindable var store = store
+        return Section {
             ForEach($store.autoConnect.ssidRules) { $rule in
                 actionPicker(selection: $rule.action) {
                     Text(rule.ssid)
@@ -129,7 +133,8 @@ public struct AutoConnectSettingsView: View {
     }
 
     private var cellularSection: some View {
-        Section {
+        @Bindable var store = store
+        return Section {
             actionPicker(selection: $store.autoConnect.cellular) {
                 Text("Cellular")
             }
@@ -137,7 +142,8 @@ public struct AutoConnectSettingsView: View {
     }
 
     private var fallbackSection: some View {
-        Section {
+        @Bindable var store = store
+        return Section {
             actionPicker(selection: $store.autoConnect.fallback) {
                 Text("Default")
             }

@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 public struct Profile: Identifiable, Equatable, Hashable, Codable, Sendable {
     public var id: UUID
@@ -20,8 +21,8 @@ public struct Profile: Identifiable, Equatable, Hashable, Codable, Sendable {
 /// Each profile is one YAML file in `Profiles/` plus a metadata index at
 /// `Profiles/index.json`. No CoreData / GRDB dependency to keep the binary
 /// small.
-@MainActor
-public final class ProfileStore: ObservableObject {
+@MainActor @Observable
+public final class ProfileStore {
     public static let shared = ProfileStore()
 
     /// Posted whenever the active profile selection changes, or the
@@ -30,11 +31,11 @@ public final class ProfileStore: ObservableObject {
     /// tunnel so it picks up the new config without a full restart.
     public static let activeContentDidChange = Notification.Name("io.proxycat.ProfileStore.activeContentDidChange")
 
-    @Published public private(set) var profiles: [Profile] = []
-    @Published public var activeProfileID: UUID?
+    public private(set) var profiles: [Profile] = []
+    public var activeProfileID: UUID?
 
-    private let indexURL: URL = FilePath.profilesDirectory.appendingPathComponent("index.json")
-    private let activePointer: URL = FilePath.activeProfilePointer
+    @ObservationIgnored private let indexURL: URL = FilePath.profilesDirectory.appendingPathComponent("index.json")
+    @ObservationIgnored private let activePointer: URL = FilePath.activeProfilePointer
 
     private init() {
         reload()

@@ -2,17 +2,18 @@ import Library
 import SwiftUI
 
 public struct ConnectionsView: View {
-    @EnvironmentObject private var profile: ExtensionProfile
-    @EnvironmentObject private var settings: RuntimeSettings
+    @Environment(ExtensionProfile.self) private var profile
+    @Environment(RuntimeSettings.self) private var settings
 
-    @StateObject private var store = ConnectionsStore()
+    @State private var store = ConnectionsStore()
     @State private var confirmCloseAll: Bool = false
     @State private var detail: Connection?
 
     public init() {}
 
     public var body: some View {
-        Group {
+        @Bindable var store = store
+        return Group {
             if !profile.isConnected {
                 ContentUnavailableView(
                     "Connect first to view connections",

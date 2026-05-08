@@ -1,6 +1,6 @@
-import Combine
 import Foundation
 import NetworkExtension
+import Observation
 
 /// Single object injected as @EnvironmentObject so views can reach the VPN
 /// profile and the streaming command client without prop-drilling.
@@ -11,28 +11,28 @@ import NetworkExtension
 /// observations; this type only wires their error callbacks back into
 /// `@Published` UI surfaces and exposes the underlying profile +
 /// command client for views.
-@MainActor
-public final class ExtensionEnvironment: ObservableObject {
+@MainActor @Observable
+public final class ExtensionEnvironment {
     public let profile: ExtensionProfile
     public let commandClient: CommandClient
 
     /// Persisted across log view appearances so the user's search term
     /// survives navigation. Mirrors sing-box-for-apple's logSearchText.
-    @Published public var logSearchText: String = ""
+    public var logSearchText: String = ""
 
     /// Surfaces the most recent reload error to the UI so taps on a
     /// profile while the tunnel is up don't fail silently.
-    @Published public var reloadError: String?
+    public var reloadError: String?
     /// Surfaces the most recent on-demand-rule save failure so the
     /// Auto Connect sub view can show an alert.
-    @Published public var autoConnectError: String?
+    public var autoConnectError: String?
 
-    private let lifecycle: VPNLifecycleCoordinator
-    private let settings: SettingsChangeCoordinator
-    private let autoConnect: AutoConnectCoordinator
-    private let traffic: TrafficCoordinator
+    @ObservationIgnored private let lifecycle: VPNLifecycleCoordinator
+    @ObservationIgnored private let settings: SettingsChangeCoordinator
+    @ObservationIgnored private let autoConnect: AutoConnectCoordinator
+    @ObservationIgnored private let traffic: TrafficCoordinator
 
-    private var memoryObserverToken: UUID?
+    @ObservationIgnored private var memoryObserverToken: UUID?
 
     public convenience init() {
         self.init(

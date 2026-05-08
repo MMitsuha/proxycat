@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 // gomobile-generated types (LibmihomoCommandClient, LibmihomoStatus,
 // ClientBridge handler) lack Sendable conformance; @preconcurrency
 // downgrades the resulting strict-concurrency diagnostics on calls
@@ -14,15 +14,15 @@ import Foundation
 /// matching sing-box's libbox approach. Swift only implements a delegate
 /// protocol the Go runtime calls back into; this keeps the dependency
 /// footprint on the Swift side at zero (no grpc-swift).
-@MainActor
-public final class CommandClient: ObservableObject {
-    @Published public private(set) var isConnected: Bool = false
-    @Published public private(set) var logs: [LogEntry] = []
-    @Published public private(set) var traffic: TrafficSnapshot = .zero
+@MainActor @Observable
+public final class CommandClient {
+    public private(set) var isConnected: Bool = false
+    public private(set) var logs: [LogEntry] = []
+    public private(set) var traffic: TrafficSnapshot = .zero
     /// Memory used by the *extension* process. Reported by the server in
     /// every Status frame so the host always reads the right process'
     /// usage (the host app has a separate, much larger jetsam budget).
-    @Published public private(set) var memory: MemoryStats = .zero
+    public private(set) var memory: MemoryStats = .zero
 
     public static let maxLogBuffer = 1500
 
@@ -36,16 +36,16 @@ public final class CommandClient: ObservableObject {
     /// Logs from the gRPC stream are kept on the host side only while a
     /// LogView is on screen. Off by default so a host app that never
     /// visits the Logs tab pays no buffer cost over a long session.
-    private var logBufferingEnabled = false
+    @ObservationIgnored private var logBufferingEnabled = false
 
-    private var goClient: LibmihomoCommandClient?
-    private var bridge: ClientBridge?
+    @ObservationIgnored private var goClient: LibmihomoCommandClient?
+    @ObservationIgnored private var bridge: ClientBridge?
 
     // Reconnect bookkeeping. The extension may not be up the moment the
     // host app first calls connect(); a simple capped backoff handles
     // the racing-startup case as well as transient drops.
-    private var reconnectTask: Task<Void, Never>?
-    private var shouldRun: Bool = false
+    @ObservationIgnored private var reconnectTask: Task<Void, Never>?
+    @ObservationIgnored private var shouldRun: Bool = false
 
     public init() {}
 

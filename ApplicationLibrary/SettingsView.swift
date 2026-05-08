@@ -7,13 +7,15 @@ public struct SettingsView: View {
     @State private var clearError: String?
     @State private var isClearing = false
 
-    @EnvironmentObject private var settings: RuntimeSettings
-    @EnvironmentObject private var hostSettings: HostSettingsStore
+    @Environment(RuntimeSettings.self) private var settings
+    @Environment(HostSettingsStore.self) private var hostSettings
 
     public init() {}
 
     public var body: some View {
-        Form {
+        @Bindable var settings = settings
+        @Bindable var hostSettings = hostSettings
+        return Form {
             Section {
                 Toggle("Disable Web Controller", isOn: $settings.disableExternalController)
             } header: {

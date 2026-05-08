@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 // NetworkExtension predates Swift concurrency annotations; types like
 // NETunnelProviderSession aren't formally Sendable but are fine to pass
 // across actors for the call patterns we use. @preconcurrency demotes
@@ -15,16 +15,16 @@ import Foundation
 /// state to the App Group container. There are no per-setting methods
 /// because the Go core re-reads settings.json + the active profile on
 /// every reload — settings flow through the file system, not this API.
-@MainActor
-public final class ExtensionProfile: ObservableObject {
-    @Published public private(set) var status: NEVPNStatus = .invalid
-    @Published public private(set) var manager: NETunnelProviderManager?
+@MainActor @Observable
+public final class ExtensionProfile {
+    public private(set) var status: NEVPNStatus = .invalid
+    public private(set) var manager: NETunnelProviderManager?
 
     // The token is opaque NSObjectProtocol (not Sendable). We only
     // mutate it from MainActor methods, but deinit is nonisolated;
     // nonisolated(unsafe) tells the compiler we've checked the
     // race-freedom by inspection.
-    nonisolated(unsafe) private var statusObserver: NSObjectProtocol?
+    @ObservationIgnored nonisolated(unsafe) private var statusObserver: NSObjectProtocol?
 
     public init() {}
 

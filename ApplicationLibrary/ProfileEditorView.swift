@@ -17,7 +17,7 @@ public struct ProfileEditorView: View {
         case edit(Profile)
     }
 
-    @EnvironmentObject private var store: ProfileStore
+    @Environment(ProfileStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
     private let mode: Mode

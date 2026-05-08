@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import NetworkExtension
 
@@ -23,7 +22,7 @@ import NetworkExtension
 public final class VPNLifecycleCoordinator {
     private let profile: ExtensionProfile
     private let commandClient: CommandClient
-    private let bag = ObservationBag()
+    private var observationTask: Task<Void, Never>?
 
     public init(profile: ExtensionProfile, commandClient: CommandClient) {
         self.profile = profile
@@ -31,15 +30,21 @@ public final class VPNLifecycleCoordinator {
     }
 
     public func start() {
-        let cancellable = profile.$status
-            .receive(on: RunLoop.main)
-            .sink { [weak self] status in
-                self?.apply(status)
-            }
-        bag.store(cancellable)
         // Honor the current state immediately for cold launches that
         // resume an already-connected VPN session.
         apply(profile.status)
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            // dropFirst skips the initial replay we already applied above.
+            for await status in Observed.values({ self.profile.status }).dropFirst() {
+                self.apply(status)
+            }
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 
     private func apply(_ status: NEVPNStatus) {
@@ -173,7 +178,7 @@ public final class AutoConnectCoordinator {
 public final class TrafficCoordinator {
     private let commandClient: CommandClient
     private let usageStore: DailyUsageStore
-    private let bag = ObservationBag()
+    private var observationTask: Task<Void, Never>?
 
     public init(commandClient: CommandClient, usageStore: DailyUsageStore) {
         self.commandClient = commandClient
@@ -181,12 +186,22 @@ public final class TrafficCoordinator {
     }
 
     public func start() {
-        let cancellable = commandClient.$traffic
-            .dropFirst()
-            .removeDuplicates()
-            .sink { [usageStore] snapshot in
-                Task { @MainActor in usageStore.record(snapshot: snapshot) }
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var last: TrafficSnapshot?
+            // dropFirst skips the initial .zero replay (otherwise the
+            // very first frame would look like a counter reset). Manual
+            // dedupe replicates the previous removeDuplicates() arm.
+            for await snapshot in Observed.values({ self.commandClient.traffic }).dropFirst() {
+                if snapshot == last { continue }
+                last = snapshot
+                self.usageStore.record(snapshot: snapshot)
             }
-        bag.store(cancellable)
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 }
