@@ -104,15 +104,6 @@ public final class ProxiesStore: ObservableObject {
     /// the group's own `testUrl`/`timeout`/`expectedStatus` through so a
     /// custom probe target on the profile is honored; falls back to the
     /// controller defaults only when the group leaves them unset.
-    ///
-    /// For URLTest/Fallback groups the per-group endpoint clears the
-    /// user's manual selection (mihomo's hub/route/groups.go calls
-    /// `ForceSet("")` for any `SelectAble` non-Selector before running
-    /// the test). To preserve a forced node, fan out per-proxy delay
-    /// calls — that endpoint doesn't touch the parent group's state.
-    /// Selector and LoadBalance keep using the cheaper group endpoint
-    /// (Selector is excluded from the ForceSet path; LoadBalance isn't
-    /// `SelectAble`, so the clear is a no-op there).
     public func testGroup(_ group: Proxy) async {
         let gen = generation
         groupTesting.insert(group.name)
@@ -120,47 +111,18 @@ public final class ProxiesStore: ObservableObject {
             if gen == generation { groupTesting.remove(group.name) }
         }
         do {
-            if group.type == "URLTest" || group.type == "Fallback" {
-                await testGroupPerNode(group)
-            } else {
-                _ = try await controller.groupDelay(
-                    name: group.name,
-                    url: group.testUrl,
-                    timeoutMs: group.timeout,
-                    expectedStatus: group.expectedStatus
-                )
-            }
+            _ = try await controller.groupDelay(
+                name: group.name,
+                url: group.testUrl,
+                timeoutMs: group.timeout,
+                expectedStatus: group.expectedStatus
+            )
             guard gen == generation else { return }
             await refresh()
         } catch {
             guard gen == generation else { return }
             loadError = (error as? LocalizedError)?.errorDescription
                 ?? error.localizedDescription
-        }
-    }
-
-    /// Issues `/proxies/{name}/delay` for every node in the group in
-    /// parallel. Per-node failures are swallowed — the subsequent
-    /// `refresh()` reflects each node's updated `history` regardless,
-    /// and a single dead node shouldn't surface as a group-wide error.
-    private func testGroupPerNode(_ group: Proxy) async {
-        let nodes = group.all ?? []
-        guard !nodes.isEmpty else { return }
-        let controller = self.controller
-        let url = group.testUrl
-        let timeout = group.timeout
-        let expected = group.expectedStatus
-        await withTaskGroup(of: Void.self) { taskGroup in
-            for node in nodes {
-                taskGroup.addTask {
-                    _ = try? await controller.proxyDelay(
-                        name: node,
-                        url: url,
-                        timeoutMs: timeout,
-                        expectedStatus: expected
-                    )
-                }
-            }
         }
     }
 

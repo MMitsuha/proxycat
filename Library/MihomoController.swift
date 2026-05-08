@@ -129,13 +129,6 @@ public struct MihomoController {
     /// when nil so callers can pass through the group's own settings
     /// straight from the `/proxies` response (testUrl/timeout are optional
     /// in mihomo's marshaller — Selector omits them when at the default).
-    ///
-    /// Caveat: for non-Selector selectable groups (URLTest, Fallback) the
-    /// backend clears any user-forced selection before running the test
-    /// (hub/route/groups.go calls `ForceSet("")` when the group is in
-    /// `SelectAble` and not a Selector). Callers that need to preserve a
-    /// manual override should fan out per-node `proxyDelay(name:)` calls
-    /// instead — that endpoint doesn't touch the forced selection.
     public func groupDelay(
         name: String,
         url: String? = nil,
@@ -163,41 +156,6 @@ public struct MihomoController {
         let data = try await perform(req)
         do {
             return try decoder.decode([String: Int].self, from: data)
-        } catch {
-            throw MihomoControllerError.decoding(error)
-        }
-    }
-
-    /// `GET /proxies/{name}/delay?url=&timeout=&expected=` → `{"delay": N}`.
-    /// Returns a single proxy's latency. Unlike `groupDelay`, this endpoint
-    /// does NOT clear a parent group's forced selection — the route handler
-    /// just runs `proxy.URLTest` against the named proxy without touching
-    /// the group's `SelectAble` state. mihomo returns 503 when the test
-    /// fails or the delay is zero, which we surface as a thrown error.
-    public func proxyDelay(
-        name: String,
-        url: String? = nil,
-        timeoutMs: Int? = nil,
-        expectedStatus: String? = nil
-    ) async throws -> Int {
-        let resolvedURL = (url?.isEmpty == false) ? url! : Self.defaultTestURL
-        let resolvedTimeout = timeoutMs ?? Self.defaultTimeoutMs
-        var queryItems = [
-            URLQueryItem(name: "url", value: resolvedURL),
-            URLQueryItem(name: "timeout", value: String(resolvedTimeout)),
-        ]
-        if let expectedStatus, !expectedStatus.isEmpty {
-            queryItems.append(URLQueryItem(name: "expected", value: expectedStatus))
-        }
-        let target = makeURL(
-            path: "proxies/\(Self.percentEncodeSegment(name))/delay",
-            queryItems: queryItems
-        )
-        var req = URLRequest(url: target)
-        req.timeoutInterval = TimeInterval(resolvedTimeout) / 1000 + 2
-        let data = try await perform(req)
-        do {
-            return try decoder.decode(DelayResponse.self, from: data).delay
         } catch {
             throw MihomoControllerError.decoding(error)
         }
