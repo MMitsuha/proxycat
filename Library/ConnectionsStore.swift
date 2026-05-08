@@ -197,6 +197,17 @@ public final class ConnectionsStore: ObservableObject {
         wsTask?.cancel(with: .goingAway, reason: nil)
         wsTask = nil
         isStreaming = false
+        // Drop the snapshot too — otherwise on reconnect, rows from the
+        // previous session render until the first fresh frame arrives,
+        // and a swipe-close in that gap would target a stale ID against
+        // the new controller.
+        connections = []
+        uploadTotal = 0
+        downloadTotal = 0
+        speedByChain = [:]
+        loadError = nil
+        prevByID.removeAll(keepingCapacity: false)
+        chainSpeedsBuf.removeAll(keepingCapacity: false)
     }
 
     deinit {
