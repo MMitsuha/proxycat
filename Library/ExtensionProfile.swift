@@ -10,11 +10,12 @@ import Observation
 /// NetworkExtension directly. Mirrors sing-box-for-apple's
 /// ExtensionProfile.
 ///
-/// The shape is deliberately small: `start()` and `stop()` for lifecycle,
-/// `reload()` to nudge the extension after the host has written new
-/// state to the App Group container. There are no per-setting methods
-/// because the Go core re-reads settings.json + the active profile on
-/// every reload — settings flow through the file system, not this API.
+/// The shape is deliberately small: `start()` and `stop()` for
+/// lifecycle, `applyAutoConnect` for on-demand rules. Reload and
+/// log-level changes flow through `CommandClient` (gRPC) instead — the
+/// extension reads runtime_settings.json on every Start / Reload, so
+/// settings travel through the file system + a single gRPC nudge, not
+/// through `sendProviderMessage`.
 @MainActor @Observable
 public final class ExtensionProfile {
     public private(set) var status: NEVPNStatus = .invalid
@@ -69,98 +70,6 @@ public final class ExtensionProfile {
 
     public func stop() {
         manager?.connection.stopVPNTunnel()
-    }
-
-    /// Asks the running tunnel to hot-reload from disk. Triggered by the
-    /// host whenever the user changes the active profile, edits the
-    /// active YAML, or toggles a runtime setting — the Go core re-reads
-    /// everything fresh, so a single call covers all three flows.
-    ///
-    /// No-op (and not an error) when the tunnel isn't connected: the
-    /// next `start()` already reads the latest disk state.
-    ///
-    /// Throws if the extension reports a reload failure (e.g. invalid
-    /// YAML on disk). The caller decides whether to surface that to the
-    /// user or fall back to disconnect+reconnect.
-    public func reload() async throws {
-        try await sendCommand("reload", failureLabel: "Reload failed")
-    }
-
-    /// Pushes a runtime log-level change to the extension without going
-    /// through the heavyweight reload path. Mihomo's filter is just one
-    /// atomic; rebuilding proxies/listeners/rules to update it would be
-    /// gratuitous (mihomo's own /configs PATCH handler also updates the
-    /// level by calling `log.SetLevel` directly).
-    ///
-    /// Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Out-of-range
-    /// values are clamped on the Go side.
-    ///
-    /// No-op when disconnected; the next `start()` reads the new level
-    /// from settings.json.
-    public func setLogLevel(_ level: Int) async throws {
-        try await sendCommand("setLogLevel:\(level)", failureLabel: "Log level update failed")
-    }
-
-    /// How long to wait for the extension to reply to a provider
-    /// message before giving up. The extension's handlers are short —
-    /// a `reload` runs `hub.ApplyConfig` which historically completes
-    /// in well under 1s. A 10s ceiling surfaces a hung extension as a
-    /// proper error rather than a UI that just freezes.
-    private static let providerMessageTimeout: Duration = .seconds(10)
-
-    private func sendCommand(_ command: String, failureLabel: String) async throws {
-        guard isConnected, let session = manager?.connection as? NETunnelProviderSession else {
-            return
-        }
-        guard let payload = command.data(using: .utf8) else { return }
-
-        let response = try await withTimeout(Self.providerMessageTimeout) {
-            try await Self.sendProviderMessage(payload, on: session)
-        }
-
-        if let response, !response.isEmpty {
-            let message = String(data: response, encoding: .utf8) ?? failureLabel
-            throw ExtensionProfileError.reloadFailed(message)
-        }
-    }
-
-    private static func sendProviderMessage(
-        _ payload: Data,
-        on session: NETunnelProviderSession
-    ) async throws -> Data? {
-        try await withCheckedThrowingContinuation { cont in
-            // Resume exactly once. A continuation with both the timeout
-            // path and sendProviderMessage's completion handler racing
-            // would otherwise crash with "resumed more than once" if the
-            // OS delivered the reply just as we were giving up.
-            let resumed = ManagedResume(continuation: cont)
-            do {
-                try session.sendProviderMessage(payload) { data in
-                    resumed.resume(returning: data)
-                }
-            } catch {
-                resumed.resume(throwing: error)
-            }
-        }
-    }
-
-    private func withTimeout<T: Sendable>(
-        _ duration: Duration,
-        operation: @escaping @Sendable () async throws -> T
-    ) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask { try await operation() }
-            group.addTask {
-                try await Task.sleep(for: duration)
-                throw ExtensionProfileError.timeout
-            }
-            // First child to finish wins; cancel the remaining one.
-            guard let first = try await group.next() else {
-                throw ExtensionProfileError.timeout
-            }
-            group.cancelAll()
-            return first
-        }
     }
 
     /// Pushes the user's Auto Connect configuration onto the
@@ -232,43 +141,10 @@ public final class ExtensionProfile {
 
 public enum ExtensionProfileError: LocalizedError {
     case notLoaded
-    case reloadFailed(String)
-    case timeout
 
     public var errorDescription: String? {
         switch self {
         case .notLoaded: return String(localized: "VPN configuration not loaded", bundle: .main)
-        case let .reloadFailed(message): return message
-        case .timeout: return String(localized: "Extension did not respond in time", bundle: .main)
         }
-    }
-}
-
-/// One-shot guard around a `CheckedContinuation` so callers can race
-/// timeout against a callback without risking a double-resume crash.
-private final class ManagedResume<T: Sendable>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var continuation: CheckedContinuation<T, Error>?
-
-    init(continuation: CheckedContinuation<T, Error>) {
-        self.continuation = continuation
-    }
-
-    func resume(returning value: T) {
-        guard let cont = take() else { return }
-        cont.resume(returning: value)
-    }
-
-    func resume(throwing error: Error) {
-        guard let cont = take() else { return }
-        cont.resume(throwing: error)
-    }
-
-    private func take() -> CheckedContinuation<T, Error>? {
-        lock.lock()
-        defer { lock.unlock() }
-        let c = continuation
-        continuation = nil
-        return c
     }
 }

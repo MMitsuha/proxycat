@@ -7,9 +7,9 @@ import Libmihomo
 /// free functions, so we wrap manually.
 ///
 /// The Go core owns runtime state. Callers configure paths once
-/// (home dir, command socket, settings file, profiles dir, active-profile
-/// pointer, log dir) and then drive lifecycle with `start()` / `reload()` /
-/// `stop()` — no YAML or settings flow through these wrappers.
+/// (home dir, command socket, runtime-settings file, profiles dir, log
+/// dir) and then drive lifecycle with `start()` / `reload()` / `stop()`
+/// — no YAML or settings flow through these wrappers.
 public enum LibmihomoBridge {
     public static func start() throws {
         var err: NSError?
@@ -19,10 +19,10 @@ public enum LibmihomoBridge {
         }
     }
 
-    /// Hot-swap the running mihomo core. Re-reads the active-profile YAML
-    /// and runtime settings from disk, then asks mihomo to apply the new
-    /// config. The TUN fd, OOM killer, and gRPC command server keep
-    /// running across the swap.
+    /// Hot-swap the running mihomo core. Re-reads runtime_settings.json
+    /// and the active profile YAML from disk, then asks mihomo to apply
+    /// the new config. The TUN fd, OOM killer, and gRPC command server
+    /// keep running across the swap.
     public static func reload() throws {
         var err: NSError?
         let ok = LibmihomoReload(&err)
@@ -47,13 +47,10 @@ public enum LibmihomoBridge {
     /// heavyweight reload path. Levels: 0=DEBUG 1=INFO 2=WARNING
     /// 3=ERROR 4=SILENT. Out-of-range values are clamped on the Go side.
     ///
-    /// Called locally in two places:
-    ///   * In the host process by `RuntimeSettings`, so host-side log
-    ///     emissions (e.g. from `validate()`) honor the user's choice.
-    ///   * In the extension by `PacketTunnelProvider` when handling the
-    ///     `setLogLevel:N` provider message — that's how a UI toggle
-    ///     reaches the running mihomo without triggering
-    ///     `hub.ApplyConfig`.
+    /// Called locally by `RuntimeSettings` in the host process so
+    /// host-side log emissions (e.g. from `validate()`) honor the
+    /// user's choice. The extension's mihomo learns about the change
+    /// via the gRPC `SetLogLevel` RPC, not this call.
     public static func setLogLevel(_ level: Int) {
         LibmihomoSetLogLevel(level)
     }
@@ -68,23 +65,19 @@ public enum LibmihomoBridge {
         LibmihomoSetCommandSocketPath(path)
     }
 
-    /// Tell the Go core where the host app's `settings.json` lives. The
-    /// core re-reads this file on every Start / Reload, so toggling a
-    /// setting in the host UI takes effect on the next reload without
-    /// shuttling values through the extension's IPC.
-    public static func setSettingsPath(_ path: String) {
-        LibmihomoSetSettingsPath(path)
-    }
-
-    /// Tell the Go core where the host app's `active-profile` UUID file
-    /// lives. Combined with `setProfilesDir` this lets Start / Reload
-    /// load the active YAML themselves — the extension never reads it.
-    public static func setActiveProfilePointer(_ path: String) {
-        LibmihomoSetActiveProfilePointer(path)
+    /// Tell the Go core where the host app's `runtime_settings.json`
+    /// lives. The core re-reads this file on every Start / Reload, so
+    /// toggling a setting (or switching the active profile) in the
+    /// host UI takes effect on the next reload without shuttling
+    /// values through the extension's option dictionary.
+    public static func setRuntimeSettingsPath(_ path: String) {
+        LibmihomoSetRuntimeSettingsPath(path)
     }
 
     /// Tell the Go core where the host app's `Profiles/` directory
     /// lives (containing `index.json` plus one YAML per profile).
+    /// Combined with `setRuntimeSettingsPath` this lets Start / Reload
+    /// load the active YAML themselves — the extension never reads it.
     public static func setProfilesDir(_ path: String) {
         LibmihomoSetProfilesDir(path)
     }

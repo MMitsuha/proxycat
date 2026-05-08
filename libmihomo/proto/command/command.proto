@@ -4,17 +4,32 @@ package proxycat.command;
 
 option go_package = "github.com/proxycat/libmihomo/proto/command;command";
 
-// Command service exposes streaming subscriptions used by the iOS host
-// app. Mirrors the shape of sing-box's daemon.StartedService (gRPC over
-// Unix domain socket inside the App Group container) but trimmed to the
-// fields ProxyCat actually needs. Mihomo's REST controller is
-// intentionally NOT used here — that surface is for the end-user.
+// Command service exposes streaming subscriptions and unary command RPCs
+// used by the iOS host app. Mirrors the shape of sing-box's
+// daemon.StartedService (gRPC over Unix domain socket inside the App
+// Group container) but trimmed to the fields ProxyCat actually needs.
+// Mihomo's REST controller is intentionally NOT used here — that
+// surface is for the end-user.
 service Command {
   // Streams a Status message every IntervalMs (default 1000).
   rpc SubscribeStatus(StatusRequest) returns (stream StatusMessage);
 
   // Streams every log event produced by mihomo from subscription onward.
   rpc SubscribeLogs(LogRequest) returns (stream LogMessage);
+
+  // Asks the running mihomo core to re-read runtime_settings.json + the
+  // active profile YAML, then hot-apply via hub.ApplyConfig. Used by the
+  // host whenever the user changes the active profile, edits the active
+  // YAML, or toggles a runtime setting that requires a full rebuild
+  // (e.g. external controller). Errors (mihomo not started, YAML parse
+  // failure, semantic config rejection) flow back via gRPC status.
+  rpc Reload(ReloadRequest) returns (ReloadResponse);
+
+  // Pushes a runtime log filter into mihomo without rebuilding the
+  // running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
+  // (clamped on the server). Mirrors mihomo's own /configs PATCH
+  // log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
+  rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
 }
 
 message StatusRequest {
@@ -44,3 +59,14 @@ message LogMessage {
   int32 level = 1;
   string payload = 2;
 }
+
+message ReloadRequest {}
+
+message ReloadResponse {}
+
+message SetLogLevelRequest {
+  // 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Clamped on the server.
+  int32 level = 1;
+}
+
+message SetLogLevelResponse {}

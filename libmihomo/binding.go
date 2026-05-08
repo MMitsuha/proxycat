@@ -6,12 +6,12 @@
 //
 // Design note: this wrapper owns ALL runtime state. The host app and the
 // extension only tell us where the App-Group container lives (via the
-// Set*Path setters); we read profile YAML, runtime settings, and the
-// active-profile pointer ourselves. The Network Extension is intentionally
-// a thin shim — every Start / Reload re-reads everything fresh from disk
-// so a setting toggled in the host UI takes effect on the next Reload
-// without anyone shuttling values through NEPacketTunnelProvider's option
-// dictionary or sendProviderMessage payloads.
+// Set*Path setters); we read profile YAML and runtime settings ourselves.
+// The Network Extension is intentionally a thin shim — every Start /
+// Reload re-reads everything fresh from disk so a setting toggled in the
+// host UI takes effect on the next Reload without anyone shuttling
+// values through NEPacketTunnelProvider's option dictionary. Host-side
+// reload / log-level commands ride the gRPC command service instead.
 package libmihomo
 
 import (
@@ -51,16 +51,16 @@ var (
 	started   atomic.Bool
 	pendingFd int32
 
-	homeDir       atomicString
-	socketPath    atomicString
-	activePointer atomicString
-	profilesDir   atomicString
+	homeDir     atomicString
+	socketPath  atomicString
+	profilesDir atomicString
 )
 
-// Default the log filter to WARNING so a fresh install (no settings.json
-// yet) and YAML profiles shipping with `log-level: debug|info` don't
-// flood the host app's log stream. Start / Reload override this from
-// settings.json; mid-session SetLogLevel updates it directly.
+// Default the log filter to WARNING so a fresh install (no
+// runtime_settings.json yet) and YAML profiles shipping with
+// `log-level: debug|info` don't flood the host app's log stream.
+// Start / Reload override this from runtime_settings.json; mid-session
+// SetLogLevel updates it directly.
 func init() {
 	log.SetLevel(log.WARNING)
 }
@@ -81,17 +81,9 @@ func SetHomeDir(path string) {
 	C.SetHomeDir(path)
 }
 
-// SetActiveProfilePointer tells the wrapper where the host app's
-// `active-profile` UUID file lives. Combined with SetProfilesDir this
-// lets Start / Reload load the active profile YAML themselves so the
-// extension never has to read or forward it.
-func SetActiveProfilePointer(path string) {
-	activePointer.Store(path)
-}
-
 // SetProfilesDir tells the wrapper where the host app's `Profiles/`
 // directory lives (containing `index.json` plus one YAML per profile).
-// Combined with SetActiveProfilePointer this lets Start / Reload load
+// Combined with SetRuntimeSettingsPath this lets Start / Reload load
 // the active profile YAML on demand.
 func SetProfilesDir(path string) {
 	profilesDir.Store(path)
@@ -107,27 +99,21 @@ type profileEntry struct {
 }
 
 // loadActiveYAML walks the same disk layout the host app's
-// `ProfileStore.loadActiveContentFromDisk` does: read the active-profile
-// UUID, look it up in the Profiles index, return the YAML bytes.
+// `RuntimeSettings.loadActiveProfileContent` does: read the active
+// profile UUID from runtime_settings.json, look it up in the Profiles
+// index, return the YAML bytes.
 //
 // Errors are returned verbatim to the caller (Start / Reload). The
-// extension surfaces them as the `reload` reply payload so the host UI
-// can show a precise message instead of "reload failed".
-func loadActiveYAML() ([]byte, error) {
-	pointer := activePointer.Load()
+// command service's Reload RPC surfaces them via gRPC status so the
+// host UI can show a precise message instead of "reload failed".
+func loadActiveYAML(settings RuntimeSettings) ([]byte, error) {
 	dir := profilesDir.Load()
-
-	if pointer == "" || dir == "" {
-		return nil, fmt.Errorf("profile paths not configured (call SetActiveProfilePointer + SetProfilesDir)")
+	if dir == "" {
+		return nil, fmt.Errorf("profiles directory not configured (call SetProfilesDir)")
 	}
-
-	raw, err := os.ReadFile(pointer)
-	if err != nil {
-		return nil, fmt.Errorf("read active-profile pointer: %w", err)
-	}
-	id := strings.TrimSpace(string(raw))
+	id := strings.TrimSpace(settings.ActiveProfileID)
 	if id == "" {
-		return nil, fmt.Errorf("active-profile pointer is empty")
+		return nil, fmt.Errorf("no active profile selected")
 	}
 
 	indexPath := filepath.Join(dir, "index.json")
@@ -155,8 +141,8 @@ func loadActiveYAML() ([]byte, error) {
 // Start brings the mihomo core up using the active profile YAML and
 // runtime settings the host app has already written into the App-Group
 // container. Required setup before this call: SetHomeDir,
-// SetCommandSocketPath, SetSettingsPath, SetActiveProfilePointer,
-// SetProfilesDir, SetTunFd. SetMemoryLimit is optional but recommended.
+// SetCommandSocketPath, SetRuntimeSettingsPath, SetProfilesDir,
+// SetTunFd. SetMemoryLimit is optional but recommended.
 //
 // The Go side reads everything itself instead of taking a YAML or
 // options argument so the extension never has to forward host-app
@@ -169,11 +155,12 @@ func Start() error {
 		return fmt.Errorf("mihomo already started")
 	}
 
-	yaml, err := loadActiveYAML()
+	settings := loadSettings()
+	yaml, err := loadActiveYAML(settings)
 	if err != nil {
 		return err
 	}
-	cfg, err := prepareConfig(yaml)
+	cfg, err := prepareConfig(yaml, settings)
 	if err != nil {
 		return err
 	}
@@ -189,10 +176,10 @@ func Start() error {
 	return nil
 }
 
-// Reload hot-swaps the running mihomo core with a fresh read of the
-// active profile YAML and settings.json. Returns an error if the core
-// isn't running (caller should fall back to Start) or if the on-disk
-// state fails to load / parse.
+// Reload hot-swaps the running mihomo core with a fresh read of
+// runtime_settings.json and the active profile YAML. Returns an error if
+// the core isn't running (caller should fall back to Start) or if the
+// on-disk state fails to load / parse.
 //
 // On iOS, the cached TUN fd from the original Start is reused — the new
 // config has the same fd patched in before hub.ApplyConfig, and mihomo's
@@ -201,9 +188,9 @@ func Start() error {
 // and gRPC command server keep running across the reload.
 //
 // Use this for any change the host wants the extension to pick up:
-// profile switch, profile YAML edit, or settings.json toggle. There's no
-// separate "settings only" path because hub.ApplyConfig is already
-// idempotent and a full re-parse takes well under 100ms.
+// profile switch, profile YAML edit, or runtime_settings.json toggle.
+// There's no separate "settings only" path because hub.ApplyConfig is
+// already idempotent and a full re-parse takes well under 100ms.
 func Reload() error {
 	startMu.Lock()
 	defer startMu.Unlock()
@@ -212,11 +199,12 @@ func Reload() error {
 		return fmt.Errorf("mihomo not started")
 	}
 
-	yaml, err := loadActiveYAML()
+	settings := loadSettings()
+	yaml, err := loadActiveYAML(settings)
 	if err != nil {
 		return err
 	}
-	cfg, err := prepareConfig(yaml)
+	cfg, err := prepareConfig(yaml, settings)
 	if err != nil {
 		return err
 	}
@@ -226,10 +214,10 @@ func Reload() error {
 }
 
 // prepareConfig parses the YAML and applies the iOS-specific overrides
-// that every Start / Reload needs, layering settings.json (controller
-// toggle, log level) on top of whatever the YAML carried. The caller
-// drives the actual hub.ApplyConfig.
-func prepareConfig(yamlConfig []byte) (*config.Config, error) {
+// that every Start / Reload needs, layering runtime_settings.json
+// (controller toggle, log level) on top of whatever the YAML carried.
+// The caller drives the actual hub.ApplyConfig.
+func prepareConfig(yamlConfig []byte, settings RuntimeSettings) (*config.Config, error) {
 	if hd := homeDir.Load(); hd != "" {
 		C.SetHomeDir(hd)
 	}
@@ -239,7 +227,6 @@ func prepareConfig(yamlConfig []byte) (*config.Config, error) {
 		return nil, err
 	}
 
-	settings := loadSettings()
 	applyLogLevel(cfg, settings.LogLevel)
 	applyControllerPolicy(cfg, settings.DisableExternalController)
 	applyIOSDefaults(cfg)
@@ -250,9 +237,9 @@ func prepareConfig(yamlConfig []byte) (*config.Config, error) {
 }
 
 // applyLogLevel forces the log filter to whatever the host wrote into
-// settings.json. The YAML's own `log-level:` is intentionally discarded
-// — the host app owns this setting at runtime, and we don't want a
-// profile import to silently re-enable debug logging.
+// runtime_settings.json. The YAML's own `log-level:` is intentionally
+// discarded — the host app owns this setting at runtime, and we don't
+// want a profile import to silently re-enable debug logging.
 func applyLogLevel(cfg *config.Config, level int) {
 	log.SetLevel(log.LogLevel(clampLogLevel(level)))
 	cfg.General.LogLevel = log.Level()
@@ -392,9 +379,9 @@ func Validate(yamlConfig []byte) error {
 
 // SetLogLevel changes the runtime log filter without rebuilding the
 // running mihomo config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR
-// 4=SILENT. Wired up to the host app's "setLogLevel" provider message
-// so a Logs-tab toggle takes effect immediately in the extension's
-// mihomo without going through hub.ApplyConfig.
+// 4=SILENT. Wired up to the host app's gRPC SetLogLevel RPC so a
+// Logs-tab toggle takes effect immediately in the extension's mihomo
+// without going through hub.ApplyConfig.
 //
 // Mirrors mihomo's own /configs PATCH handler in hub/route/configs.go,
 // which also updates the level by calling log.SetLevel directly.

@@ -884,18 +884,6 @@
         }
       }
     },
-    "Extension did not respond in time" : {
-      "comment" : "Surfaced when sendProviderMessage exceeds the host-side timeout (10s).",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "扩展进程响应超时"
-          }
-        }
-      }
-    },
     "External UI" : {
       "extractionState" : "manual",
       "localizations" : {

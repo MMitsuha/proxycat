@@ -47,7 +47,7 @@ public final class ExtensionEnvironment {
         self.profile = profile
         self.commandClient = commandClient
         self.lifecycle = VPNLifecycleCoordinator(profile: profile, commandClient: commandClient)
-        self.settings = SettingsChangeCoordinator(profile: profile)
+        self.settings = SettingsChangeCoordinator(commandClient: commandClient)
         self.autoConnect = AutoConnectCoordinator(profile: profile, store: HostSettingsStore.shared)
         self.traffic = TrafficCoordinator(commandClient: commandClient, usageStore: DailyUsageStore.shared)
     }
@@ -69,8 +69,7 @@ public final class ExtensionEnvironment {
     // host-side validate() calls see the same files mihomo would.
     private static func bootstrapMihomoPaths() {
         LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
-        LibmihomoBridge.setSettingsPath(FilePath.settingsFilePath)
-        LibmihomoBridge.setActiveProfilePointer(FilePath.activeProfilePointer.path)
+        LibmihomoBridge.setRuntimeSettingsPath(FilePath.runtimeSettingsFilePath)
         LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
         BundledAssets.installIfNeeded()
     }

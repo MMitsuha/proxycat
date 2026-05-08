@@ -252,6 +252,159 @@ func (x *LogMessage) GetPayload() string {
 	return ""
 }
 
+type ReloadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadRequest) Reset() {
+	*x = ReloadRequest{}
+	mi := &file_proto_command_command_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadRequest) ProtoMessage() {}
+
+func (x *ReloadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_command_command_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadRequest.ProtoReflect.Descriptor instead.
+func (*ReloadRequest) Descriptor() ([]byte, []int) {
+	return file_proto_command_command_proto_rawDescGZIP(), []int{4}
+}
+
+type ReloadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadResponse) Reset() {
+	*x = ReloadResponse{}
+	mi := &file_proto_command_command_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadResponse) ProtoMessage() {}
+
+func (x *ReloadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_command_command_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadResponse.ProtoReflect.Descriptor instead.
+func (*ReloadResponse) Descriptor() ([]byte, []int) {
+	return file_proto_command_command_proto_rawDescGZIP(), []int{5}
+}
+
+type SetLogLevelRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Clamped on the server.
+	Level         int32 `protobuf:"varint,1,opt,name=level,proto3" json:"level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetLogLevelRequest) Reset() {
+	*x = SetLogLevelRequest{}
+	mi := &file_proto_command_command_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetLogLevelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetLogLevelRequest) ProtoMessage() {}
+
+func (x *SetLogLevelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_command_command_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetLogLevelRequest.ProtoReflect.Descriptor instead.
+func (*SetLogLevelRequest) Descriptor() ([]byte, []int) {
+	return file_proto_command_command_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SetLogLevelRequest) GetLevel() int32 {
+	if x != nil {
+		return x.Level
+	}
+	return 0
+}
+
+type SetLogLevelResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetLogLevelResponse) Reset() {
+	*x = SetLogLevelResponse{}
+	mi := &file_proto_command_command_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetLogLevelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetLogLevelResponse) ProtoMessage() {}
+
+func (x *SetLogLevelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_command_command_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetLogLevelResponse.ProtoReflect.Descriptor instead.
+func (*SetLogLevelResponse) Descriptor() ([]byte, []int) {
+	return file_proto_command_command_proto_rawDescGZIP(), []int{7}
+}
+
 var File_proto_command_command_proto protoreflect.FileDescriptor
 
 const file_proto_command_command_proto_rawDesc = "" +
@@ -274,10 +427,17 @@ const file_proto_command_command_proto_rawDesc = "" +
 	"\n" +
 	"LogMessage\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\x05R\x05level\x12\x18\n" +
-	"\apayload\x18\x02 \x01(\tR\apayload2\xaf\x01\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\"\x0f\n" +
+	"\rReloadRequest\"\x10\n" +
+	"\x0eReloadResponse\"*\n" +
+	"\x12SetLogLevelRequest\x12\x14\n" +
+	"\x05level\x18\x01 \x01(\x05R\x05level\"\x15\n" +
+	"\x13SetLogLevelResponse2\xd8\x02\n" +
 	"\aCommand\x12U\n" +
 	"\x0fSubscribeStatus\x12\x1f.proxycat.command.StatusRequest\x1a\x1f.proxycat.command.StatusMessage0\x01\x12M\n" +
-	"\rSubscribeLogs\x12\x1c.proxycat.command.LogRequest\x1a\x1c.proxycat.command.LogMessage0\x01B5Z3github.com/proxycat/libmihomo/proto/command;commandb\x06proto3"
+	"\rSubscribeLogs\x12\x1c.proxycat.command.LogRequest\x1a\x1c.proxycat.command.LogMessage0\x01\x12K\n" +
+	"\x06Reload\x12\x1f.proxycat.command.ReloadRequest\x1a .proxycat.command.ReloadResponse\x12Z\n" +
+	"\vSetLogLevel\x12$.proxycat.command.SetLogLevelRequest\x1a%.proxycat.command.SetLogLevelResponseB5Z3github.com/proxycat/libmihomo/proto/command;commandb\x06proto3"
 
 var (
 	file_proto_command_command_proto_rawDescOnce sync.Once
@@ -291,20 +451,28 @@ func file_proto_command_command_proto_rawDescGZIP() []byte {
 	return file_proto_command_command_proto_rawDescData
 }
 
-var file_proto_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_proto_command_command_proto_goTypes = []any{
-	(*StatusRequest)(nil), // 0: proxycat.command.StatusRequest
-	(*StatusMessage)(nil), // 1: proxycat.command.StatusMessage
-	(*LogRequest)(nil),    // 2: proxycat.command.LogRequest
-	(*LogMessage)(nil),    // 3: proxycat.command.LogMessage
+	(*StatusRequest)(nil),       // 0: proxycat.command.StatusRequest
+	(*StatusMessage)(nil),       // 1: proxycat.command.StatusMessage
+	(*LogRequest)(nil),          // 2: proxycat.command.LogRequest
+	(*LogMessage)(nil),          // 3: proxycat.command.LogMessage
+	(*ReloadRequest)(nil),       // 4: proxycat.command.ReloadRequest
+	(*ReloadResponse)(nil),      // 5: proxycat.command.ReloadResponse
+	(*SetLogLevelRequest)(nil),  // 6: proxycat.command.SetLogLevelRequest
+	(*SetLogLevelResponse)(nil), // 7: proxycat.command.SetLogLevelResponse
 }
 var file_proto_command_command_proto_depIdxs = []int32{
 	0, // 0: proxycat.command.Command.SubscribeStatus:input_type -> proxycat.command.StatusRequest
 	2, // 1: proxycat.command.Command.SubscribeLogs:input_type -> proxycat.command.LogRequest
-	1, // 2: proxycat.command.Command.SubscribeStatus:output_type -> proxycat.command.StatusMessage
-	3, // 3: proxycat.command.Command.SubscribeLogs:output_type -> proxycat.command.LogMessage
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: proxycat.command.Command.Reload:input_type -> proxycat.command.ReloadRequest
+	6, // 3: proxycat.command.Command.SetLogLevel:input_type -> proxycat.command.SetLogLevelRequest
+	1, // 4: proxycat.command.Command.SubscribeStatus:output_type -> proxycat.command.StatusMessage
+	3, // 5: proxycat.command.Command.SubscribeLogs:output_type -> proxycat.command.LogMessage
+	5, // 6: proxycat.command.Command.Reload:output_type -> proxycat.command.ReloadResponse
+	7, // 7: proxycat.command.Command.SetLogLevel:output_type -> proxycat.command.SetLogLevelResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -321,7 +489,7 @@ func file_proto_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_command_command_proto_rawDesc), len(file_proto_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

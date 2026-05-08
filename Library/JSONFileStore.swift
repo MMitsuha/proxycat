@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Atomic JSON load/save for the App Group preference files
-/// (`settings.json`, `host_settings.json`). Centralizes the
+/// (`runtime_settings.json`, `host_settings.json`). Centralizes the
 /// "decode-or-defaults" + "encode-and-write-atomic" pattern that
 /// `RuntimeSettings` and `HostSettingsStore` both need so the two
 /// stores stop reimplementing the same I/O.

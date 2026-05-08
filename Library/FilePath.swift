@@ -50,11 +50,6 @@ public enum FilePath {
         ensureSubdirectory("Logs")
     }
 
-    /// Where the active profile selection (just a filename) is persisted.
-    public static var activeProfilePointer: URL {
-        sharedDirectory.appendingPathComponent("active-profile")
-    }
-
     /// Path of the Unix-domain command socket. Both the Network
     /// Extension (server) and the host app (client) compute it the
     /// same way, so they meet at the App Group container. The path
@@ -65,17 +60,17 @@ public enum FilePath {
 
     /// Path of the shared runtime-settings JSON. The host app's
     /// `RuntimeSettings` writes it; the Go core reads it on every
-    /// Start / Reload / ApplySettings. Lives in the App Group root
-    /// next to `active-profile` so the same set of paths configures
-    /// every cross-process consumer.
-    public static var settingsFilePath: String {
-        sharedDirectory.appendingPathComponent(AppConfiguration.settingsFileName).path
+    /// Start / Reload. Holds the active profile UUID alongside the
+    /// runtime preference fields, so a single file configures
+    /// everything the Go core needs at lifecycle events.
+    public static var runtimeSettingsFilePath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.runtimeSettingsFileName).path
     }
 
     /// Path of the host-only settings JSON. Sits next to
-    /// `settings.json` in the App Group root so the same set of paths
-    /// configures every persistence consumer. Read/written only by the
-    /// host app; the Go core never touches it.
+    /// `runtime_settings.json` in the App Group root so the same set
+    /// of paths configures every persistence consumer. Read/written
+    /// only by the host app; the Go core never touches it.
     public static var hostSettingsFilePath: String {
         sharedDirectory.appendingPathComponent(AppConfiguration.hostSettingsFileName).path
     }

@@ -9,12 +9,13 @@ import Network
 @preconcurrency import NetworkExtension
 import os.log
 
-/// Network Extension entry point. Intentionally a thin shim — the Go core
-/// owns all runtime state (YAML, settings, log level, controller config),
-/// and we only configure paths once and trigger lifecycle events. A
-/// setting toggled in the host UI propagates by writing settings.json
-/// (which Go re-reads) and a single "reload" message that lands in
-/// `handleAppMessage` below.
+/// Network Extension entry point. Intentionally a thin shim — the Go
+/// core owns all runtime state (YAML, settings, log level, controller
+/// config), and we only configure paths once and trigger lifecycle
+/// events. A setting toggled in the host UI propagates by writing
+/// runtime_settings.json (which Go re-reads) and a gRPC `Reload` /
+/// `SetLogLevel` RPC handled inside the embedded command server. This
+/// type owns no business logic of its own.
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let logger = Logger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
@@ -70,9 +71,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
         // 4. Tell the Go core where every shared file lives. After this
         //    point Start / Reload re-read the active YAML and runtime
-        //    settings on their own — nothing flows through this extension's
-        //    options dictionary or sendProviderMessage payload other than
-        //    the literal lifecycle signals.
+        //    settings on their own — nothing flows through this
+        //    extension's options dictionary. Host commands ride the gRPC
+        //    command service (Reload / SetLogLevel RPCs).
         configureLibmihomoPaths()
 
         // 4a. Seed compile-time bundled geo databases and external UI
@@ -109,9 +110,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             Self.logger.warning("could not open session log: \(error.localizedDescription, privacy: .public)")
         }
 
-        // 5. Start mihomo. Go reads the active profile YAML and
-        //    settings.json from disk; this call returns the parser /
-        //    apply error verbatim if either fails.
+        // 5. Start mihomo. Go reads runtime_settings.json (active
+        //    profile id + runtime preferences) and the active profile
+        //    YAML from disk; this call returns the parser / apply
+        //    error verbatim if either fails.
         try LibmihomoBridge.start()
 
         // 6. Watch the OS default network path. iOS surfaces Wi-Fi ↔
@@ -157,65 +159,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         Self.logger.info("wake → notified mihomo of possible interface change")
     }
 
-    override func handleAppMessage(_ messageData: Data) async -> Data? {
-        // Streaming status / logs go through the gRPC channel, not here.
-        // This surface carries small control signals from the host:
-        //   * "reload" — full re-read of YAML + settings.json, used for
-        //     profile switches, YAML edits, or `disableExternalController`
-        //     toggles.
-        //   * "setLogLevel:N" — fast path for log level changes; calls
-        //     `log.SetLevel` directly, no hub.ApplyConfig.
-        //   * "ping" — connectivity probe.
-        guard let cmd = String(data: messageData, encoding: .utf8) else {
-            return nil
-        }
-        if cmd == "ping" {
-            return "pong".data(using: .utf8)
-        }
-        if cmd == "reload" {
-            return await handleReload()
-        }
-        if let level = parseSetLogLevel(cmd) {
-            return handleSetLogLevel(level)
-        }
-        return nil
-    }
-
-    private func parseSetLogLevel(_ cmd: String) -> Int? {
-        let prefix = "setLogLevel:"
-        guard cmd.hasPrefix(prefix) else { return nil }
-        return Int(cmd.dropFirst(prefix.count))
-    }
-
-    /// Pushes a runtime log filter change without disturbing the running
-    /// mihomo config. Returns nil on success; an error string on bad input.
-    private func handleSetLogLevel(_ level: Int) -> Data? {
-        LibmihomoBridge.setLogLevel(level)
-        Self.logger.info("setLogLevel \(level, privacy: .public)")
-        return nil
-    }
-
-    /// Hot-swap mihomo to whatever the host has currently marked active
-    /// in the App Group container. Returns nil on success; an error
-    /// string (UTF-8) on failure so the host can surface it.
-    private func handleReload() async -> Data? {
-        // Mark the connection as reasserting so SwiftUI shows the
-        // "reasserting" state (orange dot) for the duration of the swap.
-        // Network settings stay in place, so the OS treats this as a
-        // soft renegotiation rather than a stop/start cycle.
-        reasserting = true
-        defer { reasserting = false }
-
-        do {
-            try LibmihomoBridge.reload()
-            Self.logger.info("reload done")
-            return nil
-        } catch {
-            Self.logger.error("reload failed: \(error.localizedDescription, privacy: .public)")
-            return error.localizedDescription.data(using: .utf8)
-        }
-    }
-
     // MARK: - Setup
 
     /// Sets every path the Go core needs before Start. Idempotent — safe
@@ -234,10 +177,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         LibmihomoBridge.setCommandSocketPath(FilePath.commandSocketPath)
 
         // Wire the on-disk shared state Go reads on every Reload:
-        // settings.json (controller toggle, log level), the active
-        // profile pointer, and the profiles directory.
-        LibmihomoBridge.setSettingsPath(FilePath.settingsFilePath)
-        LibmihomoBridge.setActiveProfilePointer(FilePath.activeProfilePointer.path)
+        // runtime_settings.json (active profile id, controller toggle,
+        // log level) and the profiles directory.
+        LibmihomoBridge.setRuntimeSettingsPath(FilePath.runtimeSettingsFilePath)
         LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
 
         // Where per-session log files land for the Saved Logs UI.

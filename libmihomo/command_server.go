@@ -1,6 +1,7 @@
 package libmihomo
 
 import (
+	"context"
 	"errors"
 	"net"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/metacubex/mihomo/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	pb "github.com/proxycat/libmihomo/proto/command"
 )
@@ -147,6 +150,31 @@ func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_S
 			}
 		}
 	}
+}
+
+// Reload re-reads runtime_settings.json + the active profile YAML and
+// hot-applies via hub.ApplyConfig. Errors come back to the host as
+// gRPC status messages so the host UI can surface them verbatim.
+//
+// codes.FailedPrecondition is used for the "mihomo not started" case
+// since that's a transient state on the host side (tunnel still
+// connecting); codes.Internal covers parse / apply failures, where the
+// message text carries the precise reason.
+func (s *commandServiceImpl) Reload(_ context.Context, _ *pb.ReloadRequest) (*pb.ReloadResponse, error) {
+	if err := Reload(); err != nil {
+		if err.Error() == "mihomo not started" {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &pb.ReloadResponse{}, nil
+}
+
+// SetLogLevel pushes a runtime log filter without rebuilding the
+// running config. Out-of-range levels are clamped on the Go side.
+func (s *commandServiceImpl) SetLogLevel(_ context.Context, req *pb.SetLogLevelRequest) (*pb.SetLogLevelResponse, error) {
+	SetLogLevel(int(req.GetLevel()))
+	return &pb.SetLogLevelResponse{}, nil
 }
 
 func buildStatus() *pb.StatusMessage {

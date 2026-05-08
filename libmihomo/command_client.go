@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	pb "github.com/proxycat/libmihomo/proto/command"
 )
@@ -59,11 +61,22 @@ type CommandClient struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
 	conn   *grpc.ClientConn
+	cli    pb.CommandClient
 	wg     sync.WaitGroup
 
 	connectOnce    sync.Once
 	disconnectOnce sync.Once
 }
+
+// reloadTimeout caps how long Reload() waits before giving up.
+// hub.ApplyConfig historically returns in well under 1s; a 30s ceiling
+// surfaces a hung extension as a proper error rather than a UI freeze.
+const reloadTimeout = 30 * time.Second
+
+// setLogLevelTimeout caps how long SetLogLevel() waits. The handler is
+// a single log.SetLevel call — no parsing, no I/O — so a short timeout
+// is enough to distinguish "extension wedged" from "still propagating".
+const setLogLevelTimeout = 5 * time.Second
 
 // NewCommandClient builds a client. Call Connect to dial the socket and
 // start streaming.
@@ -102,6 +115,7 @@ func (c *CommandClient) Connect(socketPath string) error {
 	c.conn = conn
 	c.cancel = cancel
 	cli := pb.NewCommandClient(conn)
+	c.cli = cli
 
 	subscribed := false
 	if c.options.SubscribeStatus {
@@ -145,6 +159,7 @@ func (c *CommandClient) Disconnect() {
 	conn := c.conn
 	c.cancel = nil
 	c.conn = nil
+	c.cli = nil
 	c.mu.Unlock()
 
 	if cancel != nil {
@@ -225,4 +240,63 @@ func (c *CommandClient) fireDisconnect(err error) {
 		}
 		c.handler.Disconnected(msg)
 	})
+}
+
+// Reload tells the running mihomo core to re-read runtime_settings.json
+// and the active profile YAML. Returns nil on success; on failure
+// returns an error whose message is the gRPC status message produced
+// by the server (e.g. "yaml: line 42: mapping values not allowed").
+//
+// Safe to call when the connection isn't established — returns an
+// error promptly rather than queuing. The host treats that as "tunnel
+// not yet up; the file we just wrote will be read on the next Start"
+// and surfaces nothing.
+func (c *CommandClient) Reload() error {
+	cli := c.client()
+	if cli == nil {
+		return fmt.Errorf("command client not connected")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), reloadTimeout)
+	defer cancel()
+	if _, err := cli.Reload(ctx, &pb.ReloadRequest{}); err != nil {
+		return fmt.Errorf("%s", grpcMessage(err))
+	}
+	return nil
+}
+
+// SetLogLevel pushes a runtime log filter into the extension's mihomo
+// without triggering a hub.ApplyConfig. Levels: 0=DEBUG 1=INFO
+// 2=WARNING 3=ERROR 4=SILENT (clamped on the server).
+func (c *CommandClient) SetLogLevel(level int) error {
+	cli := c.client()
+	if cli == nil {
+		return fmt.Errorf("command client not connected")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), setLogLevelTimeout)
+	defer cancel()
+	if _, err := cli.SetLogLevel(ctx, &pb.SetLogLevelRequest{Level: int32(level)}); err != nil {
+		return fmt.Errorf("%s", grpcMessage(err))
+	}
+	return nil
+}
+
+func (c *CommandClient) client() pb.CommandClient {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.cli
+}
+
+// grpcMessage strips the verbose `rpc error: code = X desc = ` prefix
+// gRPC adds to status.Error() so the message we surface in the host UI
+// is just the original Go error string ("mihomo not started",
+// "yaml: line 42: ..."). The status code itself isn't useful to the
+// user; the message is.
+func grpcMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	if s, ok := status.FromError(err); ok {
+		return s.Message()
+	}
+	return err.Error()
 }

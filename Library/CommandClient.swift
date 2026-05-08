@@ -8,7 +8,10 @@ import Observation
 
 /// Host-app-side counterpart to the gRPC command server running inside
 /// the Network Extension. Subscribes to `Status` (traffic + memory) and
-/// `Log` streams over a Unix-domain socket in the App Group container.
+/// `Log` streams over a Unix-domain socket in the App Group container,
+/// and exposes unary `reload` / `setLogLevel` RPCs the host calls when
+/// the user changes the active profile, edits the active YAML, or
+/// toggles a runtime setting.
 ///
 /// The actual gRPC speaking is done in Go (`Libmihomo.CommandClient`),
 /// matching sing-box's libbox approach. Swift only implements a delegate
@@ -81,6 +84,39 @@ public final class CommandClient {
 
     public func clearLogs() {
         logs.removeAll(keepingCapacity: false)
+    }
+
+    /// Asks the running mihomo core to re-read runtime_settings.json +
+    /// the active profile YAML and hot-apply via hub.ApplyConfig. The
+    /// host invokes this whenever the user changes the active profile,
+    /// edits the active YAML, or toggles a runtime setting that needs
+    /// a full rebuild (e.g. external controller).
+    ///
+    /// No-op (and not an error) when the gRPC connection isn't
+    /// established yet: runtime_settings.json is the source of truth,
+    /// so a tunnel that hasn't started will pick up the latest values
+    /// on the next Start. Errors thrown here come from the Go core's
+    /// reload (parse / semantic failures) and should be surfaced to
+    /// the user verbatim.
+    public func reload() async throws {
+        guard let client = goClient else { return }
+        try await Task.detached { try client.reload() }.value
+    }
+
+    /// Pushes a runtime log filter into the extension's mihomo without
+    /// triggering a hub.ApplyConfig. Mihomo's filter is just one
+    /// atomic; rebuilding proxies/listeners/rules to update it would
+    /// be gratuitous (mihomo's own /configs PATCH handler also uses
+    /// log.SetLevel directly).
+    ///
+    /// Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Out-of-range
+    /// values are clamped on the Go side.
+    ///
+    /// No-op when the connection isn't established — the next Start
+    /// reads the new level from runtime_settings.json.
+    public func setLogLevel(_ level: Int) async throws {
+        guard let client = goClient else { return }
+        try await Task.detached { try client.setLogLevel(level) }.value
     }
 
     /// Turn on log buffering. Subsequent log frames from the extension

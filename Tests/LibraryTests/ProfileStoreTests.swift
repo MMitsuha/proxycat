@@ -25,10 +25,10 @@ import Testing
     }
 
     @Test func profileIDIsStableAcrossEncoding() throws {
-        // The `id` field is what binds the active-profile pointer file to
-        // an entry in index.json. Codable must round-trip it intact;
-        // otherwise the user's active selection would silently reset on
-        // every relaunch.
+        // The `id` field is what binds the `activeProfileID` field of
+        // runtime_settings.json to an entry in index.json. Codable must
+        // round-trip it intact; otherwise the user's active selection
+        // would silently reset on every relaunch.
         let id = UUID()
         let p = Profile(id: id, name: "x", fileName: "x.yaml")
         let data = try JSONEncoder().encode(p)

@@ -62,18 +62,24 @@ public final class VPNLifecycleCoordinator {
 // MARK: - Settings change
 
 /// Observes the three notifications that should trigger a tunnel reload
-/// (or, in the log-level case, the cheaper fast-path message): active
+/// (or, in the log-level case, the cheaper fast-path RPC): active
 /// profile content changed, runtime settings changed, log level
 /// changed. Errors from the reload bubble up via `onError`.
+///
+/// Dispatches to the extension's mihomo via the gRPC `CommandClient`
+/// rather than `NETunnelProviderSession.sendProviderMessage` — one
+/// channel for both streaming events and unary commands. The extension
+/// has no opinion of its own; runtime_settings.json is the source of
+/// truth, and the gRPC RPC is just a nudge to re-read it.
 @MainActor
 public final class SettingsChangeCoordinator {
     public var onError: ((String) -> Void)?
 
-    private let profile: ExtensionProfile
+    private let commandClient: CommandClient
     private var tasks: [Task<Void, Never>] = []
 
-    public init(profile: ExtensionProfile) {
-        self.profile = profile
+    public init(commandClient: CommandClient) {
+        self.commandClient = commandClient
     }
 
     public func start() {
@@ -97,7 +103,7 @@ public final class SettingsChangeCoordinator {
         // Fast path: a log-level change skips hub.ApplyConfig entirely
         // and lands at log.SetLevel inside the extension. Falls back
         // silently when disconnected — the next start() reads the new
-        // level from settings.json.
+        // level from runtime_settings.json.
         tasks.append(Task { @MainActor [weak self] in
             for await note in center.notifications(named: AppConfiguration.runtimeLogLevelDidChange) {
                 guard let level = note.userInfo?["level"] as? Int else { continue }
@@ -111,18 +117,18 @@ public final class SettingsChangeCoordinator {
     }
 
     private func reloadIfConnected() async {
-        guard profile.isConnected else { return }
+        guard commandClient.isConnected else { return }
         do {
-            try await profile.reload()
+            try await commandClient.reload()
         } catch {
             onError?(error.localizedDescription)
         }
     }
 
     private func applyLogLevelIfConnected(_ level: Int) async {
-        guard profile.isConnected else { return }
+        guard commandClient.isConnected else { return }
         do {
-            try await profile.setLogLevel(level)
+            try await commandClient.setLogLevel(level)
         } catch {
             onError?(error.localizedDescription)
         }

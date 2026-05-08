@@ -19,8 +19,10 @@ public struct Profile: Identifiable, Equatable, Hashable, Codable, Sendable {
 
 /// File-based profile catalog stored in the shared app-group container.
 /// Each profile is one YAML file in `Profiles/` plus a metadata index at
-/// `Profiles/index.json`. No CoreData / GRDB dependency to keep the binary
-/// small.
+/// `Profiles/index.json`. The active profile UUID lives in
+/// `runtime_settings.json` (see `RuntimeSettings`) — this store mirrors
+/// it for SwiftUI observation but doesn't own the persistence. No
+/// CoreData / GRDB dependency to keep the binary small.
 @MainActor @Observable
 public final class ProfileStore {
     public static let shared = ProfileStore()
@@ -35,7 +37,6 @@ public final class ProfileStore {
     public var activeProfileID: UUID?
 
     @ObservationIgnored private let indexURL: URL = FilePath.profilesDirectory.appendingPathComponent("index.json")
-    @ObservationIgnored private let activePointer: URL = FilePath.activeProfilePointer
 
     private init() {
         reload()
@@ -48,9 +49,13 @@ public final class ProfileStore {
         } else {
             profiles = []
         }
-        if let data = try? Data(contentsOf: activePointer),
-           let str = String(data: data, encoding: .utf8),
-           let id = UUID(uuidString: str.trimmingCharacters(in: .whitespacesAndNewlines)) {
+        // RuntimeSettings is the single source of truth across host /
+        // extension. Mirror its `activeProfileID` here for SwiftUI
+        // observation; fall back to the first profile so a fresh
+        // install with no selection persisted still has *something*
+        // selectable in the UI.
+        if let id = RuntimeSettings.shared.activeProfileID,
+           profiles.contains(where: { $0.id == id }) {
             activeProfileID = id
         } else {
             activeProfileID = profiles.first?.id
@@ -65,11 +70,11 @@ public final class ProfileStore {
     public func setActive(_ profile: Profile) throws {
         let previous = activeProfileID
         activeProfileID = profile.id
-        // UUIDs are pure ASCII so utf8 conversion can't fail; the
-        // optional-chain in the previous version silently swallowed
-        // any disk-write error here.
-        let data = Data(profile.id.uuidString.utf8)
-        try data.write(to: activePointer, options: .atomic)
+        // RuntimeSettings persists to runtime_settings.json; the Go
+        // core picks up the new id on the next gRPC Reload. Only post
+        // activeContentDidChange when the selection actually changed —
+        // re-selecting the same profile is a no-op for the tunnel.
+        RuntimeSettings.shared.activeProfileID = profile.id
         if previous != profile.id {
             NotificationCenter.default.post(name: Self.activeContentDidChange, object: self)
         }
@@ -79,26 +84,6 @@ public final class ProfileStore {
     public func loadActiveContent() throws -> String {
         guard let p = active else { throw ProfileError.noProfileSelected }
         return try loadContent(of: p)
-    }
-
-    /// Reads the active profile YAML directly off disk without touching
-    /// the @MainActor singleton. Safe to call from the Network Extension,
-    /// which has no UI but shares the App Group container.
-    public nonisolated static func loadActiveContentFromDisk() throws -> String {
-        let pointerURL = FilePath.activeProfilePointer
-        let raw = try String(contentsOf: pointerURL, encoding: .utf8)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let id = UUID(uuidString: raw) else {
-            throw ProfileError.noProfileSelected
-        }
-        let indexURL = FilePath.profilesDirectory.appendingPathComponent("index.json")
-        let data = try Data(contentsOf: indexURL)
-        let profiles = try JSONDecoder().decode([Profile].self, from: data)
-        guard let profile = profiles.first(where: { $0.id == id }) else {
-            throw ProfileError.noProfileSelected
-        }
-        let yamlURL = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
-        return try String(contentsOf: yamlURL, encoding: .utf8)
     }
 
     /// Returns the YAML content stored for a specific profile.
@@ -220,7 +205,7 @@ public final class ProfileStore {
                 try setActive(next)
             } else {
                 activeProfileID = nil
-                try? FileManager.default.removeItem(at: activePointer)
+                RuntimeSettings.shared.activeProfileID = nil
                 // Tunnel may be running with the now-deleted profile.
                 // Posting the same notification ExtensionEnvironment
                 // listens for makes it surface a reload error rather
