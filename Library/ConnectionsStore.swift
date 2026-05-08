@@ -79,9 +79,14 @@ public final class ConnectionsStore {
 
     /// User's search box content. Two-way: the view binds it to a
     /// `.searchable` field; the didSet debounces and recomputes
-    /// `filteredConnections`.
+    /// `filteredConnections`. Skip when the value didn't change so a
+    /// re-render that re-binds the same string doesn't kick a
+    /// pointless debounce + refilter pass.
     public var searchQuery: String = "" {
-        didSet { scheduleFilterDebounce() }
+        didSet {
+            guard searchQuery != oldValue else { return }
+            scheduleFilterDebounce()
+        }
     }
 
     /// `connections` filtered by `searchQuery` (debounced). Views read

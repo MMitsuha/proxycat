@@ -23,9 +23,6 @@ import UIKit
 ///      `Menu` views from rebuilding 10×/sec under heavy log traffic — the
 ///      visible blink the user reported on the navigation bar was caused
 ///      by the entire `LogView.body` reevaluating on every appended line.
-///      With `@Observable`, only the views that actually read `stream.visible`
-///      invalidate (the inner `LogStreamList`), so this split is now also
-///      load-bearing as a documentation aid more than a structural need.
 ///   2. The host-side log buffer is enabled lazily on first appearance
 ///      and intentionally NOT disabled on disappearance, so navigating
 ///      away from the Logs tab does not throw away accumulated lines.

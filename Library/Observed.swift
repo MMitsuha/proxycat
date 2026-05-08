@@ -2,11 +2,12 @@ import Foundation
 import Observation
 
 /// Wraps `withObservationTracking` in an `AsyncStream` so observation
-/// of `@Observable` properties can be consumed with `for await`. Emits
-/// the initial value, then a fresh value every time the read closure's
-/// tracked properties change. Stream terminates (and the producer Task
-/// cancels) when the consumer breaks out of its loop or its enclosing
-/// Task is cancelled.
+/// of `@Observable` properties can be consumed with `for await`.
+///
+/// The wait between yields uses an inner `AsyncStream<Void>` instead of
+/// a non-throwing `withCheckedContinuation` — the latter is not
+/// cancellation-aware, so a consumer that broke out of its for-loop
+/// would leak both the producer Task and the continuation forever.
 public enum Observed {
     public static func values<T: Sendable>(
         _ read: @escaping @Sendable @MainActor () -> T
@@ -14,11 +15,19 @@ public enum Observed {
         AsyncStream { continuation in
             let task = Task { @MainActor in
                 while !Task.isCancelled {
-                    let value = withObservationTracking({ read() }, onChange: {})
-                    continuation.yield(value)
-                    await withCheckedContinuation { (cc: CheckedContinuation<Void, Never>) in
-                        withObservationTracking({ _ = read() }, onChange: { cc.resume() })
+                    let (changeStream, changeContinuation) = AsyncStream<Void>.makeStream(
+                        bufferingPolicy: .bufferingNewest(1)
+                    )
+                    let value = withObservationTracking({ read() }) {
+                        changeContinuation.yield(())
+                        changeContinuation.finish()
                     }
+                    continuation.yield(value)
+                    // AsyncStream iteration propagates cancellation: when
+                    // our enclosing Task is cancelled, next() returns nil
+                    // and the for-await exits without breaking, so the
+                    // outer while sees Task.isCancelled and finishes.
+                    for await _ in changeStream { break }
                 }
                 continuation.finish()
             }
