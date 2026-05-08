@@ -94,6 +94,15 @@ public struct ConnectionsView: View {
                 }
                 .listStyle(.plain)
                 .searchable(text: $store.searchQuery, placement: .navigationBarDrawer(displayMode: .always))
+                .overlay {
+                    // The list branch is taken whenever there are
+                    // connections; if the user types a query that matches
+                    // nothing, the List would otherwise render blank and
+                    // look like the data vanished.
+                    if store.filteredConnections.isEmpty {
+                        ContentUnavailableView.search(text: store.searchQuery)
+                    }
+                }
             }
         }
         .toolbar {
