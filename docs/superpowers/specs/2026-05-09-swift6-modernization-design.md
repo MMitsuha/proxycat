@@ -74,7 +74,7 @@ After all five conversions, `Library/ObservationBag.swift` has no callers and is
 
 ## Commit sequence
 
-Each commit must build clean (`make project && xcodebuild build -scheme Pcat`) and tests must pass (`xcodebuild test -scheme LibraryTests`) before moving to the next.
+Each commit must build clean (`make project && xcodebuild build -scheme Pcat`) and tests must pass (`xcodebuild test -scheme Library`) before moving to the next.
 
 ### Commit 1 — `project.yml`: Swift 6 + strict concurrency
 
@@ -246,6 +246,6 @@ import Testing
 ## Verification
 
 - Per commit: `make project && xcodebuild -scheme Pcat -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build` (or via XcodeBuildMCP `build_sim`).
-- After commit 6: `xcodebuild test -scheme LibraryTests` (or `test_sim`).
+- After commit 6: `xcodebuild test -scheme Library` (or `test_sim`).
 - After commit 5 (UI-touching landed): manual smoke on simulator — connect/disconnect, edit profile, watch logs, view stats.
 - Final: `git log --oneline main..HEAD` shows seven small commits with a coherent narrative; `git grep -nE "ObservableObject|@Published|import Combine"` returns nothing in `Library/`, `ApplicationLibrary/`, `Pcat/`, `PcatExtension/`.

@@ -36,7 +36,7 @@
 
 - `make project` regenerates `ProxyCat.xcodeproj/project.pbxproj` from `project.yml`. Do this after editing `project.yml`.
 - Build verification: `xcodebuild -project ProxyCat.xcodeproj -scheme Pcat -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build`. Expect: `** BUILD SUCCEEDED **`.
-- Test verification: `xcodebuild -project ProxyCat.xcodeproj -scheme LibraryTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test`. Expect: all tests pass.
+- Test verification: `xcodebuild -project ProxyCat.xcodeproj -scheme Library -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test`. Expect: all tests pass.
 - Commits use the format: `<short imperative subject>` followed by a 1–2 sentence body. Co-Authored-By footer per repo convention.
 - The branch is `swift6-modernization` (already created and contains the design spec commit).
 
@@ -88,7 +88,7 @@ Iterate edits, rebuild, until `xcodebuild ... build` is clean. **Do not** silenc
 
 - [ ] **Step 5: Run tests**
 
-Run: `xcodebuild -project ProxyCat.xcodeproj -scheme LibraryTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -30`
+Run: `xcodebuild -project ProxyCat.xcodeproj -scheme Library -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -30`
 Expected: all green.
 
 - [ ] **Step 6: Commit**
@@ -1169,7 +1169,7 @@ Iterate edits → rebuild until green.
 
 - [ ] **Step 2: Run tests**
 
-Run: `xcodebuild -project ProxyCat.xcodeproj -scheme LibraryTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -30`
+Run: `xcodebuild -project ProxyCat.xcodeproj -scheme Library -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -30`
 Expected: all pass. If `DailyUsageTests` regressed, double-check the `entries` property still reads + writes the same way.
 
 - [ ] **Step 3: Commit**
@@ -1400,7 +1400,7 @@ Expected: `** BUILD SUCCEEDED **`.
 
 - [ ] **Step 2: Run tests**
 
-Run: `xcodebuild -project ProxyCat.xcodeproj -scheme LibraryTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -10`
+Run: `xcodebuild -project ProxyCat.xcodeproj -scheme Library -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -10`
 Expected: all pass.
 
 - [ ] **Step 3: Commit**
@@ -1554,7 +1554,7 @@ Note that this file has async tests — keep them `async`. `XCTAssertGreaterThan
 
 - [ ] **Step 1: Run tests**
 
-Run: `xcodebuild -project ProxyCat.xcodeproj -scheme LibraryTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -30`
+Run: `xcodebuild -project ProxyCat.xcodeproj -scheme Library -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -30`
 
 Expected: Swift Testing reports the suite results in its own format. If a test fails, fix the per-conversion (often a missing `@MainActor` annotation on a suite that was implicitly main-thread under XCTest).
 
@@ -1713,7 +1713,7 @@ Expected: `** BUILD SUCCEEDED **`. Callers that already wrote `do { try await co
 
 - [ ] **Step 4: Run tests**
 
-Run: `xcodebuild -project ProxyCat.xcodeproj -scheme LibraryTests -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -10`
+Run: `xcodebuild -project ProxyCat.xcodeproj -scheme Library -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' test 2>&1 | tail -10`
 Expected: all pass.
 
 - [ ] **Step 5: Commit**

@@ -43,7 +43,7 @@ proxycat/
 ├── Tests/LibraryTests/     Swift Testing 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
 │                           AutoConnect / DailyUsage / MemoryStats / TrafficSnapshot /
 │                           ByteFormatter / LogEntry / Profile codable，
-│                           运行: `xcodebuild test -scheme LibraryTests`
+│                           运行: `xcodebuild test -scheme Library`
 ├── project.yml             XcodeGen 描述文件 — 用于（重新）生成 ProxyCat.xcodeproj
 ├── Makefile                构建编排
 └── sample-profile.yaml     最小可用的 mihomo 配置示例
