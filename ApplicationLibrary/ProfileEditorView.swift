@@ -28,6 +28,11 @@ public struct ProfileEditorView: View {
     @State private var isValidating = false
     @State private var saveError: String?
     @State private var loadError: String?
+    /// True only while the on-disk YAML is being read in edit mode. The
+    /// editor is locked during this window so a user typing on the still-
+    /// empty buffer doesn't have their input clobbered when the load
+    /// finally assigns to `yaml`.
+    @State private var isLoading: Bool
     @FocusState private var editorFocused: Bool
 
     public init(mode: Mode) {
@@ -36,9 +41,11 @@ public struct ProfileEditorView: View {
         case .create:
             _name = State(initialValue: "New Profile")
             _yaml = State(initialValue: "")
+            _isLoading = State(initialValue: false)
         case let .edit(profile):
             _name = State(initialValue: profile.name)
             _yaml = State(initialValue: "")
+            _isLoading = State(initialValue: true)
         }
     }
 
@@ -99,14 +106,20 @@ public struct ProfileEditorView: View {
             .textInputAutocapitalization(.never)
             .scrollContentBackground(.hidden)
             .background(Color(.systemBackground))
+            .disabled(isLoading)
             .overlay(alignment: .topLeading) {
-                if yaml.isEmpty {
+                if !isLoading, yaml.isEmpty {
                     Text("Paste or type YAML here…")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 8)
                         .allowsHitTesting(false)
+                }
+            }
+            .overlay {
+                if isLoading {
+                    ProgressView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -200,6 +213,10 @@ public struct ProfileEditorView: View {
         case let .success(text): yaml = text
         case let .failure(error): loadError = error.localizedDescription
         }
+        // Unlock the editor regardless of outcome — on failure the user
+        // can still paste fresh YAML rather than being stuck behind a
+        // spinner.
+        isLoading = false
     }
 
     @MainActor
