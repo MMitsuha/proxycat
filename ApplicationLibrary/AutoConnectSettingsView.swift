@@ -86,8 +86,13 @@ public struct AutoConnectSettingsView: View {
 
     private var masterSection: some View {
         Section {
+            // Only block *enabling* when no profile is loaded. If the
+            // user previously turned this on and then deleted every
+            // profile, they still need a way to turn it off — otherwise
+            // iOS keeps applying on-demand rules to a tunnel with no
+            // usable config.
             Toggle("Auto Connect", isOn: $store.autoConnect.enabled)
-                .disabled(profileStore.active == nil)
+                .disabled(profileStore.active == nil && !store.autoConnect.enabled)
         } footer: {
             if profileStore.active == nil {
                 Text("Pick a profile first.")
