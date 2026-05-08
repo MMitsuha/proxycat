@@ -27,6 +27,18 @@ public struct ProxiesView: View {
         .navigationTitle("Proxies")
         .navigationBarTitleDisplayMode(.inline)
         .task { await store.refresh() }
+        // The empty-state ContentUnavailableView already covers the
+        // first-load failure, but once `groups` has data, refresh /
+        // select / testGroup failures only update `loadError` — which
+        // would otherwise be invisible. Surface those as an alert so a
+        // tap that fails doesn't read as "tap did nothing".
+        .errorAlert(
+            Binding(
+                get: { store.groups.isEmpty ? nil : store.loadError },
+                set: { newValue in if newValue == nil { store.clearLoadError() } }
+            ),
+            title: "Action failed"
+        )
     }
 
     @ViewBuilder

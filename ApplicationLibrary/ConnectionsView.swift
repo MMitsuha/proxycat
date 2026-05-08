@@ -39,6 +39,17 @@ public struct ConnectionsView: View {
         .sheet(item: $detail) { conn in
             ConnectionDetailSheet(connection: conn)
         }
+        // Once the list has data, close / closeAll / decode failures
+        // only update `loadError` and the empty-state ContentUnavailable
+        // branch can't render — the user would otherwise see "swipe did
+        // nothing". Surface those as an alert once data is on screen.
+        .errorAlert(
+            Binding(
+                get: { store.connections.isEmpty ? nil : store.loadError },
+                set: { newValue in if newValue == nil { store.clearLoadError() } }
+            ),
+            title: "Action failed"
+        )
     }
 
     private func syncStreaming() {

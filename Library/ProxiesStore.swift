@@ -112,6 +112,13 @@ public final class ProxiesStore: ObservableObject {
             defaults.set(data, forKey: Self.collapsedKey)
         }
     }
+
+    /// Lets the view dismiss an error alert. The store keeps `loadError`
+    /// `private(set)` so it can't be mutated arbitrarily from outside, but
+    /// an alert binding does need to clear on user dismissal.
+    public func clearLoadError() {
+        loadError = nil
+    }
 }
 
 private func selectingKey(group: String, node: String) -> String {

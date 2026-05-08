@@ -240,6 +240,13 @@ public final class ConnectionsStore: ObservableObject {
         }
     }
 
+    /// Lets the view dismiss an error alert. `loadError` stays
+    /// `private(set)` so external code can't fabricate one, but an alert
+    /// binding does need to clear on user dismissal.
+    public func clearLoadError() {
+        loadError = nil
+    }
+
     // MARK: - Private
 
     private func runOnce() async -> Bool {
