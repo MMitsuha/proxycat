@@ -240,13 +240,11 @@ public struct ProfileEditorView: View {
         let data = Data(submittedYAML.utf8)
         do {
             try await LibmihomoBridge.validateAsync(yaml: data)
-            if yaml == submittedYAML {
-                validation = .ok
-            }
+            guard yaml == submittedYAML else { return }
+            validation = .ok
         } catch {
-            if yaml == submittedYAML {
-                validation = .failed(error.localizedDescription)
-            }
+            guard yaml == submittedYAML else { return }
+            validation = .failed(error.localizedDescription)
         }
     }
 
@@ -260,11 +258,8 @@ public struct ProfileEditorView: View {
 
     @MainActor
     private func save() async {
-        // One guard for the whole save flow (validate + import). The
-        // previous shape called `validate()` (which managed its own
-        // `isValidating`), so the import phase ran with the flag back
-        // off and a second tap could queue a duplicate import for the
-        // same YAML.
+        // Hold `isWorking` across the whole flow (validate + import) so a
+        // second tap can't queue a duplicate import for the same YAML.
         guard !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
@@ -279,9 +274,8 @@ public struct ProfileEditorView: View {
             case .create:
                 try await store.importYAML(yaml, name: finalName)
             case let .edit(profile):
-                // Single persist: the previous two-call form could leave
-                // the YAML saved and the rename failed, with the in-memory
-                // and on-disk index disagreeing on the profile's name.
+                // Atomic rename + content write so the in-memory and on-disk
+                // index can't disagree on the profile's name after a partial failure.
                 try await store.updateContent(of: profile, yaml: yaml, name: finalName)
             }
             dismiss()

@@ -149,11 +149,8 @@ public struct ProfileDownloadView: View {
 
     @MainActor
     private func save() async {
-        // One guard for the entire save flow — validate + import. The
-        // previous shape called `validate()` (which managed `isWorking`
-        // itself), so `isWorking` was false during the import phase and
-        // a second tap could queue another fetch+import for the same
-        // YAML. Holding the flag across both phases here closes that gap.
+        // Hold `isWorking` across the whole flow (validate + import) so a
+        // second tap can't queue a duplicate fetch+import for the same YAML.
         guard !isWorking else { return }
         isWorking = true
         defer { isWorking = false }

@@ -32,11 +32,10 @@ public struct DashboardView: View {
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("ProxyCat")
         .navigationBarTitleDisplayMode(.large)
-        // Drop the local `isStarting` guard once the OS status moves;
-        // `isInTransition` (or the connected state) keeps the button
-        // disabled from there. Also covers the synchronous-failure
-        // case where status never moves — the catch block below clears
-        // `isStarting` directly so the button isn't permanently locked.
+        // Once OS status moves off `.disconnected`, hand the button-disabled
+        // state back to `isInTransition` / `profile.isConnected`. (Synchronous
+        // start failures don't move status; the `catch` arm in `toggle`
+        // clears `isStarting` itself.)
         .onChange(of: profile.status) { _, _ in isStarting = false }
         .alert("Cannot connect", isPresented: .constant(connectError != nil)) {
             Button("OK") { connectError = nil }
