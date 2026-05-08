@@ -2,15 +2,16 @@ import Foundation
 import NetworkExtension
 import Observation
 
-/// Single object injected as @EnvironmentObject so views can reach the VPN
-/// profile and the streaming command client without prop-drilling.
+/// Single @Observable object injected via `.environment(_:)` so views
+/// can reach the VPN profile and the streaming command client without
+/// prop-drilling.
 ///
 /// Acts as a thin orchestrator over four coordinators (see
 /// `ExtensionCoordinators.swift`): VPN lifecycle, settings reloads,
 /// auto connect, traffic accounting. Each coordinator owns its own
 /// observations; this type only wires their error callbacks back into
-/// `@Published` UI surfaces and exposes the underlying profile +
-/// command client for views.
+/// observed UI surfaces and exposes the underlying profile + command
+/// client for views.
 @MainActor @Observable
 public final class ExtensionEnvironment {
     public let profile: ExtensionProfile
