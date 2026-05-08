@@ -221,13 +221,22 @@ public struct ProfileEditorView: View {
 
     @MainActor
     private func validate() async {
-        let data = Data(yaml.utf8)
+        // Snapshot the YAML the user submitted for parsing. If they keep
+        // typing while validateAsync is still running, the result belongs
+        // to old input and should not be applied — the footer would
+        // otherwise say "valid" for buffer contents that no longer match.
+        let submittedYAML = yaml
+        let data = Data(submittedYAML.utf8)
         isValidating = true
         do {
             try await LibmihomoBridge.validateAsync(yaml: data)
-            validation = .ok
+            if yaml == submittedYAML {
+                validation = .ok
+            }
         } catch {
-            validation = .failed(error.localizedDescription)
+            if yaml == submittedYAML {
+                validation = .failed(error.localizedDescription)
+            }
         }
         isValidating = false
     }

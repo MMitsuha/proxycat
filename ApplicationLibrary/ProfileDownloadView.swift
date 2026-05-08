@@ -111,15 +111,22 @@ public struct ProfileDownloadView: View {
             validation = .failed(ProfileError.invalidURL.localizedDescription)
             return
         }
+        // Snapshot the URL string the user submitted. If it changes during
+        // the fetch+parse round-trip, the async result belongs to old
+        // input — applying it would briefly show "valid" for content the
+        // user is no longer pointing at.
+        let submittedURLText = urlText
         isWorking = true
         defer { isWorking = false }
 
         do {
             let yaml = try await RemoteProfileFetcher.fetch(url)
             try await LibmihomoBridge.validateAsync(yaml: Data(yaml.utf8))
+            guard urlText == submittedURLText else { return }
             downloadedYAML = yaml
             validation = .ok
         } catch {
+            guard urlText == submittedURLText else { return }
             downloadedYAML = nil
             validation = .failed(error.localizedDescription)
         }
