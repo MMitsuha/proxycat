@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public struct ProfileListView: View {
-    @EnvironmentObject private var profileStore: ProfileStore
+    @Environment(ProfileStore.self) private var profileStore
     @State private var showImporter = false
     @State private var actionError: String?
     @State private var presentedSheet: EditorSheet?

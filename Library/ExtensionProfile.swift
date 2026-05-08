@@ -1,6 +1,10 @@
-import Combine
 import Foundation
-import NetworkExtension
+import Observation
+// NetworkExtension predates Swift concurrency annotations; types like
+// NETunnelProviderSession aren't formally Sendable but are fine to pass
+// across actors for the call patterns we use. @preconcurrency demotes
+// the resulting Sendable diagnostics to warnings.
+@preconcurrency import NetworkExtension
 
 /// Wraps NEVPNManager so the rest of the app never imports
 /// NetworkExtension directly. Mirrors sing-box-for-apple's
@@ -11,12 +15,12 @@ import NetworkExtension
 /// state to the App Group container. There are no per-setting methods
 /// because the Go core re-reads settings.json + the active profile on
 /// every reload — settings flow through the file system, not this API.
-@MainActor
-public final class ExtensionProfile: ObservableObject {
-    @Published public private(set) var status: NEVPNStatus = .invalid
-    @Published public private(set) var manager: NETunnelProviderManager?
+@MainActor @Observable
+public final class ExtensionProfile {
+    public private(set) var status: NEVPNStatus = .invalid
+    public private(set) var manager: NETunnelProviderManager?
 
-    private var statusObserver: NSObjectProtocol?
+    @ObservationIgnored private var statusObservationTask: Task<Void, Never>?
 
     public init() {}
 
@@ -211,26 +215,18 @@ public final class ExtensionProfile: ObservableObject {
     }
 
     private func attachObserver(_ manager: NETunnelProviderManager) {
-        if let token = statusObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
-        statusObserver = NotificationCenter.default.addObserver(
-            forName: .NEVPNStatusDidChange,
-            object: manager.connection,
-            queue: .main
-        ) { [weak self] note in
-            guard let conn = note.object as? NEVPNConnection else { return }
-            let status = conn.status
-            Task { @MainActor in
-                self?.status = status
+        statusObservationTask?.cancel()
+        let connection = manager.connection
+        statusObservationTask = Task { @MainActor [weak self] in
+            for await note in NotificationCenter.default.notifications(named: .NEVPNStatusDidChange, object: connection) {
+                guard let conn = note.object as? NEVPNConnection else { continue }
+                self?.status = conn.status
             }
         }
     }
 
     deinit {
-        if let token = statusObserver {
-            NotificationCenter.default.removeObserver(token)
-        }
+        statusObservationTask?.cancel()
     }
 }
 
@@ -250,7 +246,7 @@ public enum ExtensionProfileError: LocalizedError {
 
 /// One-shot guard around a `CheckedContinuation` so callers can race
 /// timeout against a callback without risking a double-resume crash.
-private final class ManagedResume<T>: @unchecked Sendable {
+private final class ManagedResume<T: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<T, Error>?
 

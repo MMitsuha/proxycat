@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import os
 
 /// Aggregates the extension's traffic stream into a per-day log that
@@ -18,28 +18,28 @@ import os
 /// is gratuitous battery + flash wear. We coalesce dirty in-memory
 /// state and flush every `persistInterval` seconds (and on demand from
 /// the resign-active hook).
-@MainActor
-public final class DailyUsageStore: ObservableObject {
+@MainActor @Observable
+public final class DailyUsageStore {
     public static let shared = DailyUsageStore()
 
-    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "DailyUsageStore")
+    @ObservationIgnored private static let logger = Logger(subsystem: "io.proxycat.Library", category: "DailyUsageStore")
 
     /// Most-recent-last. Caps at `DailyUsage.maxRetainedDays` (30).
-    @Published public private(set) var entries: [DailyUsageEntry]
+    public private(set) var entries: [DailyUsageEntry]
 
-    private var lastObservedUpTotal: Int64?
-    private var lastObservedDownTotal: Int64?
+    @ObservationIgnored private var lastObservedUpTotal: Int64?
+    @ObservationIgnored private var lastObservedDownTotal: Int64?
 
     /// Set by `record(...)` and cleared by `flush()`. Avoids round-tripping
     /// to disk when nothing changed since the last flush.
-    private var dirty: Bool = false
+    @ObservationIgnored private var dirty: Bool = false
 
     /// How long we wait between disk writes when traffic is flowing.
     /// Picked to be long enough to amortize many 1 Hz samples but short
     /// enough that a crash mid-session doesn't lose visible data.
-    private let persistInterval: TimeInterval = 5
+    @ObservationIgnored private let persistInterval: TimeInterval = 5
 
-    private var flushTask: Task<Void, Never>?
+    @ObservationIgnored private var flushTask: Task<Void, Never>?
 
     private init() {
         let stored = JSONFileStore.load(

@@ -1,5 +1,5 @@
-import Combine
 import Library
+import Observation
 import SwiftUI
 import UIKit
 
@@ -18,7 +18,7 @@ import UIKit
 /// notes worth keeping in mind when editing:
 ///
 ///   1. The streaming list (`visible`) lives on a *separate*
-///      `LogStreamData` ObservableObject. The toolbar / searchable / alert
+///      `LogStreamData` @Observable. The toolbar / searchable / alert
 ///      live on the parent `LogViewModel`. That split keeps the toolbar's
 ///      `Menu` views from rebuilding 10×/sec under heavy log traffic — the
 ///      visible blink the user reported on the navigation bar was caused
@@ -27,15 +27,14 @@ import UIKit
 ///      and intentionally NOT disabled on disappearance, so navigating
 ///      away from the Logs tab does not throw away accumulated lines.
 public struct LogView: View {
-    @EnvironmentObject private var environment: ExtensionEnvironment
-    @StateObject private var model: LogViewModel
+    @Environment(ExtensionEnvironment.self) private var environment
+    @State private var model = LogViewModel()
 
-    public init() {
-        _model = StateObject(wrappedValue: LogViewModel())
-    }
+    public init() {}
 
     public var body: some View {
-        LogStreamList(
+        @Bindable var model = model
+        return LogStreamList(
             stream: model.stream,
             query: model.searchText,
             isPaused: model.isPaused,
@@ -130,7 +129,7 @@ private struct LogActionsMenu: View {
 // MARK: - Stream list
 
 private struct LogStreamList: View {
-    @ObservedObject var stream: LogStreamData
+    @Bindable var stream: LogStreamData
     let query: String
     let isPaused: Bool
     let isConnected: Bool
@@ -223,44 +222,50 @@ private struct LogRow: View {
 /// Carries only the high-frequency `visible` list. Held as a child object
 /// of `LogViewModel` so list updates do NOT invalidate the parent
 /// `LogView.body` (and therefore do not rebuild the toolbar).
-@MainActor
-final class LogStreamData: ObservableObject {
-    @Published var visible: [LogEntry] = []
+@MainActor @Observable
+final class LogStreamData {
+    var visible: [LogEntry] = []
 }
 
-@MainActor
-final class LogViewModel: ObservableObject {
-    @Published var searchText: String = ""
+@MainActor @Observable
+final class LogViewModel {
+    var searchText: String = ""
     /// Mirror of `RuntimeSettings.shared.logLevel`, exposed as a
     /// `LogLevel` enum so the picker binding stays type-safe. Two-way:
-    /// changes from the picker write back into RuntimeSettings (which
-    /// persists + nudges the extension), and external changes to
-    /// RuntimeSettings flow back here through the Combine pipe set up
-    /// in `bind`.
-    @Published var selectedLevel: LogLevel
-    @Published var isPaused: Bool = false
-    @Published var isConnected: Bool = false
-    @Published var justCopied: Bool = false
-    @Published var lastCopyCount: Int = 0
+    /// the didSet writes back into RuntimeSettings (which persists +
+    /// nudges the extension); external changes to RuntimeSettings flow
+    /// back here through the Observed.values pipe set up in `bind`.
+    var selectedLevel: LogLevel {
+        didSet {
+            guard loaded, selectedLevel != oldValue else { return }
+            settings.logLevel = selectedLevel.rawValue
+        }
+    }
+    var isPaused: Bool = false
+    var isConnected: Bool = false
+    var justCopied: Bool = false
+    var lastCopyCount: Int = 0
 
-    let stream = LogStreamData()
+    @ObservationIgnored let stream = LogStreamData()
 
-    static let maxVisible = 800
+    @ObservationIgnored static let maxVisible = 800
 
-    private weak var commandClient: CommandClient?
-    private var environment: ExtensionEnvironment?
-    private let settings = RuntimeSettings.shared
-    private var bag = Set<AnyCancellable>()
-    private var pausedSnapshot: [LogEntry]?
+    @ObservationIgnored private weak var commandClient: CommandClient?
+    @ObservationIgnored private var environment: ExtensionEnvironment?
+    @ObservationIgnored private let settings = RuntimeSettings.shared
+    @ObservationIgnored private var pipelineTasks: [Task<Void, Never>] = []
+    @ObservationIgnored private var pausedSnapshot: [LogEntry]?
+    @ObservationIgnored private var loaded = false
 
     init() {
         self.selectedLevel = LogLevel(rawValue: RuntimeSettings.shared.logLevel) ?? .warning
+        self.loaded = true
     }
 
     func bind(to environment: ExtensionEnvironment) {
         // onAppear can fire again when the user swipes back to the Logs
         // tab — guard against double-subscription.
-        guard bag.isEmpty else { return }
+        guard pipelineTasks.isEmpty else { return }
         self.environment = environment
         commandClient = environment.commandClient
         searchText = environment.logSearchText
@@ -273,79 +278,62 @@ final class LogViewModel: ObservableObject {
         // drop everything via `ExtensionEnvironment.handleMemoryPressure`.
         client.enableLogBuffering()
 
-        // Coalesce log bursts. A busy mihomo session emits dozens of
-        // frames per second; without a throttle each one would invalidate
-        // the SwiftUI graph and rebuild the toolbar's Menu/Picker, which
-        // the user observed as a navigation-bar blink. 100 ms (≈10 Hz)
-        // keeps the feed feeling live while making the redraw cost
-        // bounded. `latest: true` ensures we always emit the freshest
-        // buffer at the end of each interval.
-        let throttledLogs = client.$logs
-            .throttle(for: .milliseconds(100), scheduler: RunLoop.main, latest: true)
+        // Single observation pipeline for recompute. Touching the four
+        // inputs (logs, selectedLevel, searchText, isPaused) inside the
+        // read closure registers them with withObservationTracking, so
+        // a change to any one re-emits a fresh tuple. @Observable's
+        // tick-coalescing collapses bursts within the same runloop tick
+        // and SwiftUI's render cadence further caps redraw frequency,
+        // so the explicit Combine throttle/debounce is no longer
+        // necessary — only views that actually read the affected
+        // property invalidate, and the toolbar reads only selectedLevel
+        // / isPaused / isConnected, none of which churn on log frames.
+        pipelineTasks.append(Task { @MainActor [weak self, weak client] in
+            guard let self, let client else { return }
+            for await inputs in Observed.values({ [weak self, weak client] () -> RecomputeInputs in
+                guard let self, let client else { return .empty }
+                return RecomputeInputs(
+                    logs: client.logs,
+                    cutoff: self.selectedLevel,
+                    query: self.searchText,
+                    paused: self.isPaused
+                )
+            }) {
+                self.recompute(
+                    logs: inputs.logs,
+                    cutoff: inputs.cutoff,
+                    query: inputs.query,
+                    paused: inputs.paused
+                )
+            }
+        })
 
-        let debouncedSearch = $searchText
-            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
-            .removeDuplicates()
-
-        Publishers.CombineLatest3(
-            throttledLogs,
-            $selectedLevel,
-            debouncedSearch
-        )
-        .combineLatest($isPaused)
-        .receive(on: RunLoop.main)
-        .sink { [weak self] tuple, paused in
-            let (logs, picked, query) = tuple
-            self?.recompute(
-                logs: logs,
-                cutoff: picked,
-                query: query,
-                paused: paused
-            )
-        }
-        .store(in: &bag)
-
-        // sink + [weak self] instead of assign(to:on:) — the latter
-        // captures self strongly, and the resulting AnyCancellable is
-        // stored in self.bag, forming a retain cycle that only breaks
-        // if detach() is called. With the weak sink the cycle is gone
-        // even if the view is torn down without onDisappear firing.
-        client.$isConnected
-            .receive(on: RunLoop.main)
-            .sink { [weak self] connected in
+        // client.isConnected → self.isConnected
+        pipelineTasks.append(Task { @MainActor [weak self, weak client] in
+            guard let client else { return }
+            for await connected in Observed.values({ [weak client] in client?.isConnected ?? false }) {
                 self?.isConnected = connected
             }
-            .store(in: &bag)
-
-        // Picker → RuntimeSettings. Writing here triggers the shared
-        // store's persist + post path, which ExtensionEnvironment
-        // observes and turns into a `reload` so mihomo picks up the new
-        // level. dropFirst skips the initial value emission so we
-        // don't immediately re-write what we loaded in init().
-        $selectedLevel
-            .dropFirst()
-            .removeDuplicates()
-            .sink { [weak self] level in
-                self?.settings.logLevel = level.rawValue
-            }
-            .store(in: &bag)
+        })
 
         // RuntimeSettings → picker. If something else mutates the
         // shared store (e.g. a future macOS companion app, or an
-        // import/export action), reflect it back into the UI.
-        settings.$logLevel
-            .receive(on: RunLoop.main)
-            .compactMap { LogLevel(rawValue: $0) }
-            .removeDuplicates()
-            .sink { [weak self] level in
-                guard let self, level != self.selectedLevel else { return }
+        // import/export action), reflect it back into the UI. dropFirst
+        // skips the initial replay we already loaded in init().
+        let settings = self.settings
+        pipelineTasks.append(Task { @MainActor [weak self] in
+            for await raw in Observed.values({ settings.logLevel }).dropFirst() {
+                guard let self,
+                      let level = LogLevel(rawValue: raw),
+                      level != self.selectedLevel
+                else { continue }
                 self.selectedLevel = level
             }
-            .store(in: &bag)
+        })
     }
 
     /// Called from `onDisappear`. Persists the search term and tears
-    /// down the Combine pipes so we stop allocating filtered arrays
+    /// down the observation pipes so we stop allocating filtered arrays
     /// while invisible — but the underlying `commandClient` buffer is
     /// left running so the user finds their history intact when they
     /// return to the Logs tab. The visible list is also kept so the
@@ -353,7 +341,12 @@ final class LogViewModel: ObservableObject {
     /// pipeline emits).
     func detach() {
         environment?.logSearchText = searchText
-        bag.removeAll()
+        for task in pipelineTasks { task.cancel() }
+        pipelineTasks.removeAll()
+    }
+
+    deinit {
+        for task in pipelineTasks { task.cancel() }
     }
 
     func clear() {
@@ -403,4 +396,13 @@ final class LogViewModel: ObservableObject {
         }
         stream.visible = filtered
     }
+}
+
+private struct RecomputeInputs: Sendable {
+    let logs: [LogEntry]
+    let cutoff: LogLevel
+    let query: String
+    let paused: Bool
+
+    static let empty = RecomputeInputs(logs: [], cutoff: .silent, query: "", paused: false)
 }

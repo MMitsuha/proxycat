@@ -8,12 +8,13 @@ import UIKit
 /// view lists them newest-first with size + modified date, and pushes
 /// to a detail view that renders the file contents.
 public struct SavedLogsView: View {
-    @StateObject private var model = SavedLogsViewModel()
+    @State private var model = SavedLogsViewModel()
 
     public init() {}
 
     public var body: some View {
-        Group {
+        @Bindable var model = model
+        return Group {
             if model.entries.isEmpty {
                 emptyState
             } else {
@@ -201,10 +202,10 @@ struct SavedLogDetailView: View {
 
 // MARK: - Model
 
-@MainActor
-final class SavedLogsViewModel: ObservableObject {
-    @Published var entries: [SavedLogEntry] = []
-    @Published var confirmDeleteAll: Bool = false
+@MainActor @Observable
+final class SavedLogsViewModel {
+    var entries: [SavedLogEntry] = []
+    var confirmDeleteAll: Bool = false
 
     func reload() {
         let dir = FilePath.logsDirectory

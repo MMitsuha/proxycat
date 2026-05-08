@@ -1,32 +1,32 @@
-import Combine
 import Foundation
+import Observation
 
 /// View-model for `ProxiesView`. One instance per view appearance; not a
 /// shared singleton. Holds proxy-group metadata plus in-flight bookkeeping
 /// so the UI can reflect "selecting…" and "testing…" states.
-@MainActor
-public final class ProxiesStore: ObservableObject {
-    @Published public private(set) var groups: [Proxy] = []
-    @Published public private(set) var nodeMap: [String: Proxy] = [:]
-    @Published public private(set) var loadError: String?
-    @Published public private(set) var isRefreshing: Bool = false
+@MainActor @Observable
+public final class ProxiesStore {
+    public private(set) var groups: [Proxy] = []
+    public private(set) var nodeMap: [String: Proxy] = [:]
+    public private(set) var loadError: String?
+    public private(set) var isRefreshing: Bool = false
     /// Group names with an in-flight health-check.
-    @Published public private(set) var groupTesting: Set<String> = []
+    public private(set) var groupTesting: Set<String> = []
     /// `"<group>/<node>"` pairs with an in-flight selection.
-    @Published public private(set) var selecting: Set<String> = []
+    public private(set) var selecting: Set<String> = []
     /// Group names whose node list is currently collapsed in the UI.
-    @Published public private(set) var collapsed: Set<String> = []
+    public private(set) var collapsed: Set<String> = []
 
-    private let controller: MihomoController
-    private let defaults: UserDefaults
-    private static let collapsedKey = "io.proxycat.proxies.collapsed"
+    @ObservationIgnored private let controller: MihomoController
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private static let collapsedKey = "io.proxycat.proxies.collapsed"
 
     /// Bumped by `reset()`. Async work captures the value at start and
     /// discards its writes if the token has moved on, so a `/proxies`
     /// or `/group/.../delay` response that returns after a disconnect
     /// can't repopulate `groups` or surface a stale error against the
     /// new controller state.
-    private var generation: Int = 0
+    @ObservationIgnored private var generation: Int = 0
 
     public init(
         controller: MihomoController = MihomoController(),

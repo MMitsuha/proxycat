@@ -2,7 +2,7 @@ import Library
 import SwiftUI
 
 public struct MainView: View {
-    @StateObject private var environment = ExtensionEnvironment()
+    @State private var environment = ExtensionEnvironment()
     @State private var selection: Tab = .dashboard
     @State private var importError: String?
     @State private var showImportError = false
@@ -11,7 +11,8 @@ public struct MainView: View {
     public init() {}
 
     public var body: some View {
-        TabView(selection: $selection) {
+        @Bindable var environment = environment
+        return TabView(selection: $selection) {
             NavigationStack {
                 DashboardView()
             }
@@ -36,16 +37,16 @@ public struct MainView: View {
             .tabItem { Label("Settings", systemImage: "gearshape") }
             .tag(Tab.settings)
         }
-        .environmentObject(environment)
-        .environmentObject(environment.profile)
-        .environmentObject(environment.commandClient)
-        .environmentObject(ProfileStore.shared)
+        .environment(environment)
+        .environment(environment.profile)
+        .environment(environment.commandClient)
+        .environment(ProfileStore.shared)
         // Inject the singletons once so child views don't each instantiate
-        // their own @ObservedObject reference. Same observable identity,
-        // visible in the dependency graph instead of hidden in each file.
-        .environmentObject(RuntimeSettings.shared)
-        .environmentObject(HostSettingsStore.shared)
-        .environmentObject(DailyUsageStore.shared)
+        // their own reference. .environment(_:) propagates the same
+        // @Observable instance to descendants.
+        .environment(RuntimeSettings.shared)
+        .environment(HostSettingsStore.shared)
+        .environment(DailyUsageStore.shared)
         .task { await environment.bootstrap() }
         .onOpenURL { url in
             Task { await handleIncomingFile(url) }

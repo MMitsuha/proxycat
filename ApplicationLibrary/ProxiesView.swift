@@ -2,9 +2,9 @@ import Library
 import SwiftUI
 
 public struct ProxiesView: View {
-    @EnvironmentObject private var profile: ExtensionProfile
-    @EnvironmentObject private var settings: RuntimeSettings
-    @StateObject private var store = ProxiesStore()
+    @Environment(ExtensionProfile.self) private var profile
+    @Environment(RuntimeSettings.self) private var settings
+    @State private var store = ProxiesStore()
 
     public init() {}
 

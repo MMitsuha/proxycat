@@ -55,7 +55,10 @@ public struct MemoryStats: Equatable, Sendable {
 public enum ByteFormatter {
     /// Network-traffic style: KiB / MiB / GiB. Used for live traffic
     /// gauges where the rate makes binary units more natural.
-    private static let trafficFormatter: ByteCountFormatter = {
+    // ByteCountFormatter is documented as safe to read concurrently
+    // after configuration; Foundation just doesn't formally declare
+    // Sendable, so we tell the compiler we've checked.
+    nonisolated(unsafe) private static let trafficFormatter: ByteCountFormatter = {
         let f = ByteCountFormatter()
         f.allowedUnits = [.useKB, .useMB, .useGB, .useTB]
         f.countStyle = .binary
@@ -68,7 +71,7 @@ public enum ByteFormatter {
     /// (cache size, log file size, bundled-asset size). Single shared
     /// instance because `ByteCountFormatter` allocations show up in
     /// ApplicationLibrary's hot paths under heavy log streaming.
-    private static let fileFormatter: ByteCountFormatter = {
+    nonisolated(unsafe) private static let fileFormatter: ByteCountFormatter = {
         let f = ByteCountFormatter()
         f.countStyle = .file
         f.allowsNonnumericFormatting = false

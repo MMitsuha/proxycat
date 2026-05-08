@@ -1,23 +1,38 @@
-import Combine
 import Foundation
+import Observation
 
 /// Single source of truth for host-only preferences (currently the
-/// Auto Connect feature; future iOS-side features land here too).
-/// Persists to `host_settings.json` in the App Group container.
+/// Auto Connect feature and log retention). Persists to
+/// `host_settings.json` in the App Group container.
 ///
-/// Mirrors `RuntimeSettings`: load on init, dropFirst() guards against
-/// re-writing what we just loaded, atomic file writes, and a single
-/// notification (`hostSettingsDidChange`) posted on every persisted
-/// change. Subscribers — currently `ExtensionEnvironment` — react by
-/// re-applying the relevant configuration to NETunnelProviderManager.
-@MainActor
-public final class HostSettingsStore: ObservableObject {
+/// Mirrors `RuntimeSettings`: load on init, `loaded` flag guards
+/// against re-writing what we just loaded, atomic file writes, and a
+/// single notification (`hostSettingsDidChange`) posted on every
+/// persisted change. Subscribers — currently `ExtensionEnvironment` —
+/// react by re-applying the relevant configuration to
+/// NETunnelProviderManager.
+@MainActor @Observable
+public final class HostSettingsStore {
     public static let shared = HostSettingsStore()
 
-    @Published public var autoConnect: AutoConnectConfig
-    @Published public var logRetention: LogRetention
+    public var autoConnect: AutoConnectConfig {
+        didSet { persistAndBroadcast() }
+    }
+    public var logRetention: LogRetention {
+        didSet {
+            persistAndBroadcast()
+            FilePath.pruneSavedLogs(
+                policy: logRetention,
+                activePath: LibmihomoBridge.currentLogFilePath()
+            )
+        }
+    }
 
-    private var bag = Set<AnyCancellable>()
+    /// `didSet` doesn't fire during the constructor's stored-property
+    /// init, so this gate is technically redundant for `init`; it's
+    /// here as a defense-in-depth guard for any future code path that
+    /// might mutate these properties before load is complete.
+    @ObservationIgnored private var loaded = false
 
     private init() {
         let stored = JSONFileStore.load(
@@ -27,38 +42,12 @@ public final class HostSettingsStore: ObservableObject {
         )
         self.autoConnect = stored.autoConnect
         self.logRetention = stored.logRetention
-
-        // Persist whenever any field changes. Build the snapshot from
-        // the publishers' emitted values rather than `self.*` — @Published
-        // emits in willSet, so reading `self.<other>` here would capture
-        // the previous value if both fields were set in the same tick.
-        // dropFirst skips the replay of values we just loaded.
-        Publishers.CombineLatest($autoConnect, $logRetention)
-            .dropFirst()
-            .removeDuplicates(by: ==)
-            .sink { [weak self] config, policy in
-                self?.persistAndBroadcast(snapshot: HostSettings(
-                    autoConnect: config,
-                    logRetention: policy
-                ))
-            }
-            .store(in: &bag)
-
-        // Apply retention immediately so the user sees old files
-        // disappear without waiting for the next view reload.
-        $logRetention
-            .dropFirst()
-            .removeDuplicates()
-            .sink { policy in
-                FilePath.pruneSavedLogs(
-                    policy: policy,
-                    activePath: LibmihomoBridge.currentLogFilePath()
-                )
-            }
-            .store(in: &bag)
+        self.loaded = true
     }
 
-    private func persistAndBroadcast(snapshot: HostSettings) {
+    private func persistAndBroadcast() {
+        guard loaded else { return }
+        let snapshot = HostSettings(autoConnect: autoConnect, logRetention: logRetention)
         // Don't broadcast on failure: subscribers would re-apply from
         // in-memory state while the persisted file still holds the old
         // value, silently reverting on the next cold launch.

@@ -1,9 +1,12 @@
 import Darwin
 import Foundation
 import Library
-import Libmihomo
+// gomobile + NetworkExtension predate Swift concurrency annotations;
+// @preconcurrency demotes the resulting Sendable diagnostics on
+// override signatures and Go-bridge calls to warnings.
+@preconcurrency import Libmihomo
 import Network
-import NetworkExtension
+@preconcurrency import NetworkExtension
 import os.log
 
 /// Network Extension entry point. Intentionally a thin shim — the Go core

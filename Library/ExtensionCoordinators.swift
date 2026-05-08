@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import NetworkExtension
 
@@ -9,9 +8,9 @@ import NetworkExtension
 /// previous 277-line ExtensionEnvironment to a thin wirer that holds
 /// the four concerns and forwards their errors to the UI.
 ///
-/// Each coordinator manages its own ObservationBag so cleanup is
-/// automatic on dealloc — there are no manually-tracked observer
-/// tokens to forget.
+/// Each coordinator owns its own observation Task(s); deinit
+/// cancels them so cleanup is automatic on dealloc — no manually
+/// tracked observer tokens to forget.
 
 // MARK: - VPN lifecycle
 
@@ -23,7 +22,7 @@ import NetworkExtension
 public final class VPNLifecycleCoordinator {
     private let profile: ExtensionProfile
     private let commandClient: CommandClient
-    private let bag = ObservationBag()
+    private var observationTask: Task<Void, Never>?
 
     public init(profile: ExtensionProfile, commandClient: CommandClient) {
         self.profile = profile
@@ -31,15 +30,21 @@ public final class VPNLifecycleCoordinator {
     }
 
     public func start() {
-        let cancellable = profile.$status
-            .receive(on: RunLoop.main)
-            .sink { [weak self] status in
-                self?.apply(status)
-            }
-        bag.store(cancellable)
         // Honor the current state immediately for cold launches that
         // resume an already-connected VPN session.
         apply(profile.status)
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            // dropFirst skips the initial replay we already applied above.
+            for await status in Observed.values({ self.profile.status }).dropFirst() {
+                self.apply(status)
+            }
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 
     private func apply(_ status: NEVPNStatus) {
@@ -65,43 +70,44 @@ public final class SettingsChangeCoordinator {
     public var onError: ((String) -> Void)?
 
     private let profile: ExtensionProfile
-    private let bag = ObservationBag()
+    private var tasks: [Task<Void, Never>] = []
 
     public init(profile: ExtensionProfile) {
         self.profile = profile
     }
 
     public func start() {
+        for task in tasks { task.cancel() }
+        tasks.removeAll()
+
         let center = NotificationCenter.default
 
-        bag.add(center.addObserver(
-            forName: ProfileStore.activeContentDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.reloadIfConnected() }
+        tasks.append(Task { @MainActor [weak self] in
+            for await _ in center.notifications(named: ProfileStore.activeContentDidChange) {
+                await self?.reloadIfConnected()
+            }
         })
 
-        bag.add(center.addObserver(
-            forName: AppConfiguration.runtimeSettingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.reloadIfConnected() }
+        tasks.append(Task { @MainActor [weak self] in
+            for await _ in center.notifications(named: AppConfiguration.runtimeSettingsDidChange) {
+                await self?.reloadIfConnected()
+            }
         })
 
         // Fast path: a log-level change skips hub.ApplyConfig entirely
         // and lands at log.SetLevel inside the extension. Falls back
         // silently when disconnected — the next start() reads the new
         // level from settings.json.
-        bag.add(center.addObserver(
-            forName: AppConfiguration.runtimeLogLevelDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let level = note.userInfo?["level"] as? Int else { return }
-            Task { @MainActor in await self?.applyLogLevelIfConnected(level) }
+        tasks.append(Task { @MainActor [weak self] in
+            for await note in center.notifications(named: AppConfiguration.runtimeLogLevelDidChange) {
+                guard let level = note.userInfo?["level"] as? Int else { continue }
+                await self?.applyLogLevelIfConnected(level)
+            }
         })
+    }
+
+    deinit {
+        for task in tasks { task.cancel() }
     }
 
     private func reloadIfConnected() async {
@@ -136,7 +142,7 @@ public final class AutoConnectCoordinator {
 
     private let profile: ExtensionProfile
     private let store: HostSettingsStore
-    private let bag = ObservationBag()
+    private var observationTask: Task<Void, Never>?
 
     public init(profile: ExtensionProfile, store: HostSettingsStore) {
         self.profile = profile
@@ -144,13 +150,12 @@ public final class AutoConnectCoordinator {
     }
 
     public func start() {
-        bag.add(NotificationCenter.default.addObserver(
-            forName: AppConfiguration.hostSettingsDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in await self?.applyFromStore() }
-        })
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            for await _ in NotificationCenter.default.notifications(named: AppConfiguration.hostSettingsDidChange) {
+                await self?.applyFromStore()
+            }
+        }
     }
 
     public func applyFromStore() async {
@@ -160,6 +165,10 @@ public final class AutoConnectCoordinator {
         } catch {
             onError?(error.localizedDescription)
         }
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 }
 
@@ -173,7 +182,7 @@ public final class AutoConnectCoordinator {
 public final class TrafficCoordinator {
     private let commandClient: CommandClient
     private let usageStore: DailyUsageStore
-    private let bag = ObservationBag()
+    private var observationTask: Task<Void, Never>?
 
     public init(commandClient: CommandClient, usageStore: DailyUsageStore) {
         self.commandClient = commandClient
@@ -181,12 +190,22 @@ public final class TrafficCoordinator {
     }
 
     public func start() {
-        let cancellable = commandClient.$traffic
-            .dropFirst()
-            .removeDuplicates()
-            .sink { [usageStore] snapshot in
-                Task { @MainActor in usageStore.record(snapshot: snapshot) }
+        observationTask?.cancel()
+        observationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var last: TrafficSnapshot?
+            // dropFirst skips the initial .zero replay (otherwise the
+            // very first frame would look like a counter reset). Manual
+            // dedupe replicates the previous removeDuplicates() arm.
+            for await snapshot in Observed.values({ self.commandClient.traffic }).dropFirst() {
+                if snapshot == last { continue }
+                last = snapshot
+                self.usageStore.record(snapshot: snapshot)
             }
-        bag.store(cancellable)
+        }
+    }
+
+    deinit {
+        observationTask?.cancel()
     }
 }

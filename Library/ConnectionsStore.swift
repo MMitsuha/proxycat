@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 
 // MARK: - Models (mirror mihomo's `/connections` snapshot; see
 // tunnel/statistic/manager.go and constant/metadata.go)
@@ -69,41 +69,49 @@ public struct ConnectionsSnapshot: Codable, Sendable {
 /// list to SwiftUI. One instance per ConnectionsView appearance — not a
 /// shared singleton, so the WS is torn down when the user leaves the
 /// screen.
-@MainActor
-public final class ConnectionsStore: ObservableObject {
-    @Published public private(set) var connections: [Connection] = []
-    @Published public private(set) var uploadTotal: Int64 = 0
-    @Published public private(set) var downloadTotal: Int64 = 0
-    @Published public private(set) var isStreaming: Bool = false
-    @Published public private(set) var loadError: String?
+@MainActor @Observable
+public final class ConnectionsStore {
+    public private(set) var connections: [Connection] = []
+    public private(set) var uploadTotal: Int64 = 0
+    public private(set) var downloadTotal: Int64 = 0
+    public private(set) var isStreaming: Bool = false
+    public private(set) var loadError: String?
 
     /// User's search box content. Two-way: the view binds it to a
-    /// `.searchable` field; the store debounces it before recomputing
-    /// `filteredConnections`.
-    @Published public var searchQuery: String = ""
+    /// `.searchable` field; the didSet debounces and recomputes
+    /// `filteredConnections`. Skip when the value didn't change so a
+    /// re-render that re-binds the same string doesn't kick a
+    /// pointless debounce + refilter pass.
+    public var searchQuery: String = "" {
+        didSet {
+            guard searchQuery != oldValue else { return }
+            scheduleFilterDebounce()
+        }
+    }
 
     /// `connections` filtered by `searchQuery` (debounced). Views read
     /// this directly rather than re-running the predicate on every body
     /// pass — under heavy traffic that ran the 6-field match across
     /// hundreds of rows on every redraw, even when the query was empty.
-    @Published public private(set) var filteredConnections: [Connection] = []
+    public private(set) var filteredConnections: [Connection] = []
 
     /// `chain → bytes/sec` aggregate, mirroring metacubexd's
     /// `speedGroupByName`. Useful for color-coding rows by outbound.
-    @Published public private(set) var speedByChain: [String: Int64] = [:]
+    public private(set) var speedByChain: [String: Int64] = [:]
 
-    private let baseURL: URL
-    private let session: URLSession
-    private var streamTask: Task<Void, Never>?
-    private var wsTask: URLSessionWebSocketTask?
+    @ObservationIgnored private let baseURL: URL
+    @ObservationIgnored private let session: URLSession
+    @ObservationIgnored private var streamTask: Task<Void, Never>?
+    @ObservationIgnored private var wsTask: URLSessionWebSocketTask?
+    @ObservationIgnored private var filterDebounceTask: Task<Void, Never>?
 
     /// Reusable scratch buffers for `apply(_:)`. Avoids allocating a
     /// fresh `[String: Connection]` and `[String: Int64]` every WS
     /// frame (1 Hz) — over a long session that's hundreds of dictionary
     /// allocations Swift's allocator + ARC have to chew through, on
     /// top of the connection list itself.
-    private var prevByID: [String: Connection] = [:]
-    private var chainSpeedsBuf: [String: Int64] = [:]
+    @ObservationIgnored private var prevByID: [String: Connection] = [:]
+    @ObservationIgnored private var chainSpeedsBuf: [String: Int64] = [:]
 
     /// `ISO8601DateFormatter` parses are thread-safe after configuration,
     /// but the type isn't formally Sendable, so we wrap them. mihomo
@@ -148,21 +156,19 @@ public final class ConnectionsStore: ObservableObject {
     ) {
         self.baseURL = baseURL
         self.session = session
-        // Debounce the typing burst before re-filtering. CombineLatest
-        // also fires the pipeline on every WS frame so newly arriving
-        // connections show up under the active filter without a typing
-        // event. `assign(to: &$published)` self-manages the cancellable
-        // for the lifetime of the publisher (no cancellable storage
-        // needed).
-        $searchQuery
-            .debounce(for: .milliseconds(150), scheduler: RunLoop.main)
-            .removeDuplicates()
-            .combineLatest($connections)
-            .map { query, connections in
-                Self.applyFilter(query: query, to: connections)
-            }
-            .receive(on: RunLoop.main)
-            .assign(to: &$filteredConnections)
+    }
+
+    private func scheduleFilterDebounce() {
+        filterDebounceTask?.cancel()
+        filterDebounceTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, let self else { return }
+            self.recomputeFilter()
+        }
+    }
+
+    private func recomputeFilter() {
+        filteredConnections = Self.applyFilter(query: searchQuery, to: connections)
     }
 
     private static func applyFilter(query: String, to connections: [Connection]) -> [Connection] {
@@ -196,12 +202,15 @@ public final class ConnectionsStore: ObservableObject {
         streamTask = nil
         wsTask?.cancel(with: .goingAway, reason: nil)
         wsTask = nil
+        filterDebounceTask?.cancel()
+        filterDebounceTask = nil
         isStreaming = false
         // Drop the snapshot too — otherwise on reconnect, rows from the
         // previous session render until the first fresh frame arrives,
         // and a swipe-close in that gap would target a stale ID against
         // the new controller.
         connections = []
+        filteredConnections = []
         uploadTotal = 0
         downloadTotal = 0
         speedByChain = [:]
@@ -214,6 +223,7 @@ public final class ConnectionsStore: ObservableObject {
         // Cannot await on main actor; just signal cancellation.
         streamTask?.cancel()
         wsTask?.cancel(with: .goingAway, reason: nil)
+        filterDebounceTask?.cancel()
     }
 
     /// `DELETE /connections/{id}`. The connection disappears from the
@@ -367,6 +377,7 @@ public final class ConnectionsStore: ObservableObject {
         uploadTotal = snapshot.uploadTotal
         downloadTotal = snapshot.downloadTotal
         speedByChain = chainSpeedsBuf
+        recomputeFilter()
     }
 
     private func humanReadable(_ error: Error) -> String {

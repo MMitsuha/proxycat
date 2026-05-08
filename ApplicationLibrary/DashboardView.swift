@@ -3,11 +3,11 @@ import NetworkExtension
 import SwiftUI
 
 public struct DashboardView: View {
-    @EnvironmentObject private var environment: ExtensionEnvironment
-    @EnvironmentObject private var profile: ExtensionProfile
-    @EnvironmentObject private var commandClient: CommandClient
-    @EnvironmentObject private var profileStore: ProfileStore
-    @EnvironmentObject private var settings: RuntimeSettings
+    @Environment(ExtensionEnvironment.self) private var environment
+    @Environment(ExtensionProfile.self) private var profile
+    @Environment(CommandClient.self) private var commandClient
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(RuntimeSettings.self) private var settings
 
     @State private var connectError: String?
     /// Held true between a Connect tap and the OS-level NEVPNStatus

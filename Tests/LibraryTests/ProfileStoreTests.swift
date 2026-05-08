@@ -1,8 +1,9 @@
-import XCTest
+import Foundation
+import Testing
 @testable import Library
 
-final class ProfileStoreTests: XCTestCase {
-    func testProfileCodableRoundTrip() throws {
+@Suite struct ProfileStoreTests {
+    @Test func profileCodableRoundTrip() throws {
         let original = Profile(
             name: "My VPN",
             fileName: "my.yaml",
@@ -11,19 +12,19 @@ final class ProfileStoreTests: XCTestCase {
         )
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(Profile.self, from: data)
-        XCTAssertEqual(decoded, original)
+        #expect(decoded == original)
     }
 
-    func testProfileWithoutOptionalFields() throws {
+    @Test func profileWithoutOptionalFields() throws {
         let original = Profile(name: "Local", fileName: "local.yaml")
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(Profile.self, from: data)
-        XCTAssertEqual(decoded, original)
-        XCTAssertNil(decoded.remoteURL)
-        XCTAssertNil(decoded.lastUpdated)
+        #expect(decoded == original)
+        #expect(decoded.remoteURL == nil)
+        #expect(decoded.lastUpdated == nil)
     }
 
-    func testProfileIDIsStableAcrossEncoding() throws {
+    @Test func profileIDIsStableAcrossEncoding() throws {
         // The `id` field is what binds the active-profile pointer file to
         // an entry in index.json. Codable must round-trip it intact;
         // otherwise the user's active selection would silently reset on
@@ -32,6 +33,6 @@ final class ProfileStoreTests: XCTestCase {
         let p = Profile(id: id, name: "x", fileName: "x.yaml")
         let data = try JSONEncoder().encode(p)
         let back = try JSONDecoder().decode(Profile.self, from: data)
-        XCTAssertEqual(back.id, id)
+        #expect(back.id == id)
     }
 }

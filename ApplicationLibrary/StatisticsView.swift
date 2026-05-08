@@ -3,7 +3,7 @@ import Library
 import SwiftUI
 
 public struct StatisticsView: View {
-    @EnvironmentObject private var dailyUsage: DailyUsageStore
+    @Environment(DailyUsageStore.self) private var dailyUsage
 
     @State private var range: Range = .week
     @State private var showResetConfirm = false
