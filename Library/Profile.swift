@@ -200,10 +200,15 @@ public final class ProfileStore: ObservableObject {
         try? FileManager.default.removeItem(at: url)
         profiles.removeAll { $0.id == profile.id }
         if activeProfileID == profile.id {
-            activeProfileID = profiles.first?.id
             if let next = profiles.first {
+                // Do NOT pre-set activeProfileID here. setActive needs to
+                // see the old (deleted) id as `previous` so that
+                // previous != next.id and it posts activeContentDidChange.
+                // Pre-setting silently suppresses the reload notification,
+                // leaving the running tunnel serving the deleted config.
                 try setActive(next)
             } else {
+                activeProfileID = nil
                 try? FileManager.default.removeItem(at: activePointer)
                 // Tunnel may be running with the now-deleted profile.
                 // Posting the same notification ExtensionEnvironment
