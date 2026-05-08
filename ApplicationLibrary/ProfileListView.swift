@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 
 public struct ProfileListView: View {
     @EnvironmentObject private var profileStore: ProfileStore
-    @EnvironmentObject private var environment: ExtensionEnvironment
     @State private var showImporter = false
     @State private var actionError: String?
     @State private var presentedSheet: EditorSheet?
@@ -113,7 +112,6 @@ public struct ProfileListView: View {
             }
         }
         .errorAlert($actionError, title: "Action failed")
-        .errorAlert($environment.reloadError, title: "Reload failed")
     }
 
     /// Runs a throwing block and surfaces any thrown error in the alert.

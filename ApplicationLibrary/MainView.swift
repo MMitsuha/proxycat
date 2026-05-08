@@ -66,6 +66,11 @@ public struct MainView: View {
         .onChange(of: showImportError) { _, isShowing in
             if !isShowing { importError = nil }
         }
+        // Hosted at TabView level so a reload failure triggered from
+        // Settings, Logs, or any other tab still surfaces — settings
+        // changes go through SettingsChangeCoordinator regardless of
+        // which tab the user is on.
+        .errorAlert($environment.reloadError, title: "Reload failed")
     }
 
     /// Imports a YAML file delivered by the system (Share sheet, Open With,
