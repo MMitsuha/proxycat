@@ -63,8 +63,21 @@ public struct AutoConnectSettingsView: View {
         }
         .onChange(of: environment.autoConnectError) { _, newValue in
             // Defer the save-error alert if the Add-SSID alert is still
-            // up so the user's in-progress input is not stomped.
+            // up so the user's in-progress input is not stomped. The
+            // upstream value persists, so onChange(of: showAddSSID)
+            // below replays it once the alert closes.
             guard let message = newValue, !showAddSSID else { return }
+            saveErrorMessage = message
+        }
+        .onChange(of: showAddSSID) { _, isShowing in
+            // Replay a save error that arrived (and was deferred) while
+            // the Add-SSID alert was up. onChange(of: autoConnectError)
+            // would not fire again here since the upstream value did
+            // not change at dismissal time.
+            guard !isShowing,
+                  saveErrorMessage == nil,
+                  let message = environment.autoConnectError
+            else { return }
             saveErrorMessage = message
         }
     }
