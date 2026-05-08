@@ -25,7 +25,12 @@ public struct ProfileEditorView: View {
     @State private var name: String
     @State private var yaml: String
     @State private var validation: ProfileValidation = .pristine
-    @State private var isValidating = false
+    /// True while validate-or-save is running. One flag for both phases
+    /// (rather than separate isValidating/isSaving) so a save() that
+    /// internally calls validate() keeps the toolbar disabled across the
+    /// whole flow — otherwise the import phase would re-enable Save and
+    /// a second tap could queue a duplicate import for the same YAML.
+    @State private var isWorking = false
     @State private var saveError: String?
     @State private var loadError: String?
     /// True only while the on-disk YAML is being read in edit mode. The
@@ -155,6 +160,7 @@ public struct ProfileEditorView: View {
                 } label: {
                     Label("Validate", systemImage: "checkmark.shield")
                 }
+                .disabled(isWorking)
                 Button {
                     Task { await save() }
                 } label: {
@@ -162,7 +168,7 @@ public struct ProfileEditorView: View {
                 }
                 .disabled(!canSave)
             } label: {
-                if isValidating {
+                if isWorking {
                     ProgressView()
                 } else {
                     Image(systemName: "ellipsis.circle")
@@ -191,6 +197,9 @@ public struct ProfileEditorView: View {
     private var canSave: Bool {
         guard !trimmedName.isEmpty, !yaml.isEmpty else { return false }
         if case .failed = validation { return false }
+        // Suppress Save while a validate-or-save is already running so a
+        // second tap can't kick off a parallel import for the same YAML.
+        if isWorking { return false }
         return true
     }
 
@@ -219,15 +228,16 @@ public struct ProfileEditorView: View {
         isLoading = false
     }
 
+    /// Runs the parser without managing `isWorking`. Caller owns the flag
+    /// so `save()` can hold one guard across validate-then-import.
     @MainActor
-    private func validate() async {
+    private func performValidation() async {
         // Snapshot the YAML the user submitted for parsing. If they keep
         // typing while validateAsync is still running, the result belongs
         // to old input and should not be applied — the footer would
         // otherwise say "valid" for buffer contents that no longer match.
         let submittedYAML = yaml
         let data = Data(submittedYAML.utf8)
-        isValidating = true
         do {
             try await LibmihomoBridge.validateAsync(yaml: data)
             if yaml == submittedYAML {
@@ -238,14 +248,27 @@ public struct ProfileEditorView: View {
                 validation = .failed(error.localizedDescription)
             }
         }
-        isValidating = false
+    }
+
+    @MainActor
+    private func validate() async {
+        guard !isWorking else { return }
+        isWorking = true
+        defer { isWorking = false }
+        await performValidation()
     }
 
     @MainActor
     private func save() async {
-        // Always re-validate before persisting — the user may have typed
-        // since their last manual Validate.
-        await validate()
+        // One guard for the whole save flow (validate + import). The
+        // previous shape called `validate()` (which managed its own
+        // `isValidating`), so the import phase ran with the flag back
+        // off and a second tap could queue a duplicate import for the
+        // same YAML.
+        guard !isWorking else { return }
+        isWorking = true
+        defer { isWorking = false }
+        await performValidation()
         if case let .failed(msg) = validation {
             saveError = msg
             return

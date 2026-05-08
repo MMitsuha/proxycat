@@ -73,7 +73,7 @@ public struct ProfileDownloadView: View {
                     } label: {
                         Label("Validate", systemImage: "checkmark.shield")
                     }
-                    .disabled(!hasValidURL)
+                    .disabled(!hasValidURL || isWorking)
                     Button {
                         Task { await save() }
                     } label: {
@@ -97,6 +97,12 @@ public struct ProfileDownloadView: View {
     private var canSave: Bool {
         guard hasValidURL, !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
         if case .failed = validation { return false }
+        // Suppress the Save tap while a previous validate/save is still
+        // running. Without this guard the menu item stays enabled the
+        // whole time the spinner is up, and a second tap kicks off
+        // another fetch+import that ends up importing the same YAML
+        // twice.
+        if isWorking { return false }
         return true
     }
 
@@ -105,8 +111,12 @@ public struct ProfileDownloadView: View {
         validation = .pristine
     }
 
+    /// Fetch + parser-validate the configured URL. Doesn't manage
+    /// `isWorking` — caller owns the spinner so a single guard can span
+    /// validate-then-import inside `save()` without the inner defer
+    /// flipping the flag back off mid-flight.
     @MainActor
-    private func validate() async {
+    private func performValidation() async {
         guard let url = parsedURL else {
             validation = .failed(ProfileError.invalidURL.localizedDescription)
             return
@@ -116,9 +126,6 @@ public struct ProfileDownloadView: View {
         // input — applying it would briefly show "valid" for content the
         // user is no longer pointing at.
         let submittedURLText = urlText
-        isWorking = true
-        defer { isWorking = false }
-
         do {
             let yaml = try await RemoteProfileFetcher.fetch(url)
             try await LibmihomoBridge.validateAsync(yaml: Data(yaml.utf8))
@@ -133,10 +140,24 @@ public struct ProfileDownloadView: View {
     }
 
     @MainActor
+    private func validate() async {
+        guard !isWorking else { return }
+        isWorking = true
+        defer { isWorking = false }
+        await performValidation()
+    }
+
+    @MainActor
     private func save() async {
-        // Re-fetch and re-validate before persisting in case the URL or
-        // remote content changed since the user last tapped Validate.
-        await validate()
+        // One guard for the entire save flow — validate + import. The
+        // previous shape called `validate()` (which managed `isWorking`
+        // itself), so `isWorking` was false during the import phase and
+        // a second tap could queue another fetch+import for the same
+        // YAML. Holding the flag across both phases here closes that gap.
+        guard !isWorking else { return }
+        isWorking = true
+        defer { isWorking = false }
+        await performValidation()
         guard case .ok = validation, let yaml = downloadedYAML, let url = parsedURL else {
             if case let .failed(msg) = validation { saveError = msg }
             return
