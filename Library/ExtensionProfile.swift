@@ -1,6 +1,10 @@
 import Combine
 import Foundation
-import NetworkExtension
+// NetworkExtension predates Swift concurrency annotations; types like
+// NETunnelProviderSession aren't formally Sendable but are fine to pass
+// across actors for the call patterns we use. @preconcurrency demotes
+// the resulting Sendable diagnostics to warnings.
+@preconcurrency import NetworkExtension
 
 /// Wraps NEVPNManager so the rest of the app never imports
 /// NetworkExtension directly. Mirrors sing-box-for-apple's
@@ -16,7 +20,11 @@ public final class ExtensionProfile: ObservableObject {
     @Published public private(set) var status: NEVPNStatus = .invalid
     @Published public private(set) var manager: NETunnelProviderManager?
 
-    private var statusObserver: NSObjectProtocol?
+    // The token is opaque NSObjectProtocol (not Sendable). We only
+    // mutate it from MainActor methods, but deinit is nonisolated;
+    // nonisolated(unsafe) tells the compiler we've checked the
+    // race-freedom by inspection.
+    nonisolated(unsafe) private var statusObserver: NSObjectProtocol?
 
     public init() {}
 
@@ -250,7 +258,7 @@ public enum ExtensionProfileError: LocalizedError {
 
 /// One-shot guard around a `CheckedContinuation` so callers can race
 /// timeout against a callback without risking a double-resume crash.
-private final class ManagedResume<T>: @unchecked Sendable {
+private final class ManagedResume<T: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<T, Error>?
 

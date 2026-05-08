@@ -1,6 +1,10 @@
 import Combine
 import Foundation
-import Libmihomo
+// gomobile-generated types (LibmihomoCommandClient, LibmihomoStatus,
+// ClientBridge handler) lack Sendable conformance; @preconcurrency
+// downgrades the resulting strict-concurrency diagnostics on calls
+// across the host/Go boundary.
+@preconcurrency import Libmihomo
 
 /// Host-app-side counterpart to the gRPC command server running inside
 /// the Network Extension. Subscribes to `Status` (traffic + memory) and
@@ -195,7 +199,10 @@ public final class CommandClient: ObservableObject {
 /// Glue between the gomobile-generated handler protocol and our Swift
 /// view-model. Methods are invoked from arbitrary Go-runtime threads,
 /// so every UI-touching update is dispatched onto the main actor.
-private final class ClientBridge: NSObject, LibmihomoCommandClientHandlerProtocol {
+/// `@unchecked Sendable`: the only stored state is a weak ref to the
+/// MainActor owner and an actor-protected one-shot signal, both safe
+/// to read concurrently.
+private final class ClientBridge: NSObject, LibmihomoCommandClientHandlerProtocol, @unchecked Sendable {
     private weak var owner: CommandClient?
     private let disconnect = AsyncOneShot()
 

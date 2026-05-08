@@ -82,7 +82,11 @@ public enum MihomoControllerError: LocalizedError {
 /// secret is forced empty there too (binding.go:122,125), so the host app
 /// reaches it without auth as long as the tunnel is up. See the design
 /// spec for the auth-assumption caveat.
-public struct MihomoController {
+///
+/// `@unchecked Sendable` because JSONDecoder isn't formally Sendable but
+/// our instance is configured once at init and used read-only thereafter,
+/// matching URLSession.shared's own thread-safety contract.
+public struct MihomoController: @unchecked Sendable {
     public static let defaultBaseURL = URL(string: "http://127.0.0.1:9090")!
     /// Match `C.DefaultTestURL` in mihomo (constant/adapters.go). Selector
     /// groups whose test URL equals the default omit `testUrl` from their
