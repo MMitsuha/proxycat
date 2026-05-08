@@ -60,12 +60,13 @@ public final class ProxiesStore: ObservableObject {
         }
     }
 
-    /// Pick a node inside a Selector group. Non-selector groups are
-    /// guarded out — the view also hides the tap action for them, but we
-    /// keep the guard here so a misuse of the API is silent rather than
-    /// throwing a 400 the user has to read.
+    /// Pick a node inside a manually-selectable group (Selector / URLTest /
+    /// Fallback — see `Proxy.isSelectable`). LoadBalance and leaf proxies
+    /// would 400 on `PUT /proxies/{name}`; the view also hides the tap
+    /// affordance for them, but we keep the guard so a misuse of the API
+    /// is silent rather than surfacing a 400 the user has to read.
     public func select(group: Proxy, name: String) async {
-        guard group.isSelector else { return }
+        guard group.isSelectable else { return }
         let key = selectingKey(group: group.name, node: name)
         selecting.insert(key)
         defer { selecting.remove(key) }

@@ -72,7 +72,7 @@ public struct ProxiesView: View {
                                     name: name,
                                     node: store.nodeMap[name],
                                     isSelected: group.now == name,
-                                    isInteractive: group.isSelector,
+                                    isInteractive: group.isSelectable,
                                     isPending: store.isSelecting(group: group.name, node: name),
                                     onTap: {
                                         Task { await store.select(group: group, name: name) }

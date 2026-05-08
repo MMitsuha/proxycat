@@ -35,6 +35,13 @@ public struct Proxy: Codable, Hashable {
 
     public var isGroup: Bool { all?.isEmpty == false }
     public var isSelector: Bool { type == "Selector" }
+
+    /// Whether `PUT /proxies/{name}` will accept a manual selection. Mirrors
+    /// the backend's `outboundgroup.SelectAble` set (Selector, URLTest,
+    /// Fallback). LoadBalance and leaf proxies are not selectable.
+    public var isSelectable: Bool {
+        type == "Selector" || type == "URLTest" || type == "Fallback"
+    }
 }
 
 public struct ProxiesResponse: Codable {
