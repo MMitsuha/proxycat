@@ -46,8 +46,14 @@ public struct DashboardView: View {
 
             Button(action: toggle) {
                 HStack(spacing: 6) {
-                    Image(systemName: profile.isConnected ? "stop.fill" : "play.fill")
-                    Text(profile.isConnected ? String(localized: "Disconnect") : String(localized: "Connect"))
+                    if isInTransition {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    } else {
+                        Image(systemName: profile.isConnected ? "stop.fill" : "play.fill")
+                    }
+                    Text(toggleButtonLabel)
                         .font(.subheadline.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
@@ -56,7 +62,7 @@ public struct DashboardView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)
             .tint(profile.isConnected ? .red : .accentColor)
-            .disabled(profileStore.active == nil)
+            .disabled(profileStore.active == nil || isInTransition)
 
             if profile.isConnected, !settings.disableExternalController, let url = URL(string: "http://127.0.0.1:9090/ui/") {
                 Link(destination: url) {
@@ -133,6 +139,18 @@ public struct DashboardView: View {
         }
     }
 
+    private var isInTransition: Bool {
+        switch profile.status {
+        case .connecting, .disconnecting, .reasserting: return true
+        default: return false
+        }
+    }
+
+    private var toggleButtonLabel: String {
+        if isInTransition { return statusText }
+        return profile.isConnected ? String(localized: "Disconnect") : String(localized: "Connect")
+    }
+
     // MARK: - Traffic
 
     private var trafficGrid: some View {
@@ -205,6 +223,11 @@ public struct DashboardView: View {
     // MARK: - Actions
 
     private func toggle() {
+        // Disabled-state guard — the button itself is disabled during
+        // these statuses, but a stale tap before SwiftUI re-renders
+        // would otherwise call start()/stop() against a transitioning
+        // tunnel and surface confusing NEVPNError failures.
+        if isInTransition { return }
         if profile.isConnected {
             profile.stop()
             return
