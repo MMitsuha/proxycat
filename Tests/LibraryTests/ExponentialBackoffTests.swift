@@ -1,35 +1,36 @@
-import XCTest
+import Foundation
+import Testing
 @testable import Library
 
-final class ExponentialBackoffTests: XCTestCase {
-    func testStartsAtInitial() {
+@Suite struct ExponentialBackoffTests {
+    @Test func startsAtInitial() {
         let b = ExponentialBackoff(initialMs: 200, maxMs: 5_000)
-        XCTAssertEqual(b.currentDelayMs, 200)
+        #expect(b.currentDelayMs == 200)
     }
 
-    func testDoublesAndCaps() async {
+    @Test func doublesAndCaps() async {
         var b = ExponentialBackoff(initialMs: 1, maxMs: 4)
         await b.sleep()
-        XCTAssertEqual(b.currentDelayMs, 2)
+        #expect(b.currentDelayMs == 2)
         await b.sleep()
-        XCTAssertEqual(b.currentDelayMs, 4)
+        #expect(b.currentDelayMs == 4)
         // Capped — no further growth.
         await b.sleep()
-        XCTAssertEqual(b.currentDelayMs, 4)
+        #expect(b.currentDelayMs == 4)
     }
 
-    func testResetReturnsToInitial() async {
+    @Test func resetReturnsToInitial() async {
         var b = ExponentialBackoff(initialMs: 1, maxMs: 4)
         await b.sleep()
         await b.sleep()
-        XCTAssertEqual(b.currentDelayMs, 4)
+        #expect(b.currentDelayMs == 4)
         b.reset()
-        XCTAssertEqual(b.currentDelayMs, 1)
+        #expect(b.currentDelayMs == 1)
     }
 
     /// Cancellation must not throw out of `sleep()` — calling loops use
     /// `Task.isCancelled` for the exit signal.
-    func testSleepSwallowsCancellation() async {
+    @Test func sleepSwallowsCancellation() async {
         let task = Task {
             var b = ExponentialBackoff(initialMs: 100_000, maxMs: 100_000)
             await b.sleep()
@@ -38,7 +39,7 @@ final class ExponentialBackoffTests: XCTestCase {
         await task.value  // would throw if sleep() didn't swallow CancellationError
     }
 
-    func testRetryLoopRunsBodyUntilCancelled() async {
+    @Test func retryLoopRunsBodyUntilCancelled() async {
         let attempts = Box<Int>(value: 0)
         let task = Task {
             await RetryLoop.run(
@@ -53,10 +54,10 @@ final class ExponentialBackoffTests: XCTestCase {
         task.cancel()
         await task.value
         let total = await attempts.value
-        XCTAssertGreaterThan(total, 1, "RetryLoop must run body more than once before cancellation")
+        #expect(total > 1, "RetryLoop must run body more than once before cancellation")
     }
 
-    func testRetryLoopExitsImmediatelyWhenCancelled() async {
+    @Test func retryLoopExitsImmediatelyWhenCancelled() async {
         // Body runs at most once (or zero times if the cancellation
         // beats the first iteration); the loop must not deadlock.
         let task = Task {
