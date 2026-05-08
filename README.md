@@ -202,9 +202,12 @@ Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift C
 
 ProxyCat 直接消费 mihomo 标准 YAML。Profiles 标签页支持：
 
-- 通过文档选择器导入 `.yaml` / `.yml` 文件；
-- 在内置编辑器粘贴 / 编辑 YAML（保存前会调用 `LibmihomoValidate` 做语法校验）；
+- 通过文档选择器或系统 Share / Open With 导入 `.yaml` / `.yml`；
+- 在内置编辑器粘贴 / 编辑 YAML；
+- 从订阅 URL 下载远程 profile，并支持下拉刷新逐条重新拉取；
 - 滑动删除。
+
+所有写入路径（导入、编辑器保存、远程下载与刷新）在 `ProfileStore` 中统一调用 `LibmihomoValidate` 校验，畸形 YAML 不会落盘，也不会把原本可用的远程订阅覆盖成解析不出的内容。
 
 YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descriptor`：fd 由 Network Extension 在运行时通过 `SetTunFd` 注入。同时 `binding.go` 的 `prepareConfig`（在每次 Start / Reload 时执行）会强制覆盖以下 TUN 字段以适配 iOS NE 沙箱：
 

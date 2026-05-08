@@ -111,10 +111,15 @@ public final class ProfileStore: ObservableObject {
     /// in the same persist so the editor's "save YAML + rename" path
     /// can't half-succeed.
     ///
+    /// Validates with mihomo's parser before writing so callers like
+    /// `refreshRemote` can't replace a working profile with an
+    /// unparseable response from a flaky subscription server.
+    ///
     /// The YAML write itself runs on a detached task: profile YAMLs can
     /// be 100KB–1MB for large rule sets, and a synchronous write on the
     /// MainActor would visibly hitch the editor's save action.
     public func updateContent(of profile: Profile, yaml: String, name: String? = nil) async throws {
+        try await LibmihomoBridge.validateAsync(yaml: Data(yaml.utf8))
         let fileName = profile.fileName
         try await Self.writeYAML(yaml, fileName: fileName)
         if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
@@ -129,8 +134,13 @@ public final class ProfileStore: ObservableObject {
         }
     }
 
+    /// Persists a new profile with the given YAML content. Validates with
+    /// mihomo's parser before writing so file/URL/share-sheet ingress
+    /// paths can't seed the catalog with unparseable YAML, regardless of
+    /// whether the caller validated interactively first.
     @discardableResult
     public func importYAML(_ content: String, name: String, remoteURL: URL? = nil) async throws -> Profile {
+        try await LibmihomoBridge.validateAsync(yaml: Data(content.utf8))
         let id = UUID()
         let fileName = id.uuidString + ".yaml"
         try await Self.writeYAML(content, fileName: fileName)
