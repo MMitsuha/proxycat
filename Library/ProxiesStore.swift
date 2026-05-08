@@ -80,12 +80,20 @@ public final class ProxiesStore: ObservableObject {
 
     /// Run a health-check on every node in a group. Re-fetches `/proxies`
     /// after to pick up the updated `history` arrays — the delay endpoint
-    /// returns just `name → ms` and we want consistent UI state.
+    /// returns just `name → ms` and we want consistent UI state. Passes
+    /// the group's own `testUrl`/`timeout`/`expectedStatus` through so a
+    /// custom probe target on the profile is honored; falls back to the
+    /// controller defaults only when the group leaves them unset.
     public func testGroup(_ group: Proxy) async {
         groupTesting.insert(group.name)
         defer { groupTesting.remove(group.name) }
         do {
-            _ = try await controller.groupDelay(name: group.name)
+            _ = try await controller.groupDelay(
+                name: group.name,
+                url: group.testUrl,
+                timeoutMs: group.timeout,
+                expectedStatus: group.expectedStatus
+            )
             await refresh()
         } catch {
             loadError = (error as? LocalizedError)?.errorDescription

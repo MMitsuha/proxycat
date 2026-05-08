@@ -17,6 +17,9 @@ public struct Proxy: Codable, Hashable {
     public let all: [String]?
     public let history: [ProxyDelayPoint]
     public let testUrl: String?
+    /// HTTP status range string (e.g. "200" or "200-299"). Optional — only
+    /// URLTest/Fallback/LoadBalance emit it; Selector and leaf nodes don't.
+    public let expectedStatus: String?
     public let timeout: Int?
     public let hidden: Bool?
     public let udp: Bool?
@@ -108,25 +111,36 @@ public struct MihomoController {
         _ = try await perform(req)
     }
 
-    /// `GET /group/{name}/delay?url=&timeout=` → `{ name: delay }` map.
-    /// We re-fetch `/proxies` after this to pick up updated histories.
+    /// `GET /group/{name}/delay?url=&timeout=&expected=` → `{ name: delay }`
+    /// map. We re-fetch `/proxies` after this to pick up updated histories.
+    /// `url`/`timeoutMs` fall back to `defaultTestURL`/`defaultTimeoutMs`
+    /// when nil so callers can pass through the group's own settings
+    /// straight from the `/proxies` response (testUrl/timeout are optional
+    /// in mihomo's marshaller — Selector omits them when at the default).
     public func groupDelay(
         name: String,
-        url: String = defaultTestURL,
-        timeoutMs: Int = defaultTimeoutMs
+        url: String? = nil,
+        timeoutMs: Int? = nil,
+        expectedStatus: String? = nil
     ) async throws -> [String: Int] {
+        let resolvedURL = (url?.isEmpty == false) ? url! : Self.defaultTestURL
+        let resolvedTimeout = timeoutMs ?? Self.defaultTimeoutMs
+        var queryItems = [
+            URLQueryItem(name: "url", value: resolvedURL),
+            URLQueryItem(name: "timeout", value: String(resolvedTimeout)),
+        ]
+        if let expectedStatus, !expectedStatus.isEmpty {
+            queryItems.append(URLQueryItem(name: "expected", value: expectedStatus))
+        }
         let target = makeURL(
             path: "group/\(Self.percentEncodeSegment(name))/delay",
-            queryItems: [
-                URLQueryItem(name: "url", value: url),
-                URLQueryItem(name: "timeout", value: String(timeoutMs)),
-            ]
+            queryItems: queryItems
         )
         // Give the request a hair more time than the per-node timeout
         // because the server runs them concurrently and still needs to
         // serialize the result.
         var req = URLRequest(url: target)
-        req.timeoutInterval = TimeInterval(timeoutMs) / 1000 + 2
+        req.timeoutInterval = TimeInterval(resolvedTimeout) / 1000 + 2
         let data = try await perform(req)
         do {
             return try decoder.decode([String: Int].self, from: data)
