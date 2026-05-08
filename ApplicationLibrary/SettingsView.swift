@@ -5,6 +5,7 @@ public struct SettingsView: View {
     @State private var cacheBytes: Int64 = 0
     @State private var showClearConfirm = false
     @State private var clearError: String?
+    @State private var isClearing = false
 
     @EnvironmentObject private var settings: RuntimeSettings
     @EnvironmentObject private var hostSettings: HostSettingsStore
@@ -30,9 +31,15 @@ public struct SettingsView: View {
                 Button(role: .destructive) {
                     showClearConfirm = true
                 } label: {
-                    Label("Clear cache", systemImage: "trash")
+                    HStack {
+                        Label("Clear cache", systemImage: "trash")
+                        if isClearing {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
                 }
-                .disabled(cacheBytes == 0)
+                .disabled(cacheBytes == 0 || isClearing)
             } header: {
                 Text("Storage")
             } footer: {
@@ -101,11 +108,28 @@ public struct SettingsView: View {
     }
 
     private func clearCache() {
-        do {
-            try FilePath.clearCache()
-            Task { await refreshCacheSize() }
-        } catch {
-            clearError = error.localizedDescription
+        // Enumeration + unlink can take real time on a large
+        // working directory (downloaded UI bundles, fat geo databases).
+        // Run it off the main actor so the Settings screen stays
+        // responsive; the button shows a spinner via `isClearing` while
+        // the work runs.
+        isClearing = true
+        Task {
+            let result: Result<Void, Error> = await Task.detached(priority: .userInitiated) {
+                do {
+                    try FilePath.clearCache()
+                    return .success(())
+                } catch {
+                    return .failure(error)
+                }
+            }.value
+            switch result {
+            case .success:
+                await refreshCacheSize()
+            case let .failure(error):
+                clearError = error.localizedDescription
+            }
+            isClearing = false
         }
     }
 }
