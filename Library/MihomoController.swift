@@ -107,7 +107,7 @@ public struct MihomoController: @unchecked Sendable {
     }
 
     /// `GET /proxies` → `{ "proxies": { name: Proxy } }`.
-    public func proxies() async throws -> [String: Proxy] {
+    public func proxies() async throws(MihomoControllerError) -> [String: Proxy] {
         let req = makeRequest(path: "proxies", timeout: 5)
         let data = try await perform(req)
         do {
@@ -119,11 +119,15 @@ public struct MihomoController: @unchecked Sendable {
 
     /// `PUT /proxies/{group}` body `{"name": <node>}`. 204 on success.
     /// 400 if the group is not a Selector (URLTest/Fallback/LoadBalance).
-    public func select(group: String, name: String) async throws {
+    public func select(group: String, name: String) async throws(MihomoControllerError) {
         var req = makeRequest(path: "proxies/\(Self.percentEncodeSegment(group))", timeout: 5)
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: ["name": name])
+        do {
+            req.httpBody = try JSONSerialization.data(withJSONObject: ["name": name])
+        } catch {
+            throw MihomoControllerError.decoding(error)
+        }
         _ = try await perform(req)
     }
 
@@ -138,7 +142,7 @@ public struct MihomoController: @unchecked Sendable {
         url: String? = nil,
         timeoutMs: Int? = nil,
         expectedStatus: String? = nil
-    ) async throws -> [String: Int] {
+    ) async throws(MihomoControllerError) -> [String: Int] {
         let resolvedURL = (url?.isEmpty == false) ? url! : Self.defaultTestURL
         let resolvedTimeout = timeoutMs ?? Self.defaultTimeoutMs
         var queryItems = [
@@ -209,21 +213,23 @@ public struct MihomoController: @unchecked Sendable {
         s.addingPercentEncoding(withAllowedCharacters: pathSegmentAllowed) ?? s
     }
 
-    private func perform(_ request: URLRequest) async throws -> Data {
+    private func perform(_ request: URLRequest) async throws(MihomoControllerError) -> Data {
+        let data: Data
+        let response: URLResponse
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                throw MihomoControllerError.invalidResponse
-            }
-            guard (200..<300).contains(http.statusCode) else {
-                let body = String(data: data, encoding: .utf8) ?? ""
-                throw MihomoControllerError.requestFailed(status: http.statusCode, body: body)
-            }
-            return data
-        } catch let err as MihomoControllerError {
-            throw err
+            (data, response) = try await session.data(for: request)
         } catch let err as URLError {
             throw MihomoControllerError.transport(err)
+        } catch {
+            throw MihomoControllerError.invalidResponse
         }
+        guard let http = response as? HTTPURLResponse else {
+            throw MihomoControllerError.invalidResponse
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw MihomoControllerError.requestFailed(status: http.statusCode, body: body)
+        }
+        return data
     }
 }
