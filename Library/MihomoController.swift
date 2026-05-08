@@ -84,7 +84,12 @@ public enum MihomoControllerError: LocalizedError {
 /// spec for the auth-assumption caveat.
 public struct MihomoController {
     public static let defaultBaseURL = URL(string: "http://127.0.0.1:9090")!
-    public static let defaultTestURL = "http://www.gstatic.com/generate_204"
+    /// Match `C.DefaultTestURL` in mihomo (constant/adapters.go). Selector
+    /// groups whose test URL equals the default omit `testUrl` from their
+    /// JSON (adapter/outboundgroup/selector.go), so a nil `Proxy.testUrl`
+    /// means "use mihomo's default" — falling back to `http` here would
+    /// quietly probe a different scheme than the configured/default.
+    public static let defaultTestURL = "https://www.gstatic.com/generate_204"
     public static let defaultTimeoutMs = 5000
 
     private let baseURL: URL

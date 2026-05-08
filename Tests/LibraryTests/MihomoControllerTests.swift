@@ -35,7 +35,7 @@ final class MihomoControllerTests: XCTestCase {
         let url = controller.makeURL(
             path: "group/\(segment)/delay",
             queryItems: [
-                URLQueryItem(name: "url", value: "http://www.gstatic.com/generate_204"),
+                URLQueryItem(name: "url", value: "https://www.gstatic.com/generate_204"),
                 URLQueryItem(name: "timeout", value: "5000"),
             ]
         )
