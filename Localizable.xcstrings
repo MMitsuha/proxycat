@@ -58,6 +58,18 @@
         }
       }
     },
+    "7 days" : {
+      "comment" : "Statistics range picker: 7-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 天"
+          }
+        }
+      }
+    },
     "14 days" : {
       "comment" : "Statistics range picker: 14-day window.",
       "extractionState" : "manual",
@@ -78,18 +90,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 天"
-          }
-        }
-      }
-    },
-    "7 days" : {
-      "comment" : "Statistics range picker: 7-day window.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 天"
           }
         }
       }
@@ -304,6 +304,17 @@
         }
       }
     },
+    "Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "限制 Saved Logs 中保留的每会话日志文件数量。当前会话始终保留。修改此设置、应用进入前台或打开 Saved Logs 列表时会清理较旧的文件。"
+          }
+        }
+      }
+    },
     "Cellular" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -469,17 +480,6 @@
         }
       }
     },
-    "Connected" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已连接"
-          }
-        }
-      }
-    },
     "Connect the tunnel to start collecting daily usage." : {
       "comment" : "Statistics empty state subtitle.",
       "extractionState" : "manual",
@@ -488,6 +488,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "连接隧道以开始收集每日流量记录。"
+          }
+        }
+      }
+    },
+    "Connected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接"
           }
         }
       }
@@ -939,6 +950,18 @@
         }
       }
     },
+    "Forever" : {
+      "comment" : "Saved-log retention picker option that keeps every session log file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永久保留"
+          }
+        }
+      }
+    },
     "Go" : {
       "comment" : "Row label in Advanced Settings → Runtime, paired with the Go toolchain version used to build mihomo.",
       "extractionState" : "manual",
@@ -1046,6 +1069,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在本设备上至少在仪表盘点击一次「连接」后,iOS 才会启用自动连接。"
+          }
+        }
+      }
+    },
+    "Keep last 10 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 10 次会话"
+          }
+        }
+      }
+    },
+    "Keep last 50 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 50 次会话"
+          }
+        }
+      }
+    },
+    "Keep last 100 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 100 次会话"
           }
         }
       }
@@ -1206,6 +1265,17 @@
         }
       }
     },
+    "No assets bundled with this build." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此构建未内置任何资源。"
+          }
+        }
+      }
+    },
     "No daily totals yet." : {
       "comment" : "Statistics: empty list when no daily entries have been recorded.",
       "extractionState" : "manual",
@@ -1214,17 +1284,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无每日流量记录。"
-          }
-        }
-      }
-    },
-    "No assets bundled with this build." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此构建未内置任何资源。"
           }
         }
       }
@@ -1599,6 +1658,18 @@
         }
       }
     },
+    "Retention" : {
+      "comment" : "Saved-log retention picker label in Settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留策略"
+          }
+        }
+      }
+    },
     "Retry" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1875,6 +1946,16 @@
         }
       }
     },
+    "This deletes %@ saved log files. The active session is preserved." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这将删除 %@ 个已保存的日志文件。当前活动会话会被保留。"
+          }
+        }
+      }
+    },
     "This deletes %lld saved log files. The active session is preserved." : {
       "comment" : "Confirmation message for the Saved Logs → Delete All action.",
       "extractionState" : "manual",
@@ -2072,77 +2153,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "封装提交"
-          }
-        }
-      }
-    },
-    "Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "限制 Saved Logs 中保留的每会话日志文件数量。当前会话始终保留。修改此设置、应用进入前台或打开 Saved Logs 列表时会清理较旧的文件。"
-          }
-        }
-      }
-    },
-    "Forever" : {
-      "comment" : "Saved-log retention picker option that keeps every session log file.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "永久保留"
-          }
-        }
-      }
-    },
-    "Keep last 10 sessions" : {
-      "comment" : "Saved-log retention picker option.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留最近 10 次会话"
-          }
-        }
-      }
-    },
-    "Keep last 50 sessions" : {
-      "comment" : "Saved-log retention picker option.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留最近 50 次会话"
-          }
-        }
-      }
-    },
-    "Keep last 100 sessions" : {
-      "comment" : "Saved-log retention picker option.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留最近 100 次会话"
-          }
-        }
-      }
-    },
-    "Retention" : {
-      "comment" : "Saved-log retention picker label in Settings.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留策略"
           }
         }
       }
