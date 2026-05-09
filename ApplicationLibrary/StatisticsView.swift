@@ -34,10 +34,13 @@ public struct StatisticsView: View {
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Statistics")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(
+        // .alert (modal) instead of .confirmationDialog: iOS 26 renders
+        // confirmationDialog as a popover whose full-screen dismiss
+        // region eats a rapid second tap on the trigger button, making
+        // it look like Reset needs two taps. See SettingsView.
+        .alert(
             "Reset statistics?",
-            isPresented: $showResetConfirm,
-            titleVisibility: .visible
+            isPresented: $showResetConfirm
         ) {
             Button("Reset", role: .destructive) { dailyUsage.reset() }
             Button("Cancel", role: .cancel) {}

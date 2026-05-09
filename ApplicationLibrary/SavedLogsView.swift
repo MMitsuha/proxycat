@@ -55,10 +55,13 @@ public struct SavedLogsView: View {
                 }
             }
         }
-        .confirmationDialog(
+        // .alert (modal) instead of .confirmationDialog: iOS 26 renders
+        // confirmationDialog as a popover whose full-screen dismiss
+        // region eats a rapid second tap on the trigger, making Delete
+        // All look like it needs two taps. See SettingsView.
+        .alert(
             "Delete all saved logs?",
-            isPresented: $model.confirmDeleteAll,
-            titleVisibility: .visible
+            isPresented: $model.confirmDeleteAll
         ) {
             Button("Delete All", role: .destructive) { model.deleteAll() }
             Button("Cancel", role: .cancel) {}
