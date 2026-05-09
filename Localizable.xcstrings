@@ -1875,17 +1875,6 @@
         }
       }
     },
-    "This deletes %@ saved log files. The active session is preserved." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这将删除 %@ 个已保存的日志文件。当前活动会话会被保留。"
-          }
-        }
-      }
-    },
     "This deletes %lld saved log files. The active session is preserved." : {
       "comment" : "Confirmation message for the Saved Logs → Delete All action.",
       "extractionState" : "manual",
