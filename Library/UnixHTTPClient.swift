@@ -238,19 +238,22 @@ public struct UnixHTTPClient: Sendable {
             }
             idx = term.upperBound
             if size == 0 { return out }
-            let chunkEnd = raw.index(idx, offsetBy: size)
-            guard chunkEnd <= raw.endIndex else {
+            // `limitedBy:` defends against an adversarial size that
+            // overruns the buffer; `Data.index(_:offsetBy:)` itself
+            // doesn't validate, and `subdata(in:)` would trap on the
+            // out-of-range slice that follows.
+            guard let chunkEnd = raw.index(idx, offsetBy: size, limitedBy: raw.endIndex) else {
                 throw UnixHTTPError.malformedResponse("chunked: short chunk")
             }
             out.append(raw.subdata(in: idx ..< chunkEnd))
             idx = chunkEnd
             // Expect CRLF after each chunk's data.
-            guard raw.index(idx, offsetBy: 2) <= raw.endIndex,
+            guard let crlfEnd = raw.index(idx, offsetBy: 2, limitedBy: raw.endIndex),
                   raw[idx] == 0x0D, raw[idx + 1] == 0x0A
             else {
                 throw UnixHTTPError.malformedResponse("chunked: missing chunk CRLF")
             }
-            idx = raw.index(idx, offsetBy: 2)
+            idx = crlfEnd
         }
         return out
     }
