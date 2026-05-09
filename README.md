@@ -30,11 +30,15 @@ proxycat/
 ├── scripts/
 │   └── build-libmihomo.sh  gomobile bind → Frameworks/Libmihomo.xcframework
 ├── Library/                共享 Swift framework：
+│                           AppConfiguration（共享常量）/ FilePath（AppGroup 路径）/
 │                           LibmihomoBridge / ExtensionProfile / ExtensionEnvironment /
-│                           CommandClient / RuntimeSettings / HostSettingsStore /
-│                           DailyUsageStore / AutoConnect / Profile /
-│                           ProxiesStore / ConnectionsStore /
-│                           MemoryMonitor / FilePath（AppGroup 路径辅助）
+│                           ExtensionCoordinators（VPN 生命周期 / 设置 / Auto Connect / 流量）/
+│                           CommandClient / MihomoController / UnixHTTPClient /
+│                           RuntimeSettings / HostSettingsStore / JSONFileStore /
+│                           Profile / ProxiesStore / ConnectionsStore /
+│                           DailyUsage / DailyUsageStore / AutoConnect /
+│                           TrafficSnapshot / LogEntry / Observed / ExponentialBackoff /
+│                           BundledAssets / MemoryMonitor
 ├── ApplicationLibrary/     SwiftUI 视图：Dashboard / Profiles (含编辑器与下载) /
 │                           Logs (含 SavedLogs) / Connections / Proxies /
 │                           Settings (含 Statistics / AutoConnect / Advanced)
@@ -42,7 +46,7 @@ proxycat/
 ├── PcatExtension/          Network Extension target（PacketTunnelProvider）
 ├── Tests/LibraryTests/     Swift Testing 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
 │                           AutoConnect / DailyUsage / MemoryStats / TrafficSnapshot /
-│                           ByteFormatter / LogEntry / Profile codable，
+│                           ByteFormatter / LogEntry / Profile codable / MihomoController，
 │                           运行: `xcodebuild test -scheme Library`
 ├── project.yml             XcodeGen 描述文件 — 用于（重新）生成 ProxyCat.xcodeproj
 ├── Makefile                构建编排

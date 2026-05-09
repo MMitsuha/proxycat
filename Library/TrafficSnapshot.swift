@@ -19,8 +19,8 @@ public struct TrafficSnapshot: Equatable, Sendable {
 }
 
 /// Memory state of the Network Extension process. Values are produced by
-/// the extension itself and shipped to the host via the shared
-/// `traffic.json` snapshot — the host process can NOT read the extension's
+/// the extension itself and shipped to the host inside every gRPC
+/// `StatusMessage` frame — the host process can NOT read the extension's
 /// memory directly, the kernels are separate.
 public struct MemoryStats: Equatable, Sendable {
     /// Bytes the kernel currently bills against the process. This is the

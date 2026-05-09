@@ -4,9 +4,8 @@ import NetworkExtension
 /// Coordinators that ExtensionEnvironment composes. Each one owns a
 /// single cross-cutting concern (VPN lifecycle, settings reloads, auto
 /// connect rules, traffic accounting) and exposes a tiny `start` API
-/// plus an optional error callback. Splitting them out shrank the
-/// previous 277-line ExtensionEnvironment to a thin wirer that holds
-/// the four concerns and forwards their errors to the UI.
+/// plus an optional error callback. ExtensionEnvironment wires their
+/// error callbacks back into observed UI surfaces.
 ///
 /// Each coordinator owns its own observation Task(s); deinit
 /// cancels them so cleanup is automatic on dealloc — no manually

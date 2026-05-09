@@ -5,11 +5,12 @@ import UIKit
 
 /// Streaming log viewer with the user-requested controls:
 ///   • Log level filter — defaults to `.warning`, persisted across launches
-///     in `RuntimeSettings.shared` (which writes settings.json in the App
-///     Group). The Go core re-reads that file on every reload, so a
-///     change here propagates to mihomo without going through any
-///     dedicated IPC. The YAML profile's `log-level:` key is
-///     intentionally ignored.
+///     in `RuntimeSettings.shared` (which writes `runtime_settings.json`
+///     in the App Group). Changes propagate to the running extension
+///     via the lightweight gRPC `SetLogLevel` RPC (no `hub.ApplyConfig`
+///     reload), and the same value seeds mihomo on the next Start. The
+///     YAML profile's `log-level:` key is intentionally ignored — the
+///     host app owns this setting at runtime.
 ///   • Debounced search box
 ///   • "Copy All" — copies every line currently visible under the active
 ///     filter to UIPasteboard.

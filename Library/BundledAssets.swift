@@ -30,8 +30,9 @@ public struct BundledAsset: Sendable, Hashable, Identifiable {
 /// Layout inside the project's `BundledAssets/` folder reference:
 ///   - `geo/<file>`  — single files copied to `<workingDir>/<file>`
 ///   - `ui/`         — entire directory copied to `<workingDir>/ui/`
-/// Anything else is reported as `.other` so it still shows up in
-/// Settings even if it doesn't fit the two known kinds.
+/// Anything outside those two roots is silently skipped — extend
+/// `discover()` and `BundledAsset.Kind` if a new asset family is
+/// added.
 public enum BundledAssets {
     private static let logger = Logger(subsystem: "io.proxycat.Library", category: "BundledAssets")
 

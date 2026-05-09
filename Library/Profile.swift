@@ -28,9 +28,11 @@ public final class ProfileStore {
     public static let shared = ProfileStore()
 
     /// Posted whenever the active profile selection changes, or the
-    /// active profile's YAML on disk is rewritten. Subscribers (e.g.
-    /// `ExtensionEnvironment`) use this to hot-reload the running
-    /// tunnel so it picks up the new config without a full restart.
+    /// active profile's YAML on disk is rewritten. Picked up by
+    /// `SettingsChangeCoordinator` (composed inside
+    /// `ExtensionEnvironment`), which fires the gRPC `Reload` RPC so
+    /// the running tunnel hot-applies the new config without a full
+    /// restart.
     public static let activeContentDidChange = Notification.Name("io.proxycat.ProfileStore.activeContentDidChange")
 
     public private(set) var profiles: [Profile] = []

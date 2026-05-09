@@ -46,18 +46,16 @@ public struct ExponentialBackoff: Sendable {
 }
 
 /// "Retry an async block until cancelled, with exponential backoff between
-/// attempts that succeed → reset, fail → sleep." Same shape ConnectionsStore
-/// and CommandClient both used to implement inline. Pulling it out:
+/// attempts." The body returns `true` to mean "made progress, reset the
+/// backoff" and `false` to mean "transient error, sleep before retrying."
 ///
-///   1. Means there is one place to fix backoff bugs.
-///   2. Lets tests exercise the loop without spinning a real network.
-///   3. Documents the contract: the body returns true to mean "made
-///      progress, reset the backoff" and false to mean "transient error,
-///      sleep before retrying."
+/// Used by `ConnectionsStore`'s `/connections` poll loop. `CommandClient`
+/// drives `ExponentialBackoff` directly because its reconnect cycle has
+/// to interleave Go-runtime teardown between attempt and wait.
 public enum RetryLoop {
     /// Drives `body` in a loop until the surrounding task is cancelled.
-    /// Returns true after a successful attempt, false to keep backing off.
-    /// The body receives the current backoff delay (ms) for telemetry.
+    /// `body` returns true after a successful attempt (resets the backoff)
+    /// or false to keep backing off.
     public static func run(
         backoff: ExponentialBackoff = ExponentialBackoff(),
         body: @Sendable () async -> Bool
