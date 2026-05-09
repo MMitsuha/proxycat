@@ -90,6 +90,15 @@ public enum FilePath {
         sharedDirectory.appendingPathComponent(AppConfiguration.dailyUsageFileName).path
     }
 
+    /// Path of the profile catalog JSON. Lives inside the profiles
+    /// directory; the Go core reads it to resolve the active profile
+    /// UUID to a YAML path. Both `ProfileStore` (host) and
+    /// `LibmihomoBridge.setProfileIndexPath` (extension) compute the
+    /// same path through this helper so the literal lives in one place.
+    public static var profileIndexFilePath: String {
+        profilesDirectory.appendingPathComponent(AppConfiguration.profileIndexFileName).path
+    }
+
     private static func ensureSubdirectory(_ name: String) -> URL {
         let url = sharedDirectory.appendingPathComponent(name, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

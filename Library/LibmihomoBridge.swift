@@ -84,11 +84,20 @@ public enum LibmihomoBridge {
     }
 
     /// Tell the Go core where the host app's `Profiles/` directory
-    /// lives (containing `index.json` plus one YAML per profile).
-    /// Combined with `setRuntimeSettingsPath` this lets Start / Reload
-    /// load the active YAML themselves — the extension never reads it.
+    /// lives (containing one YAML per profile). Pair with
+    /// `setProfileIndexPath` and `setRuntimeSettingsPath` so Start /
+    /// Reload can resolve the active YAML themselves — the extension
+    /// never reads them.
     public static func setProfilesDir(_ path: String) {
         LibmihomoSetProfilesDir(path)
+    }
+
+    /// Tell the Go core where the host app's profile catalog JSON
+    /// lives. Decoupled from `setProfilesDir` so the index filename
+    /// stays under `AppConfiguration.profileIndexFileName` on the
+    /// Swift side rather than being duplicated as a literal in Go.
+    public static func setProfileIndexPath(_ path: String) {
+        LibmihomoSetProfileIndexPath(path)
     }
 
     /// Configure the Go OOM killer's per-process memory budget. Pass 0 to

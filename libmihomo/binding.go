@@ -39,12 +39,6 @@ const (
 	logLevelMax = 4
 )
 
-// Filename of the profile catalog inside `profilesDir`. Must match
-// `AppConfiguration.profileIndexFileName` on the Swift side — the host
-// app writes it, the Go core reads it. Single source of literal truth
-// per language; values are kept identical by code review.
-const profileIndexFileName = "index.json"
-
 // Virtual TUN addresses installed in fd-mode. They MUST match the
 // NEPacketTunnelNetworkSettings configured by PacketTunnelProvider so
 // gvisor's netstack recognises incoming packets as locally addressed.
@@ -62,6 +56,7 @@ var (
 	socketPath           atomicString
 	controllerSocketPath atomicString
 	profilesDir          atomicString
+	profileIndexPath     atomicString
 )
 
 // errMihomoNotStarted is returned by Reload when the core hasn't been
@@ -106,11 +101,21 @@ func SetHomeDir(path string) {
 }
 
 // SetProfilesDir tells the wrapper where the host app's `Profiles/`
-// directory lives (containing `index.json` plus one YAML per profile).
-// Combined with SetRuntimeSettingsPath this lets Start / Reload load
-// the active profile YAML on demand.
+// directory lives (containing one YAML per profile, named by the
+// `fileName` field of each `index.json` entry). Combined with
+// `SetProfileIndexPath` and `SetRuntimeSettingsPath` this lets Start /
+// Reload resolve the active profile YAML on demand.
 func SetProfilesDir(path string) {
 	profilesDir.Store(path)
+}
+
+// SetProfileIndexPath tells the wrapper where the host app's profile
+// catalog JSON lives. Decoupled from `SetProfilesDir` so the index
+// can be relocated (or the filename centralised on the Swift side
+// via `AppConfiguration.profileIndexFileName`) without baking the
+// literal into the Go wrapper. Call before Start.
+func SetProfileIndexPath(path string) {
+	profileIndexPath.Store(path)
 }
 
 // profileEntry is the subset of Library/Profile.swift's `Profile` shape
@@ -135,12 +140,15 @@ func loadActiveYAML(settings RuntimeSettings) ([]byte, error) {
 	if dir == "" {
 		return nil, fmt.Errorf("profiles directory not configured (call SetProfilesDir)")
 	}
+	indexPath := profileIndexPath.Load()
+	if indexPath == "" {
+		return nil, fmt.Errorf("profile index path not configured (call SetProfileIndexPath)")
+	}
 	id := strings.TrimSpace(settings.ActiveProfileID)
 	if id == "" {
 		return nil, fmt.Errorf("no active profile selected")
 	}
 
-	indexPath := filepath.Join(dir, profileIndexFileName)
 	indexRaw, err := os.ReadFile(indexPath)
 	if err != nil {
 		return nil, fmt.Errorf("read profile index: %w", err)

@@ -71,6 +71,7 @@ public final class ExtensionEnvironment {
         LibmihomoBridge.setHomeDir(FilePath.workingDirectory.path)
         LibmihomoBridge.setRuntimeSettingsPath(FilePath.runtimeSettingsFilePath)
         LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
+        LibmihomoBridge.setProfileIndexPath(FilePath.profileIndexFilePath)
         BundledAssets.installIfNeeded()
     }
 

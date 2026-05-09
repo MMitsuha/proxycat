@@ -186,9 +186,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
         // Wire the on-disk shared state Go reads on every Reload:
         // runtime_settings.json (active profile id, controller toggle,
-        // log level) and the profiles directory.
+        // log level), the profiles directory, and the profile catalog
+        // JSON inside it.
         LibmihomoBridge.setRuntimeSettingsPath(FilePath.runtimeSettingsFilePath)
         LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
+        LibmihomoBridge.setProfileIndexPath(FilePath.profileIndexFilePath)
 
         // Where per-session log files land for the Saved Logs UI.
         LibmihomoBridge.setLogFileDir(FilePath.logsDirectory.path)
