@@ -89,10 +89,14 @@ public struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .task { await refreshCacheSize() }
-        .confirmationDialog(
+        // .alert (modal) instead of .confirmationDialog: on iOS 26 the
+        // dialog renders as a popover with a full-screen dismiss region,
+        // so an impatient second tap on the trigger button lands on the
+        // dismiss region and cancels the popover the first tap just
+        // opened — the user reads it as "needed two taps".
+        .alert(
             "Clear cache?",
-            isPresented: $showClearConfirm,
-            titleVisibility: .visible
+            isPresented: $showClearConfirm
         ) {
             Button("Clear", role: .destructive) { clearCache() }
             Button("Cancel", role: .cancel) {}
