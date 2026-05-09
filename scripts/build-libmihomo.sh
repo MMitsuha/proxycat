@@ -74,10 +74,10 @@ SHIM
   chmod +x "$LIBMIHOMO_SHIM_DIR/go"
   export LIBMIHOMO_REAL_GO LIBMIHOMO_GARBLE_BIN
   # -literals obfuscates strings/numbers — biggest contributor to binary
-  # diversity vs other mihomo apps. Skip -tiny so log[level=warning]
-  # stack frames stay readable (runtime.Caller would otherwise return
-  # zero PCs, making field bug reports useless).
-  export LIBMIHOMO_GARBLE_FLAGS="-literals"
+  # diversity vs other mihomo apps. -tiny strips line/file info and zeroes
+  # out runtime.Caller PCs, shrinking the binary further at the cost of
+  # readable log[level=warning] stack frames in field reports.
+  export LIBMIHOMO_GARBLE_FLAGS="-literals -tiny"
   export LIBMIHOMO_REAL_PATH="$PATH"
   export PATH="$LIBMIHOMO_SHIM_DIR:$PATH"
   echo "==> Obfuscated build via $("$LIBMIHOMO_GARBLE_BIN" version | head -1)"
