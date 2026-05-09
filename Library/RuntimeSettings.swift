@@ -99,7 +99,7 @@ public final class RuntimeSettings {
         guard let id = snapshot.activeProfileID else {
             throw ProfileError.noProfileSelected
         }
-        let indexURL = FilePath.profilesDirectory.appendingPathComponent("index.json")
+        let indexURL = FilePath.profilesDirectory.appendingPathComponent(AppConfiguration.profileIndexFileName)
         let indexData = try Data(contentsOf: indexURL)
         let profiles = try JSONDecoder().decode([Profile].self, from: indexData)
         guard let profile = profiles.first(where: { $0.id == id }) else {

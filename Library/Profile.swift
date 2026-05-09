@@ -41,7 +41,7 @@ public final class ProfileStore {
     /// lose persistence.
     public private(set) var activeProfileID: UUID?
 
-    @ObservationIgnored private let indexURL: URL = FilePath.profilesDirectory.appendingPathComponent("index.json")
+    @ObservationIgnored private let indexURL: URL = FilePath.profilesDirectory.appendingPathComponent(AppConfiguration.profileIndexFileName)
 
     private init() {
         reload()

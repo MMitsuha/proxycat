@@ -38,6 +38,14 @@ public enum AppConfiguration {
     /// host-side JSONs; the Go core never touches it.
     public static let dailyUsageFileName = "daily_usage.json"
 
+    /// Filename of the profile catalog index. Lives inside
+    /// `Profiles/` alongside the per-profile YAMLs and maps each
+    /// profile UUID to its display name and on-disk filename. Written
+    /// by `ProfileStore`; read by the Go core (libmihomo/binding.go)
+    /// to resolve the active profile UUID from `runtime_settings.json`
+    /// to a YAML path.
+    public static let profileIndexFileName = "index.json"
+
     /// Posted by RuntimeSettings when the user changes a runtime
     /// preference *other than* log level (or when log level changes
     /// alongside another field). Subscribers (ExtensionEnvironment)
