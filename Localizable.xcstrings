@@ -2076,6 +2076,17 @@
         }
       }
     },
+    "Wrapper commit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "封装提交"
+          }
+        }
+      }
+    },
     "Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
       "extractionState" : "manual",
       "localizations" : {

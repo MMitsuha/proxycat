@@ -33,6 +33,7 @@ struct AdvancedSettingsView: View {
             Section("Runtime") {
                 copyableRow("Go", value: v.go, mono: true)
                 copyableRow("Platform", value: v.platform, mono: true)
+                copyableRow("Wrapper commit", value: v.wrapperCommit, mono: true)
                 copyableRow("Wrapper built", value: v.wrapperBuildTime, mono: true)
             }
 

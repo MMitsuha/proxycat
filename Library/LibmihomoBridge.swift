@@ -203,6 +203,7 @@ public struct VersionInfo: Sendable, Hashable {
     public let mihomoBuildTime: String
     public let mihomoCommit: String
     public let wrapperBuildTime: String
+    public let wrapperCommit: String
     public let buildTags: String
     public let go: String
     public let platform: String
@@ -213,6 +214,7 @@ public struct VersionInfo: Sendable, Hashable {
         self.mihomoBuildTime = go?.mihomoBuildTime ?? "unknown"
         self.mihomoCommit = go?.mihomoCommit ?? "unknown"
         self.wrapperBuildTime = go?.wrapperBuildTime ?? "unknown"
+        self.wrapperCommit = go?.wrapperCommit ?? "unknown"
         self.buildTags = go?.buildTags ?? ""
         self.go = go?.go ?? ""
         self.platform = go?.platform ?? ""

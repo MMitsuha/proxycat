@@ -441,6 +441,7 @@ var (
 	wrapperBuildTime = "unknown"
 	wrapperBuildTag  = "with_gvisor"
 	mihomoCommit     = "unknown"
+	wrapperCommit    = "unknown"
 )
 
 // VersionInfo holds build-time identifying information about the embedded
@@ -457,6 +458,10 @@ type VersionInfo struct {
 	MihomoCommit string
 	// Time the xcframework itself was assembled.
 	WrapperBuildTime string
+	// Wrapper repo commit hash captured by the build script from the
+	// outer proxycat checkout (distinct from MihomoCommit, which tracks
+	// the embedded mihomo submodule).
+	WrapperCommit string
 	// Build tags used when compiling (e.g. "with_gvisor").
 	BuildTags string
 	// Go runtime / compiler version, e.g. "go1.26.2".
@@ -475,6 +480,7 @@ func Version() *VersionInfo {
 		MihomoBuildTime:  C.BuildTime,
 		MihomoCommit:     mihomoCommit,
 		WrapperBuildTime: wrapperBuildTime,
+		WrapperCommit:    wrapperCommit,
 		BuildTags:        wrapperBuildTag,
 		Go:               runtime.Version(),
 		Platform:         runtime.GOOS + "/" + runtime.GOARCH,
