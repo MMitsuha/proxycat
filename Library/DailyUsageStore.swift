@@ -151,7 +151,7 @@ public final class DailyUsageStore {
         guard flushTask == nil else { return }
         let delay = persistInterval
         flushTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            try? await Task.sleep(for: .seconds(delay))
             guard let self else { return }
             self.flushTask = nil
             if self.dirty {

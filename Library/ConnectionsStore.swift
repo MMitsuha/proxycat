@@ -297,11 +297,7 @@ public final class ConnectionsStore {
         // Wait the rest of the interval before the next poll. Cancellation
         // throws out of `Task.sleep`, which we treat as a clean exit
         // (RetryLoop will see `Task.isCancelled` and stop).
-        do {
-            try await Task.sleep(for: Self.pollInterval)
-        } catch {
-            return true
-        }
+        try? await Task.sleep(for: Self.pollInterval)
         return true
     }
 

@@ -205,7 +205,7 @@ public final class CommandClient {
         isConnected = true
     }
 
-    fileprivate func didDisconnect(_ reason: String) {
+    fileprivate func didDisconnect() {
         isConnected = false
     }
 
@@ -256,8 +256,8 @@ private final class ClientBridge: NSObject, LibmihomoCommandClientHandlerProtoco
         Task { @MainActor [weak owner] in owner?.didConnect() }
     }
 
-    func disconnected(_ message: String?) {
-        Task { @MainActor [weak owner] in owner?.didDisconnect(message ?? "") }
+    func disconnected(_: String?) {
+        Task { @MainActor [weak owner] in owner?.didDisconnect() }
         disconnect.signal()
     }
 

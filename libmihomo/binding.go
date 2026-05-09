@@ -366,11 +366,6 @@ func Stop() {
 	started.Store(false)
 }
 
-// IsRunning reports whether the core is currently up.
-func IsRunning() bool {
-	return started.Load()
-}
-
 // SetTunFd installs a TUN file descriptor obtained from
 // NEPacketTunnelProvider. Must be called before Start. Pass 0 to clear.
 //

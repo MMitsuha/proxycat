@@ -98,12 +98,6 @@ public enum LibmihomoBridge {
         LibmihomoSetMemoryLimit(limit)
     }
 
-    /// Current process resident memory (phys_footprint). Same source the
-    /// Go OOM killer reads, so dashboards using this match its perspective.
-    public static func memoryUsage() -> Int64 {
-        LibmihomoMemoryUsage()
-    }
-
     /// Parses the YAML and throws on syntax / semantic errors. Doesn't
     /// apply anything; safe to call from the host app while the tunnel
     /// is running. Used by the profile editor before saving — unrelated

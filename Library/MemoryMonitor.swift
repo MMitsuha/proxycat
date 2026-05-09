@@ -100,15 +100,15 @@ public final class MemoryMonitor: @unchecked Sendable {
     }
 
     /// Bytes still available to this process before the kernel kills it.
-    /// Wraps `os_proc_available_memory()` (iOS 13+). Returns 0 on platforms
-    /// where the call is unavailable.
+    /// Wraps `os_proc_available_memory()` — iOS / tvOS / watchOS only;
+    /// returns 0 on macOS / Linux test runs so callers can stay
+    /// platform-agnostic.
     public static func availableBytes() -> Int {
         #if os(iOS) || os(tvOS) || os(watchOS)
-        if #available(iOS 13.0, tvOS 13.0, watchOS 6.0, *) {
-            return os_proc_available_memory()
-        }
-        #endif
+        return os_proc_available_memory()
+        #else
         return 0
+        #endif
     }
 
     /// Bytes the kernel currently bills against this process. This is
@@ -132,10 +132,5 @@ public final class MemoryMonitor: @unchecked Sendable {
             return Int(info.phys_footprint)
         }
         return 0
-    }
-
-    /// Snapshot of both numbers, captured atomically.
-    public static func snapshot() -> MemoryStats {
-        MemoryStats(resident: residentBytes(), available: availableBytes())
     }
 }

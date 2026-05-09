@@ -230,14 +230,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             "_socket._fileDescriptor",
         ]
         for keyPath in candidates {
-            if let n = packetFlow.value(forKeyPath: keyPath) as? NSNumber {
-                let fd = n.int32Value
-                if fd > 0 {
-                    Self.logger.info("found tun fd via KVC \(keyPath, privacy: .public) = \(fd, privacy: .public)")
-                    return fd
-                }
-            }
-            if let fd = packetFlow.value(forKeyPath: keyPath) as? Int32, fd > 0 {
+            // KVC may surface the fd as either a boxed NSNumber or as a
+            // raw Int32 depending on the iOS runtime; accept both.
+            let raw = packetFlow.value(forKeyPath: keyPath)
+            let fd = (raw as? NSNumber)?.int32Value ?? (raw as? Int32) ?? 0
+            if fd > 0 {
                 Self.logger.info("found tun fd via KVC \(keyPath, privacy: .public) = \(fd, privacy: .public)")
                 return fd
             }

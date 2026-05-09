@@ -190,14 +190,6 @@ public final class ProfileStore {
         }.value
     }
 
-    /// Updates the in-memory profile and persists the index. Caller is
-    /// responsible for ensuring the profile id still exists.
-    public func rename(_ profile: Profile) throws {
-        guard let idx = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
-        profiles[idx] = profile
-        try persist()
-    }
-
     public func delete(_ profile: Profile) throws {
         let url = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
         try? FileManager.default.removeItem(at: url)

@@ -28,7 +28,7 @@ public final class RuntimeSettings {
     public var activeProfileID: UUID? {
         didSet {
             guard loaded, activeProfileID != oldValue else { return }
-            persist()
+            _ = persist()
             // Asymmetric vs the other properties: ProfileStore.setActive
             // is the user-facing entry point and posts
             // activeContentDidChange itself, so we don't double-notify
@@ -40,7 +40,11 @@ public final class RuntimeSettings {
     public var disableExternalController: Bool {
         didSet {
             guard loaded, disableExternalController != oldValue else { return }
-            persist()
+            // Don't broadcast on persist failure: subscribers (the
+            // settings reload coordinator) would call `Reload`, the Go
+            // core would re-read the on-disk file with the OLD value,
+            // and the toggle would silently revert.
+            guard persist() else { return }
             NotificationCenter.default.post(
                 name: AppConfiguration.runtimeSettingsDidChange,
                 object: nil
@@ -51,7 +55,7 @@ public final class RuntimeSettings {
     public var logLevel: Int {
         didSet {
             guard loaded, logLevel != oldValue else { return }
-            persist()
+            guard persist() else { return }
             LibmihomoBridge.setLogLevel(logLevel)
             NotificationCenter.default.post(
                 name: AppConfiguration.runtimeLogLevelDidChange,
@@ -75,13 +79,14 @@ public final class RuntimeSettings {
         self.loaded = true
     }
 
-    private func persist() {
+    @discardableResult
+    private func persist() -> Bool {
         let snapshot = Snapshot(
             activeProfileID: activeProfileID,
             disableExternalController: disableExternalController,
             logLevel: logLevel
         )
-        JSONFileStore.saveOrLog(
+        return JSONFileStore.saveOrLog(
             snapshot,
             to: FilePath.runtimeSettingsFilePath,
             category: "RuntimeSettings"
