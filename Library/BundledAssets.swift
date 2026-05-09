@@ -1,9 +1,9 @@
 import Foundation
 import os
 
-/// A geo database, external-UI bundle, or other asset that ships
-/// embedded inside the Library framework and gets installed into the
-/// App Group working directory on first run.
+/// A geo database or external-UI bundle that ships embedded inside
+/// the Library framework and gets installed into the App Group
+/// working directory on first run.
 public struct BundledAsset: Sendable, Hashable, Identifiable {
     public enum Kind: String, Sendable, Hashable {
         case geo
