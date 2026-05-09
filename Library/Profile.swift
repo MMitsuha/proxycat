@@ -34,7 +34,12 @@ public final class ProfileStore {
     public static let activeContentDidChange = Notification.Name("io.proxycat.ProfileStore.activeContentDidChange")
 
     public private(set) var profiles: [Profile] = []
-    public var activeProfileID: UUID?
+    /// Mirror of `RuntimeSettings.shared.activeProfileID`. Read-only
+    /// from outside; mutate exclusively through `setActive` / `delete`
+    /// so RuntimeSettings (the cross-process source of truth) stays
+    /// in sync. A SwiftUI binding writing this directly would silently
+    /// lose persistence.
+    public private(set) var activeProfileID: UUID?
 
     @ObservationIgnored private let indexURL: URL = FilePath.profilesDirectory.appendingPathComponent("index.json")
 

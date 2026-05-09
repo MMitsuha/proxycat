@@ -162,7 +162,7 @@ func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_S
 // message text carries the precise reason.
 func (s *commandServiceImpl) Reload(_ context.Context, _ *pb.ReloadRequest) (*pb.ReloadResponse, error) {
 	if err := Reload(); err != nil {
-		if err.Error() == "mihomo not started" {
+		if errors.Is(err, errMihomoNotStarted) {
 			return nil, status.Error(codes.FailedPrecondition, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())

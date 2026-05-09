@@ -16,6 +16,7 @@ package libmihomo
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/netip"
 	"os"
@@ -55,6 +56,12 @@ var (
 	socketPath  atomicString
 	profilesDir atomicString
 )
+
+// errMihomoNotStarted is returned by Reload when the core hasn't been
+// brought up yet. Sentinel so command_server.go can map it to a precise
+// gRPC status code (FailedPrecondition) via errors.Is — matching on the
+// error message text would silently degrade if the wording changed.
+var errMihomoNotStarted = errors.New("mihomo not started")
 
 // Default the log filter to WARNING so a fresh install (no
 // runtime_settings.json yet) and YAML profiles shipping with
@@ -196,7 +203,7 @@ func Reload() error {
 	defer startMu.Unlock()
 
 	if !started.Load() {
-		return fmt.Errorf("mihomo not started")
+		return errMihomoNotStarted
 	}
 
 	settings := loadSettings()

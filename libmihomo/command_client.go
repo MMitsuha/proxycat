@@ -247,14 +247,15 @@ func (c *CommandClient) fireDisconnect(err error) {
 // returns an error whose message is the gRPC status message produced
 // by the server (e.g. "yaml: line 42: mapping values not allowed").
 //
-// Safe to call when the connection isn't established — returns an
-// error promptly rather than queuing. The host treats that as "tunnel
-// not yet up; the file we just wrote will be read on the next Start"
-// and surfaces nothing.
+// Returns nil (not an error) when the connection isn't established:
+// the Swift wrapper guards on its goClient before getting here, so a
+// nil `c.cli` means the client raced with Disconnect between the
+// guard and the gomobile call. runtime_settings.json is the source of
+// truth — a missed nudge becomes a no-op, picked up on the next Start.
 func (c *CommandClient) Reload() error {
 	cli := c.client()
 	if cli == nil {
-		return fmt.Errorf("command client not connected")
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), reloadTimeout)
 	defer cancel()
@@ -266,11 +267,13 @@ func (c *CommandClient) Reload() error {
 
 // SetLogLevel pushes a runtime log filter into the extension's mihomo
 // without triggering a hub.ApplyConfig. Levels: 0=DEBUG 1=INFO
-// 2=WARNING 3=ERROR 4=SILENT (clamped on the server).
+// 2=WARNING 3=ERROR 4=SILENT (clamped on the server). Returns nil when
+// the connection isn't established (same disconnect-race rationale as
+// Reload).
 func (c *CommandClient) SetLogLevel(level int) error {
 	cli := c.client()
 	if cli == nil {
-		return fmt.Errorf("command client not connected")
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), setLogLevelTimeout)
 	defer cancel()
