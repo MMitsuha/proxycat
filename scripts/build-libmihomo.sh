@@ -14,7 +14,11 @@
 #   ./scripts/build-libmihomo.sh sim       # simulator-only (faster iteration)
 #
 # Env:
-#   LIBMIHOMO_OBFUSCATE=1   build through garble (see `make libmihomo-obf`)
+#   LIBMIHOMO_OBFUSCATE=1     build through garble (see `make libmihomo-obf`)
+#   LIBMIHOMO_GARBLE_FLAGS    extra garble flags (e.g. "-literals -tiny");
+#                             empty by default. Only consulted when
+#                             LIBMIHOMO_OBFUSCATE=1. The Makefile forwards
+#                             `make libmihomo-obf GARBLE_FLAGS=…` here.
 
 set -euo pipefail
 
@@ -73,11 +77,12 @@ esac
 SHIM
   chmod +x "$LIBMIHOMO_SHIM_DIR/go"
   export LIBMIHOMO_REAL_GO LIBMIHOMO_GARBLE_BIN
-  # -literals obfuscates strings/numbers — biggest contributor to binary
-  # diversity vs other mihomo apps. -tiny strips line/file info and zeroes
-  # out runtime.Caller PCs, shrinking the binary further at the cost of
-  # readable log[level=warning] stack frames in field reports.
-  export LIBMIHOMO_GARBLE_FLAGS="-literals -tiny"
+  # Default: empty — garble alone (symbol/package rename) is enough to
+  # break binary-similarity hashes vs other mihomo apps. Override with
+  # `make libmihomo-obf GARBLE_FLAGS=…` to add e.g. -literals (scramble
+  # strings, biggest diversity gain) or -tiny (strip line/file info,
+  # at the cost of zeroing runtime.Caller PCs in field stack traces).
+  export LIBMIHOMO_GARBLE_FLAGS="${LIBMIHOMO_GARBLE_FLAGS:-}"
   export LIBMIHOMO_REAL_PATH="$PATH"
   export PATH="$LIBMIHOMO_SHIM_DIR:$PATH"
   echo "==> Obfuscated build via $("$LIBMIHOMO_GARBLE_BIN" version | head -1)"

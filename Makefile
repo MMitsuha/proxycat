@@ -11,6 +11,7 @@ help:
 	@echo "Targets:"
 	@echo "  make libmihomo      build Frameworks/Libmihomo.xcframework via gomobile"
 	@echo "  make libmihomo-obf  same, but routed through garble (App Store submissions)"
+	@echo "                      (extra flags via GARBLE_FLAGS, e.g. GARBLE_FLAGS='-literals -tiny')"
 	@echo "  make project        run xcodegen (auto-fills version from VERSION + git)"
 	@echo "  make version        print the marketing version + build number"
 	@echo "  make all            libmihomo + project (run after first checkout)"
@@ -91,7 +92,7 @@ libmihomo:
 	./scripts/build-libmihomo.sh
 
 libmihomo-obf:
-	LIBMIHOMO_OBFUSCATE=1 ./scripts/build-libmihomo.sh
+	LIBMIHOMO_OBFUSCATE=1 LIBMIHOMO_GARBLE_FLAGS="$(GARBLE_FLAGS)" ./scripts/build-libmihomo.sh
 
 project:
 	XCODEGEN=$(XCODEGEN) ./scripts/generate-project.sh
