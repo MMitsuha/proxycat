@@ -55,7 +55,12 @@ public final class RuntimeSettings {
     public var logLevel: Int {
         didSet {
             guard loaded, logLevel != oldValue else { return }
-            guard persist() else { return }
+            // Apply in-session even when persist fails: the gRPC
+            // SetLogLevel RPC calls `log.SetLevel` directly (it does
+            // not re-read runtime_settings.json), so a failed save
+            // doesn't make the live filter snap back. Disk loses on
+            // cold launch; the running session honors the user's tap.
+            _ = persist()
             LibmihomoBridge.setLogLevel(logLevel)
             NotificationCenter.default.post(
                 name: AppConfiguration.runtimeLogLevelDidChange,

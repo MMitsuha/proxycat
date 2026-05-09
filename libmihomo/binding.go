@@ -39,6 +39,12 @@ const (
 	logLevelMax = 4
 )
 
+// Filename of the profile catalog inside `profilesDir`. Must match
+// `AppConfiguration.profileIndexFileName` on the Swift side — the host
+// app writes it, the Go core reads it. Single source of literal truth
+// per language; values are kept identical by code review.
+const profileIndexFileName = "index.json"
+
 // Virtual TUN addresses installed in fd-mode. They MUST match the
 // NEPacketTunnelNetworkSettings configured by PacketTunnelProvider so
 // gvisor's netstack recognises incoming packets as locally addressed.
@@ -134,7 +140,7 @@ func loadActiveYAML(settings RuntimeSettings) ([]byte, error) {
 		return nil, fmt.Errorf("no active profile selected")
 	}
 
-	indexPath := filepath.Join(dir, "index.json")
+	indexPath := filepath.Join(dir, profileIndexFileName)
 	indexRaw, err := os.ReadFile(indexPath)
 	if err != nil {
 		return nil, fmt.Errorf("read profile index: %w", err)
