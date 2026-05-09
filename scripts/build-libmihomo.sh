@@ -83,10 +83,32 @@ SHIM
   # strings, biggest diversity gain) or -tiny (strip line/file info,
   # at the cost of zeroing runtime.Caller PCs in field stack traces).
   export LIBMIHOMO_GARBLE_FLAGS="${LIBMIHOMO_GARBLE_FLAGS:-}"
+  # Allowlist of modules to obfuscate. GOGARBLE is *includes only* —
+  # `module.MatchPrefixPatterns` has no `!` exclusion syntax (see
+  # x/mod/module.go), so we have to enumerate what we want obfuscated
+  # rather than excluding what breaks.
+  #
+  # We obfuscate the proxycat wrapper and mihomo core, since those are
+  # the App Store binary-similarity concern (every other mihomo client
+  # ships the same wrapper-shaped Go bridge over the same core). Lower-
+  # level deps stay un-obfuscated:
+  #   * gvisor — tcpip.InitStatCounters walks Stats with reflection and
+  #     does `v.Addr().Interface().(**StatCounter|**IntegralStatCounterMap)`
+  #     type assertions; under garble's name obfuscation those assertions
+  #     misfire on the *IntegralStatCounterMap fields and the recursive
+  #     fallback calls v.NumField() on a Ptr Value, panicking the NE at
+  #     startTunnel. (Reproduced 2026-05-09 with garble v0.16.1-master.)
+  #   * grpc/protobuf, crypto, net/http etc. — shared with every other
+  #     mihomo app, so obfuscating them adds little binary diversity
+  #     while extending the bug surface.
+  # Override by setting GOGARBLE in the environment if you want to
+  # widen or narrow this set.
+  export GOGARBLE="${GOGARBLE:-github.com/proxycat,github.com/metacubex/mihomo,github.com/metacubex/sing*}"
   export LIBMIHOMO_REAL_PATH="$PATH"
   export PATH="$LIBMIHOMO_SHIM_DIR:$PATH"
   echo "==> Obfuscated build via $("$LIBMIHOMO_GARBLE_BIN" version | head -1)"
   echo "    GARBLE_FLAGS=$LIBMIHOMO_GARBLE_FLAGS"
+  echo "    GOGARBLE=$GOGARBLE"
 fi
 
 # Tags chosen to keep the binary small for the NE jetsam ceiling
