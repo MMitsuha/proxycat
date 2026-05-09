@@ -2002,17 +2002,6 @@
         }
       }
     },
-    "Web Controller is off" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网页控制器已关闭"
-          }
-        }
-      }
-    },
     "When on, ProxyCat connects or disconnects automatically based on the rules below. When off, use the Dashboard to control the tunnel manually." : {
       "extractionState" : "manual",
       "localizations" : {

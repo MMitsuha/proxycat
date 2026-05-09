@@ -52,9 +52,10 @@ var (
 	started   atomic.Bool
 	pendingFd int32
 
-	homeDir     atomicString
-	socketPath  atomicString
-	profilesDir atomicString
+	homeDir              atomicString
+	socketPath           atomicString
+	controllerSocketPath atomicString
+	profilesDir          atomicString
 )
 
 // errMihomoNotStarted is returned by Reload when the core hasn't been
@@ -77,6 +78,16 @@ func init() {
 // can connect. Pass "" to disable the server. Call before Start.
 func SetCommandSocketPath(path string) {
 	socketPath.Store(path)
+}
+
+// SetControllerSocketPath chooses where mihomo's REST controller binds
+// its Unix-domain listener. The host app's MihomoController dials this
+// path to issue /proxies, /connections, /group/.../delay etc. requests
+// without going through the loopback HTTP listener. Must point at a path
+// inside an App Group container. Pass "" to leave the Unix listener off.
+// Call before Start; mid-run changes take effect on the next Reload.
+func SetControllerSocketPath(path string) {
+	controllerSocketPath.Store(path)
 }
 
 // SetHomeDir tells mihomo where to keep cache.db, downloaded providers, the
@@ -265,17 +276,25 @@ func applyIOSDefaults(cfg *config.Config) {
 	cfg.Profile.StoreFakeIP = true
 }
 
-// applyControllerPolicy honors the user's "disable external controller"
-// toggle. When disabled, every listener form (HTTP/TLS/Unix/pipe) is
-// cleared so a YAML that asks for a controller can't sneak one back up.
-// When enabled, we bind only to loopback and tighten CORS — mihomo's
-// default permits any browser origin, which combined with the loopback
-// listener creates a cross-site read primitive.
+// applyControllerPolicy wires the controller listeners up. The Unix
+// listener is bound unconditionally (when a path is configured) because
+// it carries the host app's native UI traffic — proxies/connections/etc.
+// — and lives inside the App Group sandbox, so there is no loopback
+// exposure for the user's toggle to mitigate.
+//
+// The user-facing toggle ("Disable Web Controller") gates only the HTTP
+// loopback listener that the bundled metacubexd in-app web view
+// connects to. Disabling it clears the HTTP/TLS/pipe forms so a YAML
+// that asks for a controller can't sneak one back up. When enabled, we
+// bind only to loopback and tighten CORS — mihomo's default permits any
+// browser origin, which combined with the loopback listener would
+// create a cross-site read primitive.
 func applyControllerPolicy(cfg *config.Config, disabled bool) {
+	cfg.Controller.ExternalControllerUnix = controllerSocketPath.Load()
+
 	if disabled {
 		cfg.Controller.ExternalController = ""
 		cfg.Controller.ExternalControllerTLS = ""
-		cfg.Controller.ExternalControllerUnix = ""
 		cfg.Controller.ExternalControllerPipe = ""
 		cfg.Controller.ExternalUI = ""
 		cfg.Controller.Secret = ""

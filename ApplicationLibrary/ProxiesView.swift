@@ -3,13 +3,12 @@ import SwiftUI
 
 public struct ProxiesView: View {
     @Environment(ExtensionProfile.self) private var profile
-    @Environment(RuntimeSettings.self) private var settings
     @State private var store = ProxiesStore()
 
     public init() {}
 
     private var isReady: Bool {
-        profile.isConnected && !settings.disableExternalController
+        profile.isConnected
     }
 
     private func syncIfReady() async {
@@ -27,11 +26,6 @@ public struct ProxiesView: View {
                     "Connect first to manage proxies",
                     systemImage: "powerplug.portrait"
                 )
-            } else if settings.disableExternalController {
-                ContentUnavailableView(
-                    "Web Controller is off",
-                    systemImage: "network.slash"
-                )
             } else {
                 content
             }
@@ -39,14 +33,14 @@ public struct ProxiesView: View {
         .navigationTitle("Proxies")
         .navigationBarTitleDisplayMode(.inline)
         .task { await syncIfReady() }
-        // The view stays mounted across tunnel toggles and Web-Controller
-        // toggles (TabView keeps tabs alive). Without these the cached
-        // `store.groups` would persist after a disconnect, and a tap on
-        // re-enable would briefly fire actions against the previous
-        // controller state. Refresh on the rising edge, clear on the
-        // falling edge.
+        // The view stays mounted across tunnel toggles (TabView keeps
+        // tabs alive). Without this the cached `store.groups` would
+        // persist after a disconnect, and a tap on reconnect would
+        // briefly fire actions against the previous controller state.
+        // The "Disable Web Controller" toggle no longer affects this
+        // view — the native controller dials a sibling Unix socket
+        // that's always bound while the tunnel is up.
         .onChange(of: profile.isConnected) { _, _ in Task { await syncIfReady() } }
-        .onChange(of: settings.disableExternalController) { _, _ in Task { await syncIfReady() } }
         // The empty-state ContentUnavailableView already covers the
         // first-load failure, but once `groups` has data, refresh /
         // select / testGroup failures only update `loadError` — which

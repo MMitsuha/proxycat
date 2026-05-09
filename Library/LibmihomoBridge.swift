@@ -65,6 +65,15 @@ public enum LibmihomoBridge {
         LibmihomoSetCommandSocketPath(path)
     }
 
+    /// Tell mihomo where to bind its REST controller's Unix-domain
+    /// listener. Path must be inside the App Group container so the
+    /// host app's `MihomoController` can dial it. Pass "" to leave the
+    /// Unix listener off (the loopback HTTP listener is governed
+    /// separately by `disableExternalController`).
+    public static func setControllerSocketPath(_ path: String) {
+        LibmihomoSetControllerSocketPath(path)
+    }
+
     /// Tell the Go core where the host app's `runtime_settings.json`
     /// lives. The core re-reads this file on every Start / Reload, so
     /// toggling a setting (or switching the active profile) in the

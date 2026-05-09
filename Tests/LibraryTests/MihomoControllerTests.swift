@@ -19,47 +19,39 @@ import Testing
         #expect(MihomoController.percentEncodeSegment("a b") == "a%20b")
     }
 
-    /// The full composition path: a slash inside a proxy group name is
-    /// encoded as `%2F` and survives URL assembly as one segment, so chi's
-    /// `{name}` route matches it and `url.PathUnescape` round-trips it
-    /// back to `JP/Tokyo` server-side.
-    @Test func makeURLPreservesEscapedSlashInPath() {
-        let controller = MihomoController(baseURL: URL(string: "http://127.0.0.1:9090")!)
+    /// A slash inside a proxy group name is encoded as `%2F` and survives
+    /// path assembly as one segment, so chi's `{name}` route matches it
+    /// and `url.PathUnescape` round-trips it back to `JP/Tokyo` server-side.
+    @Test func makePathPreservesEscapedSlashInPath() {
         let segment = MihomoController.percentEncodeSegment("JP/Tokyo")
-        let url = controller.makeURL(path: "proxies/\(segment)")
-        #expect(url.absoluteString == "http://127.0.0.1:9090/proxies/JP%2FTokyo")
+        let path = MihomoController.makePath("proxies/\(segment)")
+        #expect(path == "/proxies/JP%2FTokyo")
     }
 
-    @Test func makeURLAppendsQueryItems() {
-        let controller = MihomoController(baseURL: URL(string: "http://127.0.0.1:9090")!)
+    @Test func makePathAppendsQueryItems() {
         let segment = MihomoController.percentEncodeSegment("JP/Tokyo")
-        let url = controller.makeURL(
-            path: "group/\(segment)/delay",
+        let path = MihomoController.makePath(
+            "group/\(segment)/delay",
             queryItems: [
                 URLQueryItem(name: "url", value: "https://www.gstatic.com/generate_204"),
                 URLQueryItem(name: "timeout", value: "5000"),
             ]
         )
-        #expect(url.path == "/group/JP/Tokyo/delay")  // .path decodes %2F
-        #expect(url.absoluteString.contains("/group/JP%2FTokyo/delay"),
-                "expected escaped slash in path, got \(url.absoluteString)")
-        let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        #expect(comps.queryItems?.first { $0.name == "timeout" }?.value == "5000")
+        #expect(path.hasPrefix("/group/JP%2FTokyo/delay?"))
+        #expect(path.contains("timeout=5000"))
+        #expect(path.contains("url=https"))
     }
 
-    @Test func makeURLHandlesBaseWithTrailingSlash() {
-        let controller = MihomoController(baseURL: URL(string: "http://127.0.0.1:9090/")!)
-        let url = controller.makeURL(path: "proxies")
-        #expect(url.absoluteString == "http://127.0.0.1:9090/proxies")
+    @Test func makePathOmitsQueryWhenEmpty() {
+        let path = MihomoController.makePath("proxies")
+        #expect(path == "/proxies")
     }
 
-    @Test func staticMakeURLEncodesConnectionId() {
-        let base = URL(string: "http://127.0.0.1:9090")!
+    @Test func makePathEncodesConnectionId() {
         let id = "abc/def"  // synthetic — real mihomo IDs are UUIDs
-        let url = MihomoController.makeURL(
-            baseURL: base,
-            path: "connections/\(MihomoController.percentEncodeSegment(id))"
+        let path = MihomoController.makePath(
+            "connections/\(MihomoController.percentEncodeSegment(id))"
         )
-        #expect(url.absoluteString == "http://127.0.0.1:9090/connections/abc%2Fdef")
+        #expect(path == "/connections/abc%2Fdef")
     }
 }

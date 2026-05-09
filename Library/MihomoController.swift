@@ -56,7 +56,7 @@ public struct DelayResponse: Codable {
 
 public enum MihomoControllerError: LocalizedError {
     case requestFailed(status: Int, body: String)
-    case transport(URLError)
+    case transport(UnixHTTPError)
     case decoding(Error)
     case invalidResponse
 
@@ -76,18 +76,17 @@ public enum MihomoControllerError: LocalizedError {
 
 // MARK: - Client
 
-/// Talks to mihomo's external-controller (default `http://127.0.0.1:9090`).
-///
-/// The controller is bound to loopback by `libmihomo/binding.go` and its
-/// secret is forced empty there too (binding.go:122,125), so the host app
-/// reaches it without auth as long as the tunnel is up. See the design
-/// spec for the auth-assumption caveat.
+/// Talks to mihomo's external-controller over a Unix-domain socket in
+/// the App Group container. The Network Extension binds the listener
+/// via `cfg.Controller.ExternalControllerUnix` (see libmihomo/binding.go
+/// and PacketTunnelProvider's `setControllerSocketPath` call), and this
+/// client dials the same path. Loopback HTTP (port 9090) still exists
+/// for the in-app metacubexd web view, but the host's native UI never
+/// touches it.
 ///
 /// `@unchecked Sendable` because JSONDecoder isn't formally Sendable but
-/// our instance is configured once at init and used read-only thereafter,
-/// matching URLSession.shared's own thread-safety contract.
+/// our instance is configured once at init and used read-only thereafter.
 public struct MihomoController: @unchecked Sendable {
-    public static let defaultBaseURL = URL(string: "http://127.0.0.1:9090")!
     /// Match `C.DefaultTestURL` in mihomo (constant/adapters.go). Selector
     /// groups whose test URL equals the default omit `testUrl` from their
     /// JSON (adapter/outboundgroup/selector.go), so a nil `Proxy.testUrl`
@@ -96,20 +95,24 @@ public struct MihomoController: @unchecked Sendable {
     public static let defaultTestURL = "https://www.gstatic.com/generate_204"
     public static let defaultTimeoutMs = 5000
 
-    private let baseURL: URL
-    private let session: URLSession
+    public let client: UnixHTTPClient
     private let decoder: JSONDecoder
 
-    public init(baseURL: URL = defaultBaseURL, session: URLSession = .shared) {
-        self.baseURL = baseURL
-        self.session = session
+    /// Default ctor: dial the App-Group controller socket. Tests pass a
+    /// custom path or a pre-built client.
+    public init(socketPath: String = FilePath.controllerSocketPath) {
+        self.client = UnixHTTPClient(socketPath: socketPath)
+        self.decoder = JSONDecoder()
+    }
+
+    public init(client: UnixHTTPClient) {
+        self.client = client
         self.decoder = JSONDecoder()
     }
 
     /// `GET /proxies` → `{ "proxies": { name: Proxy } }`.
     public func proxies() async throws(MihomoControllerError) -> [String: Proxy] {
-        let req = makeRequest(path: "proxies", timeout: 5)
-        let data = try await perform(req)
+        let data = try await perform(method: "GET", path: Self.makePath("proxies"), timeout: 5)
         do {
             return try decoder.decode(ProxiesResponse.self, from: data).proxies
         } catch {
@@ -120,15 +123,20 @@ public struct MihomoController: @unchecked Sendable {
     /// `PUT /proxies/{group}` body `{"name": <node>}`. 204 on success.
     /// 400 if the group is not a Selector (URLTest/Fallback/LoadBalance).
     public func select(group: String, name: String) async throws(MihomoControllerError) {
-        var req = makeRequest(path: "proxies/\(Self.percentEncodeSegment(group))", timeout: 5)
-        req.httpMethod = "PUT"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: Data
         do {
-            req.httpBody = try JSONSerialization.data(withJSONObject: ["name": name])
+            body = try JSONSerialization.data(withJSONObject: ["name": name])
         } catch {
             throw MihomoControllerError.decoding(error)
         }
-        _ = try await perform(req)
+        let path = Self.makePath("proxies/\(Self.percentEncodeSegment(group))")
+        _ = try await perform(
+            method: "PUT",
+            path: path,
+            headers: [("Content-Type", "application/json")],
+            body: body,
+            timeout: 5
+        )
     }
 
     /// `GET /group/{name}/delay?url=&timeout=&expected=` → `{ name: delay }`
@@ -152,16 +160,15 @@ public struct MihomoController: @unchecked Sendable {
         if let expectedStatus, !expectedStatus.isEmpty {
             queryItems.append(URLQueryItem(name: "expected", value: expectedStatus))
         }
-        let target = makeURL(
-            path: "group/\(Self.percentEncodeSegment(name))/delay",
+        let path = Self.makePath(
+            "group/\(Self.percentEncodeSegment(name))/delay",
             queryItems: queryItems
         )
         // Give the request a hair more time than the per-node timeout
         // because the server runs them concurrently and still needs to
         // serialize the result.
-        var req = URLRequest(url: target)
-        req.timeoutInterval = TimeInterval(resolvedTimeout) / 1000 + 2
-        let data = try await perform(req)
+        let timeout = TimeInterval(resolvedTimeout) / 1000 + 2
+        let data = try await perform(method: "GET", path: path, timeout: timeout)
         do {
             return try decoder.decode([String: Int].self, from: data)
         } catch {
@@ -169,32 +176,22 @@ public struct MihomoController: @unchecked Sendable {
         }
     }
 
-    // MARK: - Private
+    // MARK: - Path helpers
 
-    private func makeRequest(path: String, timeout: TimeInterval) -> URLRequest {
-        var req = URLRequest(url: makeURL(path: path))
-        req.timeoutInterval = timeout
-        return req
-    }
-
-    func makeURL(path: String, queryItems: [URLQueryItem] = []) -> URL {
-        Self.makeURL(baseURL: baseURL, path: path, queryItems: queryItems)
-    }
-
-    /// Compose a URL from `baseURL` plus a percent-encoded path. We set
-    /// `URLComponents.percentEncodedPath` directly because
-    /// `URL.appendingPathComponent` re-encodes `%` to `%25`, which would
-    /// turn `JP%2FTokyo` (one escaped segment) into `JP%252FTokyo`
-    /// (the literal text `JP%2FTokyo`).
-    static func makeURL(baseURL: URL, path: String, queryItems: [URLQueryItem] = []) -> URL {
-        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-        var basePath = components.percentEncodedPath
-        if !basePath.hasSuffix("/") { basePath += "/" }
-        components.percentEncodedPath = basePath + path
+    /// Builds a `/path[?query]` string for the HTTP request-target.
+    /// Caller is responsible for percent-encoding any path segment that
+    /// may contain reserved characters (use `percentEncodeSegment`).
+    /// Query items are encoded by URLComponents.
+    public static func makePath(_ path: String, queryItems: [URLQueryItem] = []) -> String {
+        var s = "/" + path
         if !queryItems.isEmpty {
-            components.queryItems = queryItems
+            var comps = URLComponents()
+            comps.queryItems = queryItems
+            if let q = comps.percentEncodedQuery, !q.isEmpty {
+                s += "?" + q
+            }
         }
-        return components.url!
+        return s
     }
 
     /// `urlPathAllowed` minus `/`, so a name containing `/`
@@ -209,27 +206,32 @@ public struct MihomoController: @unchecked Sendable {
     /// middleware (hub/route/common.go) round-trips the encoding via
     /// `url.PathUnescape`, and chi's `{name}` token doesn't span `/`, so
     /// any `/` inside the name must be `%2F` to land in the right route.
-    static func percentEncodeSegment(_ s: String) -> String {
+    public static func percentEncodeSegment(_ s: String) -> String {
         s.addingPercentEncoding(withAllowedCharacters: pathSegmentAllowed) ?? s
     }
 
-    private func perform(_ request: URLRequest) async throws(MihomoControllerError) -> Data {
-        let data: Data
-        let response: URLResponse
+    // MARK: - Private
+
+    private func perform(
+        method: String,
+        path: String,
+        headers: [(String, String)] = [],
+        body: Data? = nil,
+        timeout: TimeInterval
+    ) async throws(MihomoControllerError) -> Data {
+        let request = UnixHTTPRequest(method: method, path: path, headers: headers, body: body)
+        let response: UnixHTTPResponse
         do {
-            (data, response) = try await session.data(for: request)
-        } catch let err as URLError {
+            response = try await client.send(request, timeout: timeout)
+        } catch let err as UnixHTTPError {
             throw MihomoControllerError.transport(err)
         } catch {
             throw MihomoControllerError.invalidResponse
         }
-        guard let http = response as? HTTPURLResponse else {
-            throw MihomoControllerError.invalidResponse
+        guard response.isSuccess else {
+            let bodyText = String(data: response.body, encoding: .utf8) ?? ""
+            throw MihomoControllerError.requestFailed(status: response.status, body: bodyText)
         }
-        guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw MihomoControllerError.requestFailed(status: http.statusCode, body: body)
-        }
-        return data
+        return response.body
     }
 }

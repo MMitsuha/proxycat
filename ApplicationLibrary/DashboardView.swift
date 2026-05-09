@@ -89,7 +89,7 @@ public struct DashboardView: View {
                 }
             }
 
-            if profile.isConnected, !settings.disableExternalController {
+            if profile.isConnected {
                 NavigationLink {
                     ProxiesView()
                 } label: {
@@ -199,7 +199,7 @@ public struct DashboardView: View {
 
     @ViewBuilder
     private var connectionsCell: some View {
-        let isInteractive = profile.isConnected && !settings.disableExternalController
+        let isInteractive = profile.isConnected
         if isInteractive {
             NavigationLink {
                 ConnectionsView()

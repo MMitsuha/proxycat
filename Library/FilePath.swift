@@ -58,6 +58,15 @@ public enum FilePath {
         sharedDirectory.appendingPathComponent(AppConfiguration.commandSocketName).path
     }
 
+    /// Path of the Unix-domain socket where mihomo's REST controller
+    /// binds. Same App-Group rendezvous as `commandSocketPath` but
+    /// carries HTTP — the native UI controller dials it for proxies,
+    /// connections, and group-delay calls without going through the
+    /// loopback HTTP listener.
+    public static var controllerSocketPath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.controllerSocketName).path
+    }
+
     /// Path of the shared runtime-settings JSON. The host app's
     /// `RuntimeSettings` writes it; the Go core reads it on every
     /// Start / Reload. Holds the active profile UUID alongside the

@@ -3,7 +3,6 @@ import SwiftUI
 
 public struct ConnectionsView: View {
     @Environment(ExtensionProfile.self) private var profile
-    @Environment(RuntimeSettings.self) private var settings
 
     @State private var store = ConnectionsStore()
     @State private var confirmCloseAll: Bool = false
@@ -19,11 +18,6 @@ public struct ConnectionsView: View {
                     "Connect first to view connections",
                     systemImage: "powerplug.portrait"
                 )
-            } else if settings.disableExternalController {
-                ContentUnavailableView(
-                    "Web Controller is off",
-                    systemImage: "network.slash"
-                )
             } else {
                 content
             }
@@ -32,11 +26,13 @@ public struct ConnectionsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { syncStreaming() }
         .onDisappear { store.stop() }
-        // Defensive: if the tunnel drops or the controller flag flips
-        // mid-view, stop the WS retry loop and let the empty state take
-        // over instead of letting the store hammer a closed socket.
+        // Defensive: if the tunnel drops mid-view, stop the poll loop
+        // and let the empty state take over instead of letting the
+        // store hammer a closed socket. The "Disable Web Controller"
+        // toggle no longer affects this view — the native poller
+        // dials a sibling Unix socket that's always bound while the
+        // tunnel is up.
         .onChange(of: profile.isConnected) { _, _ in syncStreaming() }
-        .onChange(of: settings.disableExternalController) { _, _ in syncStreaming() }
         .sheet(item: $detail) { conn in
             ConnectionDetailSheet(connection: conn)
         }
@@ -54,7 +50,7 @@ public struct ConnectionsView: View {
     }
 
     private func syncStreaming() {
-        if profile.isConnected, !settings.disableExternalController {
+        if profile.isConnected {
             store.start()
         } else {
             store.stop()

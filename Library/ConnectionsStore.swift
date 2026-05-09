@@ -65,10 +65,17 @@ public struct ConnectionsSnapshot: Codable, Sendable {
 
 // MARK: - Store
 
-/// Subscribes to mihomo's `/connections` WebSocket and exposes the live
-/// list to SwiftUI. One instance per ConnectionsView appearance — not a
-/// shared singleton, so the WS is torn down when the user leaves the
-/// screen.
+/// Polls mihomo's `/connections` over the App-Group Unix-domain socket
+/// once per second and exposes the live list to SwiftUI. One instance
+/// per ConnectionsView appearance — not a shared singleton, so the
+/// poller is torn down when the user leaves the screen.
+///
+/// Replaced an earlier WebSocket implementation that ran over the
+/// loopback HTTP listener. The wire shape is identical (mihomo's
+/// connectionRouter returns the same snapshot JSON whether the request
+/// upgrades or not), so the rate of UI refresh is the same — it just
+/// rides the App-Group Unix socket now and stays up regardless of the
+/// user's "Disable Web Controller" toggle.
 @MainActor @Observable
 public final class ConnectionsStore {
     public private(set) var connections: [Connection] = []
@@ -99,15 +106,13 @@ public final class ConnectionsStore {
     /// `speedGroupByName`. Useful for color-coding rows by outbound.
     public private(set) var speedByChain: [String: Int64] = [:]
 
-    @ObservationIgnored private let baseURL: URL
-    @ObservationIgnored private let session: URLSession
-    @ObservationIgnored private var streamTask: Task<Void, Never>?
-    @ObservationIgnored private var wsTask: URLSessionWebSocketTask?
+    @ObservationIgnored private let client: UnixHTTPClient
+    @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var filterDebounceTask: Task<Void, Never>?
 
     /// Reusable scratch buffers for `apply(_:)`. Avoids allocating a
-    /// fresh `[String: Connection]` and `[String: Int64]` every WS
-    /// frame (1 Hz) — over a long session that's hundreds of dictionary
+    /// fresh `[String: Connection]` and `[String: Int64]` every poll
+    /// (1 Hz) — over a long session that's hundreds of dictionary
     /// allocations Swift's allocator + ARC have to chew through, on
     /// top of the connection list itself.
     @ObservationIgnored private var prevByID: [String: Connection] = [:]
@@ -150,12 +155,12 @@ public final class ConnectionsStore {
         return d
     }()
 
-    public init(
-        baseURL: URL = MihomoController.defaultBaseURL,
-        session: URLSession = .shared
-    ) {
-        self.baseURL = baseURL
-        self.session = session
+    /// Polling interval. Matches the WebSocket cadence the server-side
+    /// /connections endpoint pushes at, so the UI feels identical.
+    private static let pollInterval: Duration = .milliseconds(1_000)
+
+    public init(client: UnixHTTPClient = UnixHTTPClient(socketPath: FilePath.controllerSocketPath)) {
+        self.client = client
     }
 
     private func scheduleFilterDebounce() {
@@ -187,28 +192,26 @@ public final class ConnectionsStore {
     }
 
     public func start() {
-        guard streamTask == nil else { return }
-        streamTask = Task { @MainActor [weak self] in
+        guard pollTask == nil else { return }
+        pollTask = Task { @MainActor [weak self] in
             await RetryLoop.run { [weak self] in
                 guard let self else { return true }
-                return await self.runOnce()
+                return await self.runPollLoop()
             }
             self?.isStreaming = false
         }
     }
 
     public func stop() {
-        streamTask?.cancel()
-        streamTask = nil
-        wsTask?.cancel(with: .goingAway, reason: nil)
-        wsTask = nil
+        pollTask?.cancel()
+        pollTask = nil
         filterDebounceTask?.cancel()
         filterDebounceTask = nil
         isStreaming = false
         // Drop the snapshot too — otherwise on reconnect, rows from the
-        // previous session render until the first fresh frame arrives,
-        // and a swipe-close in that gap would target a stale ID against
-        // the new controller.
+        // previous session render until the first fresh poll lands, and
+        // a swipe-close in that gap would target a stale ID against the
+        // new controller.
         connections = []
         filteredConnections = []
         uploadTotal = 0
@@ -220,9 +223,7 @@ public final class ConnectionsStore {
     }
 
     deinit {
-        // Cannot await on main actor; just signal cancellation.
-        streamTask?.cancel()
-        wsTask?.cancel(with: .goingAway, reason: nil)
+        pollTask?.cancel()
         filterDebounceTask?.cancel()
     }
 
@@ -232,36 +233,15 @@ public final class ConnectionsStore {
     public func close(id: String) async {
         // mihomo IDs are UUIDs, but escape anyway so a future server
         // change (or a synthetic test) can't smuggle path traversal in.
-        let url = MihomoController.makeURL(
-            baseURL: baseURL,
-            path: "connections/\(MihomoController.percentEncodeSegment(id))"
+        let path = MihomoController.makePath(
+            "connections/\(MihomoController.percentEncodeSegment(id))"
         )
-        var req = URLRequest(url: url)
-        req.httpMethod = "DELETE"
-        req.timeoutInterval = 5
-        do {
-            let (_, response) = try await session.data(for: req)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                loadError = "Could not close (HTTP \(http.statusCode))"
-            }
-        } catch {
-            loadError = error.localizedDescription
-        }
+        await sendDelete(path: path, errorPrefix: "Could not close")
     }
 
     /// `DELETE /connections`.
     public func closeAll() async {
-        var req = URLRequest(url: MihomoController.makeURL(baseURL: baseURL, path: "connections"))
-        req.httpMethod = "DELETE"
-        req.timeoutInterval = 5
-        do {
-            let (_, response) = try await session.data(for: req)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                loadError = "Could not close all (HTTP \(http.statusCode))"
-            }
-        } catch {
-            loadError = error.localizedDescription
-        }
+        await sendDelete(path: MihomoController.makePath("connections"), errorPrefix: "Could not close all")
     }
 
     /// Lets the view dismiss an error alert. `loadError` stays
@@ -273,63 +253,65 @@ public final class ConnectionsStore {
 
     // MARK: - Private
 
-    private func runOnce() async -> Bool {
-        // ws scheme on loopback. mihomo's binding (binding.go) forces the
-        // controller secret empty for proxycat, so no auth header.
-        let httpURL = MihomoController.makeURL(
-            baseURL: baseURL,
-            path: "connections",
-            queryItems: [URLQueryItem(name: "interval", value: "1000")]
-        )
-        guard var components = URLComponents(url: httpURL, resolvingAgainstBaseURL: false) else {
-            return false
-        }
-        components.scheme = (baseURL.scheme == "https") ? "wss" : "ws"
-        guard let wsURL = components.url else { return false }
-
-        let task = session.webSocketTask(with: wsURL)
-        wsTask = task
-        task.resume()
-
+    private func sendDelete(path: String, errorPrefix: String) async {
+        let request = UnixHTTPRequest(method: "DELETE", path: path)
         do {
-            // First receive doubles as a connection-success signal: if
-            // the handshake fails (extension still booting, controller
-            // not bound yet), receive() throws and we back off.
-            let firstFrame = try await task.receive()
-            try Task.checkCancellation()
-            isStreaming = true
-            loadError = nil
-            try handle(frame: firstFrame)
-
-            while !Task.isCancelled {
-                let frame = try await task.receive()
-                try handle(frame: frame)
+            let response = try await client.send(request, timeout: 5)
+            if !response.isSuccess {
+                loadError = "\(errorPrefix) (HTTP \(response.status))"
             }
-            return true
-        } catch is CancellationError {
-            return true
         } catch {
-            loadError = humanReadable(error)
-            isStreaming = false
-            task.cancel(with: .goingAway, reason: nil)
-            wsTask = nil
-            return false
+            loadError = error.localizedDescription
         }
     }
 
-    private func handle(frame: URLSessionWebSocketTask.Message) throws {
-        let data: Data
-        switch frame {
-        case .data(let d): data = d
-        case .string(let s): data = Data(s.utf8)
-        @unknown default: return
+    /// One iteration of the poll-and-sleep cycle. Returns true on
+    /// success so RetryLoop resets its backoff between snapshots —
+    /// failures keep the original backoff so a stuck extension doesn't
+    /// pin the loop hot.
+    private func runPollLoop() async -> Bool {
+        let path = MihomoController.makePath(
+            "connections",
+            queryItems: [URLQueryItem(name: "interval", value: "1000")]
+        )
+        let request = UnixHTTPRequest(method: "GET", path: path)
+        do {
+            let response = try await client.send(request, timeout: 5)
+            try Task.checkCancellation()
+            guard response.isSuccess else {
+                loadError = "Controller returned HTTP \(response.status)"
+                isStreaming = false
+                return false
+            }
+            try handle(body: response.body)
+            isStreaming = true
+            loadError = nil
+        } catch is CancellationError {
+            return true
+        } catch {
+            loadError = error.localizedDescription
+            isStreaming = false
+            return false
         }
+
+        // Wait the rest of the interval before the next poll. Cancellation
+        // throws out of `Task.sleep`, which we treat as a clean exit
+        // (RetryLoop will see `Task.isCancelled` and stop).
+        do {
+            try await Task.sleep(for: Self.pollInterval)
+        } catch {
+            return true
+        }
+        return true
+    }
+
+    private func handle(body: Data) throws {
         let snapshot: ConnectionsSnapshot
         do {
-            snapshot = try Self.dateDecoder.decode(ConnectionsSnapshot.self, from: data)
+            snapshot = try Self.dateDecoder.decode(ConnectionsSnapshot.self, from: body)
         } catch {
-            // A malformed frame is not fatal — keep the stream open.
-            // We surface the error as a banner via loadError so the user
+            // A malformed snapshot is not fatal — keep polling. We
+            // surface the error as a banner via loadError so the user
             // knows the table may be stale.
             loadError = "Decode failed: \(error.localizedDescription)"
             return
@@ -378,12 +360,5 @@ public final class ConnectionsStore {
         downloadTotal = snapshot.downloadTotal
         speedByChain = chainSpeedsBuf
         recomputeFilter()
-    }
-
-    private func humanReadable(_ error: Error) -> String {
-        if let urlError = error as? URLError {
-            return urlError.localizedDescription
-        }
-        return error.localizedDescription
     }
 }
