@@ -35,6 +35,24 @@
         }
       }
     },
+    "%@ lines" : {
+      "comment" : "Saved log viewer line count summary.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 行"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 行"
+          }
+        }
+      }
+    },
     "%@ lines copied to clipboard." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -941,6 +959,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "読み込めませんでした"
+          }
+        }
+      }
+    },
+    "Could not open log" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开日志"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログを開けませんでした"
           }
         }
       }
@@ -3068,6 +3103,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "サイレント"
+          }
+        }
+      }
+    },
+    "Some invalid UTF-8 bytes were replaced." : {
+      "comment" : "Warning shown when a saved log file contains invalid UTF-8 bytes and the viewer replaces them.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已替换部分无效的 UTF-8 字节。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部の無効な UTF-8 バイトを置換しました。"
           }
         }
       }
