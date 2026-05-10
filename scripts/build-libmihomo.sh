@@ -143,10 +143,10 @@ if [[ -z "$MIHOMO_SHORT" ]]; then
   MIHOMO_VERSION="unknown"
 elif EXACT_TAG="$(git -C "$MIHOMO_GIT" describe --tags --exact-match HEAD 2>/dev/null)"; then
   MIHOMO_VERSION="$EXACT_TAG"
+elif git -C "$MIHOMO_GIT" merge-base --is-ancestor HEAD origin/Meta 2>/dev/null; then
+  MIHOMO_VERSION="meta-$MIHOMO_SHORT"
 elif git -C "$MIHOMO_GIT" merge-base --is-ancestor HEAD origin/Alpha 2>/dev/null; then
   MIHOMO_VERSION="alpha-$MIHOMO_SHORT"
-elif git -C "$MIHOMO_GIT" merge-base --is-ancestor HEAD origin/Beta 2>/dev/null; then
-  MIHOMO_VERSION="beta-$MIHOMO_SHORT"
 else
   MIHOMO_VERSION="$(git -C "$MIHOMO_GIT" describe --tags --always 2>/dev/null || echo "$MIHOMO_SHORT")"
 fi

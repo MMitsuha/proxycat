@@ -72,8 +72,6 @@ mihomo-checkout:
 		git -C mihomo checkout --detach "$(REF)"; \
 	fi
 	@printf "    now at %s (%s)\n" "$$(git -C mihomo rev-parse --short=12 HEAD)" "$$(git -C mihomo log -1 --format=%s)"
-	@echo "==> Rebuilding xcframework"
-	./scripts/build-libmihomo.sh
 	@echo ""
 	@echo "Mihomo pinned to $(REF). Commit the new pointer with:"
 	@echo "  git add mihomo && git commit -m \"Pin mihomo to $$(git -C mihomo rev-parse --short=12 HEAD) ($(REF))\""

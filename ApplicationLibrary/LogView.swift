@@ -3,30 +3,9 @@ import Observation
 import SwiftUI
 import UIKit
 
-/// Streaming log viewer with the user-requested controls:
-///   • Log level filter — defaults to `.warning`, persisted across launches
-///     in `RuntimeSettings.shared` (which writes `runtime_settings.json`
-///     in the App Group). Changes propagate to the running extension
-///     via the lightweight gRPC `SetLogLevel` RPC (no `hub.ApplyConfig`
-///     reload), and the same value seeds mihomo on the next Start. The
-///     YAML profile's `log-level:` key is intentionally ignored — the
-///     host app owns this setting at runtime.
-///   • Debounced search box
-///   • "Copy All" — copies every line currently visible under the active
-///     filter to UIPasteboard.
-///
-/// Patterned on sing-box-for-apple's LogView/LogViewModel. Two structural
-/// notes worth keeping in mind when editing:
-///
-///   1. The streaming list (`visible`) lives on a *separate*
-///      `LogStreamData` @Observable. The toolbar / searchable / alert
-///      live on the parent `LogViewModel`. That split keeps the toolbar's
-///      `Menu` views from rebuilding 10×/sec under heavy log traffic — the
-///      visible blink the user reported on the navigation bar was caused
-///      by the entire `LogView.body` reevaluating on every appended line.
-///   2. The host-side log buffer is enabled lazily on first appearance
-///      and intentionally NOT disabled on disappearance, so navigating
-///      away from the Logs tab does not throw away accumulated lines.
+/// Streaming mihomo log viewer. The high-frequency visible list is kept
+/// on a child observable so live log frames do not rebuild the navigation
+/// toolbar while the stream is busy.
 public struct LogView: View {
     @Environment(ExtensionEnvironment.self) private var environment
     @State private var model = LogViewModel()
@@ -167,11 +146,15 @@ private struct LogStreamList: View {
         }
     }
 
+    @ViewBuilder
     private var emptyState: some View {
-        ContentUnavailableView(
-            isConnected ? "No matching logs" : "Service not started",
-            systemImage: "doc.text.magnifyingglass"
-        )
+        if !isConnected {
+            ContentUnavailableView("Service not started", systemImage: "powerplug.portrait")
+        } else if !query.isEmpty {
+            ContentUnavailableView.search(text: query)
+        } else {
+            ContentUnavailableView("No logs yet", systemImage: "doc.text")
+        }
     }
 }
 
@@ -180,15 +163,26 @@ private struct LogRow: View {
     let query: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: entry.level.symbolName)
-                .foregroundStyle(color(for: entry.level))
-                .font(.caption2.weight(.semibold))
-                .frame(width: 14)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Label(entry.level.displayName, systemImage: entry.level.symbolName)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(color(for: entry.level))
+                    .labelStyle(.titleAndIcon)
+                    .fixedSize()
+
+                Spacer(minLength: 8)
+
+                Text(entry.timestamp, format: .dateTime.hour().minute().second())
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+            }
+
             Text(highlighted(entry.message, query: query))
                 .font(.system(.caption2, design: .monospaced))
                 .textSelection(.enabled)
         }
+        .padding(.vertical, 2)
     }
 
     private func color(for level: LogLevel) -> Color {

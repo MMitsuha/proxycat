@@ -1,14 +1,16 @@
 import Library
+import QuickLook
 import SwiftUI
 import UIKit
 
 /// Browser for the per-session log files the Network Extension drops
 /// in the App Group container. The extension opens a fresh
 /// `mihomo-YYYYMMDD-HHMMSS.log` whenever it starts the tunnel; this
-/// view lists them newest-first with size + modified date, and pushes
-/// to a detail view that renders the file contents.
+/// view lists them newest-first with size + modified date and opens
+/// files through the system Quick Look preview.
 public struct SavedLogsView: View {
     @State private var model = SavedLogsViewModel()
+    @State private var previewURL: URL?
 
     public init() {}
 
@@ -20,10 +22,17 @@ public struct SavedLogsView: View {
             } else {
                 List {
                     ForEach(model.entries) { entry in
-                        NavigationLink {
-                            SavedLogDetailView(entry: entry)
+                        Button {
+                            previewURL = entry.url
                         } label: {
                             row(for: entry)
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Rectangle())
+                        .contextMenu {
+                            ShareLink(item: entry.url) {
+                                Label("Share File", systemImage: "square.and.arrow.up")
+                            }
                         }
                     }
                     .onDelete { indices in
@@ -31,6 +40,7 @@ public struct SavedLogsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .refreshable { model.reload() }
             }
         }
         .navigationTitle("Saved Logs")
@@ -71,6 +81,7 @@ public struct SavedLogsView: View {
             // Chinese form that doesn't need a plural marker either.
             Text("This deletes \(model.entries.count) saved log files. The active session is preserved.")
         }
+        .quickLookPreview($previewURL)
         .onAppear { model.reload() }
     }
 
@@ -106,100 +117,6 @@ public struct SavedLogsView: View {
             systemImage: "doc.text.magnifyingglass",
             description: Text("A new file is created each time the tunnel connects.")
         )
-    }
-}
-
-// MARK: - Detail view
-
-struct SavedLogDetailView: View {
-    let entry: SavedLogEntry
-
-    @State private var content: String = ""
-    @State private var loading: Bool = true
-    @State private var loadError: String?
-    @State private var showShareSheet = false
-
-    var body: some View {
-        Group {
-            if loading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let loadError {
-                ContentUnavailableView {
-                    Label("Could not load", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(loadError)
-                }
-            } else {
-                LogTextView(text: content)
-            }
-        }
-        .navigationTitle(entry.displayDate)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        UIPasteboard.general.string = content
-                    } label: {
-                        Label("Copy", systemImage: "doc.on.clipboard")
-                    }
-                    .disabled(content.isEmpty)
-                    Button {
-                        showShareSheet = true
-                    } label: {
-                        Label("Share File", systemImage: "square.and.arrow.up")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .accessibilityLabel("Actions")
-                }
-            }
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: [entry.url])
-        }
-        .task(id: entry.id) {
-            await load()
-        }
-    }
-
-    private func load() async {
-        loading = true
-        loadError = nil
-        // Reading large files synchronously freezes the UI, so go to a
-        // utility queue. Truncate to the last 5MB to bound memory —
-        // UITextView handles that size smoothly, and the share-sheet
-        // exports the full file when more is needed.
-        let url = entry.url
-        let result: Result<String, Error> = await Task.detached(priority: .userInitiated) {
-            do {
-                let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
-                let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
-                let limit: Int64 = 5_000_000
-                if size <= limit {
-                    let data = try Data(contentsOf: url)
-                    return .success(String(decoding: data, as: UTF8.self))
-                }
-                let handle = try FileHandle(forReadingFrom: url)
-                defer { try? handle.close() }
-                try handle.seek(toOffset: UInt64(size - limit))
-                let tail = try handle.readToEnd() ?? Data()
-                let header = String(
-                    localized: "[truncated — showing last \(limit) of \(size) bytes]\n\n",
-                    bundle: .main
-                )
-                return .success(header + String(decoding: tail, as: UTF8.self))
-            } catch {
-                return .failure(error)
-            }
-        }.value
-
-        loading = false
-        switch result {
-        case let .success(text): content = text
-        case let .failure(error): loadError = error.localizedDescription
-        }
     }
 }
 
