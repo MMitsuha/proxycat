@@ -2,48 +2,71 @@ package libmihomo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
 	pb "github.com/proxycat/libmihomo/proto/command"
 )
 
-// CommandClientHandler is implemented in Swift via a gomobile-generated
-// protocol. The runtime calls each method when the corresponding stream
-// emits an event. None of these calls are allowed to block — Swift
-// implementations should hop UI work to MainActor and return promptly.
+// CommandClientDelegate is implemented in Swift via a gomobile-generated
+// protocol. The runtime calls each method when the command IPC lifecycle
+// changes or a subscribed stream emits a frame.
+//
+// Implementations must return promptly. Swift implementations should hop
+// UI work to MainActor and avoid blocking Go stream goroutines.
 //
 // Lifecycle guarantees:
-//   - Connected() fires exactly once per Connect() call, after the first
-//     stream frame is received from the server (i.e. the socket is
-//     actually live). It will not fire if the dial never succeeds.
-//   - Disconnected() fires exactly once per Connect() call, when any
-//     stream returns an error or Disconnect() is invoked.
-type CommandClientHandler interface {
-	Connected()
-	Disconnected(message string)
-	WriteStatus(status *Status)
-	WriteLog(level int, payload string)
+//   - OnConnected fires at most once per Connect call, after the first
+//     stream frame arrives from the server. For clients with no streams
+//     enabled it fires immediately after the gRPC client is created.
+//   - OnDisconnected fires at most once per Connect call, when a stream
+//     ends, an open fails, or Close/Disconnect is invoked.
+type CommandClientDelegate interface {
+	OnConnected()
+	OnDisconnected(message string)
+	OnStatus(status *CommandStatus)
+	OnLog(level int, payload string)
 }
 
-// CommandClientOptions selects which streams to subscribe to and how
-// frequently the server should push status. Created from Swift via
-// gomobile (no constructor required — zero value is "subscribe nothing").
-type CommandClientOptions struct {
+// CommandClientConfig selects which command IPC streams to subscribe to and
+// how frequently the server should push status frames. A nil config and the
+// zero value both subscribe to nothing, which is useful for unary-only tests
+// and tools.
+type CommandClientConfig struct {
 	SubscribeStatus  bool
 	SubscribeLogs    bool
 	StatusIntervalMs int64
 }
 
-// Status mirrors the gRPC StatusMessage but is the gomobile-friendly
-// shape (no protobuf reflection / unexported fields). The client
-// translates between the two when forwarding events.
-type Status struct {
+type commandClientConfig struct {
+	subscribeStatus  bool
+	subscribeLogs    bool
+	statusIntervalMs int64
+}
+
+func normalizeCommandClientConfig(config *CommandClientConfig) commandClientConfig {
+	if config == nil {
+		return commandClientConfig{}
+	}
+	return commandClientConfig{
+		subscribeStatus:  config.SubscribeStatus,
+		subscribeLogs:    config.SubscribeLogs,
+		statusIntervalMs: config.StatusIntervalMs,
+	}
+}
+
+// CommandStatus mirrors the gRPC StatusMessage but uses a gomobile-friendly
+// shape with flat exported fields and no protobuf runtime state.
+type CommandStatus struct {
 	Up             int64
 	Down           int64
 	UpTotal        int64
@@ -55,76 +78,123 @@ type Status struct {
 
 // CommandClient is the host-app-side counterpart to CommandServer.
 type CommandClient struct {
-	handler CommandClientHandler
-	options *CommandClientOptions
+	delegate CommandClientDelegate
+	config   commandClientConfig
 
-	mu     sync.Mutex
-	cancel context.CancelFunc
-	conn   *grpc.ClientConn
-	cli    pb.CommandClient
-	wg     sync.WaitGroup
-
-	connectOnce    sync.Once
-	disconnectOnce sync.Once
+	mu      sync.Mutex
+	session *commandClientSession
 }
 
-// reloadTimeout caps how long Reload() waits before giving up.
-// hub.ApplyConfig historically returns in well under 1s; a 30s ceiling
-// surfaces a hung extension as a proper error rather than a UI freeze.
-const reloadTimeout = 30 * time.Second
+type commandClientSession struct {
+	ctx      context.Context
+	cancel   context.CancelFunc
+	conn     *grpc.ClientConn
+	client   pb.CommandClient
+	delegate CommandClientDelegate
 
-// setLogLevelTimeout caps how long SetLogLevel() waits. The handler is
-// a single log.SetLevel call — no parsing, no I/O — so a short timeout
-// is enough to distinguish "extension wedged" from "still propagating".
-const setLogLevelTimeout = 5 * time.Second
+	wg           sync.WaitGroup
+	connected    sync.Once
+	disconnected sync.Once
+	stopping     atomic.Bool
+}
 
-// NewCommandClient builds a client. Call Connect to dial the socket and
-// start streaming.
-func NewCommandClient(handler CommandClientHandler, options *CommandClientOptions) *CommandClient {
-	if options == nil {
-		options = &CommandClientOptions{}
+const (
+	commandReloadTimeout      = 30 * time.Second
+	commandSetLogLevelTimeout = 5 * time.Second
+)
+
+var commandConnectBackoff = backoff.Config{
+	BaseDelay:  100 * time.Millisecond,
+	Multiplier: 1.6,
+	Jitter:     0.2,
+	MaxDelay:   2 * time.Second,
+}
+
+// NewCommandClient builds a client. Call Connect to dial the socket and start
+// the configured streams.
+func NewCommandClient(delegate CommandClientDelegate, config *CommandClientConfig) *CommandClient {
+	return &CommandClient{
+		delegate: delegate,
+		config:   normalizeCommandClientConfig(config),
 	}
-	return &CommandClient{handler: handler, options: options}
 }
 
-// Connect dials the Unix-domain command socket and starts the requested
-// streams. Returns an error if grpc.NewClient itself fails — note that
-// this *won't* error when the socket isn't listening, since gRPC's
-// non-blocking dial defers connection establishment to the first RPC.
-// The caller learns about an unreachable server via Disconnected.
-//
-// Connected fires only after the first stream frame actually arrives,
-// which is what callers should treat as "the extension is up".
+// Connect creates the gRPC-over-Unix-socket client and starts the configured
+// subscriptions. gRPC connection establishment is asynchronous; callers should
+// treat OnConnected, not Connect returning nil, as the "extension is live"
+// signal.
 func (c *CommandClient) Connect(socketPath string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	if socketPath == "" {
+		return errors.New("command socket path is empty")
+	}
 
-	if c.conn != nil {
+	c.mu.Lock()
+	if c.session != nil {
+		c.mu.Unlock()
 		return nil
 	}
 
-	target := "unix://" + socketPath
+	target := commandSocketTarget(socketPath)
 	conn, err := grpc.NewClient(
 		target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           commandConnectBackoff,
+			MinConnectTimeout: time.Second,
+		}),
 	)
 	if err != nil {
-		return fmt.Errorf("grpc dial %s: %w", target, err)
+		c.mu.Unlock()
+		return fmt.Errorf("grpc client %s: %w", target, err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	c.conn = conn
-	c.cancel = cancel
-	cli := pb.NewCommandClient(conn)
-	c.cli = cli
-	c.connectOnce = sync.Once{}
-	c.disconnectOnce = sync.Once{}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	session := &commandClientSession{
+		ctx:      ctx,
+		cancel:   cancel,
+		conn:     conn,
+		client:   pb.NewCommandClient(conn),
+		delegate: c.delegate,
+	}
+	c.session = session
+	config := c.config
+	c.mu.Unlock()
+
+	session.start(config)
+	return nil
+}
+
+// Close terminates all streams and releases the gRPC connection. It is safe to
+// call multiple times. Close blocks until stream goroutines exit, so Swift
+// callers should invoke it away from the main actor.
+func (c *CommandClient) Close() {
+	c.mu.Lock()
+	session := c.session
+	c.session = nil
+	c.mu.Unlock()
+
+	if session != nil {
+		session.close()
+	}
+}
+
+// Disconnect is kept as a compatibility alias for older Swift call sites.
+func (c *CommandClient) Disconnect() {
+	c.Close()
+}
+
+func (s *commandClientSession) start(config commandClientConfig) {
 	subscribed := false
-	if c.options.SubscribeStatus {
-		c.wg.Add(1)
-		stream, err := cli.SubscribeStatus(ctx, &pb.StatusRequest{IntervalMs: c.options.StatusIntervalMs})
-		go runStream(c, stream, err, func(msg *pb.StatusMessage) {
-			c.handler.WriteStatus(&Status{
+	if config.subscribeStatus {
+		s.wg.Add(1)
+		stream, err := s.client.SubscribeStatus(s.ctx, &pb.StatusRequest{
+			IntervalMs: config.statusIntervalMs,
+		})
+		go runCommandStream(s, stream, err, func(msg *pb.StatusMessage) {
+			if s.delegate == nil {
+				return
+			}
+			s.delegate.OnStatus(&CommandStatus{
 				Up:             msg.Up,
 				Down:           msg.Down,
 				UpTotal:        msg.UpTotal,
@@ -136,130 +206,102 @@ func (c *CommandClient) Connect(socketPath string) error {
 		})
 		subscribed = true
 	}
-	if c.options.SubscribeLogs {
-		c.wg.Add(1)
-		stream, err := cli.SubscribeLogs(ctx, &pb.LogRequest{})
-		go runStream(c, stream, err, func(msg *pb.LogMessage) {
-			c.handler.WriteLog(int(msg.Level), msg.Payload)
+	if config.subscribeLogs {
+		s.wg.Add(1)
+		stream, err := s.client.SubscribeLogs(s.ctx, &pb.LogRequest{})
+		go runCommandStream(s, stream, err, func(msg *pb.LogMessage) {
+			if s.delegate != nil {
+				s.delegate.OnLog(int(msg.Level), msg.Payload)
+			}
 		})
 		subscribed = true
 	}
-	// Pure plumbing client (neither stream subscribed): there's nothing
-	// to wait on, treat it as connected immediately.
 	if !subscribed {
-		c.fireConnected()
+		s.fireConnected()
 	}
-	return nil
 }
 
-// Disconnect terminates all streams and releases the gRPC connection.
-// Safe to call multiple times. Blocks until both stream goroutines exit
-// — call from a non-UI thread on the Swift side.
-func (c *CommandClient) Disconnect() {
-	c.mu.Lock()
-	cancel := c.cancel
-	conn := c.conn
-	c.cancel = nil
-	c.conn = nil
-	c.cli = nil
-	c.mu.Unlock()
-
-	if cancel != nil {
-		cancel()
+func (s *commandClientSession) close() {
+	s.stopping.Store(true)
+	s.cancel()
+	if s.conn != nil {
+		_ = s.conn.Close()
 	}
-	if conn != nil {
-		_ = conn.Close()
-	}
-	c.wg.Wait()
-	// Make sure the disconnect callback fires even if both streams
-	// already returned cleanly (or were never started).
-	c.fireDisconnect(nil)
+	s.wg.Wait()
+	s.fireDisconnected(nil)
 }
 
-// runStream is the shared body of every server-streaming subscription:
-// drain Recv into dispatch until the stream errors, signalling
-// connected on the first frame and disconnected on any error or open
-// failure. The stream type stays at the call site (gomobile-friendly
-// proto types) and we constrain it via an inline interface so the
-// generic compiles without listing every gRPC client interface.
-//
-// On any error we cancel the shared context before firing the
-// disconnect callback. That stops the *other* stream goroutine from
-// dispatching frames after the host has already moved on to a new
-// reconnect cycle — which would surface as phantom traffic readings
-// for one tick after every reconnect.
-func runStream[Msg any](
-	c *CommandClient,
+// runCommandStream is the shared body for every server-streaming subscription.
+// It marks the IPC as connected after the first frame, dispatches every frame
+// to Swift, and turns any stream end into one disconnection event.
+func runCommandStream[Msg any](
+	s *commandClientSession,
 	stream interface{ Recv() (*Msg, error) },
 	openErr error,
 	dispatch func(*Msg),
 ) {
-	defer c.wg.Done()
+	defer s.wg.Done()
 	if openErr != nil {
-		c.cancelContext()
-		c.fireDisconnect(openErr)
+		s.finish(openErr)
 		return
 	}
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			c.cancelContext()
-			c.fireDisconnect(err)
+			s.finish(err)
 			return
 		}
-		c.fireConnected()
+		s.fireConnected()
 		dispatch(msg)
 	}
 }
 
-// cancelContext nudges every other stream goroutine sharing this
-// client's context to exit the next time it returns from Recv. Idempotent.
-func (c *CommandClient) cancelContext() {
-	c.mu.Lock()
-	cancel := c.cancel
-	c.mu.Unlock()
-	if cancel != nil {
-		cancel()
-	}
+func (s *commandClientSession) finish(err error) {
+	s.cancel()
+	s.fireDisconnected(s.disconnectError(err))
 }
 
-func (c *CommandClient) fireConnected() {
-	c.connectOnce.Do(func() {
-		if c.handler != nil {
-			c.handler.Connected()
+func (s *commandClientSession) disconnectError(err error) error {
+	if err == nil || s.stopping.Load() || errors.Is(err, context.Canceled) {
+		return nil
+	}
+	if st, ok := status.FromError(err); ok && st.Code() == codes.Canceled {
+		return nil
+	}
+	return err
+}
+
+func (s *commandClientSession) fireConnected() {
+	s.connected.Do(func() {
+		if s.delegate != nil {
+			s.delegate.OnConnected()
 		}
 	})
 }
 
-func (c *CommandClient) fireDisconnect(err error) {
-	c.disconnectOnce.Do(func() {
-		if c.handler == nil {
+func (s *commandClientSession) fireDisconnected(err error) {
+	s.disconnected.Do(func() {
+		if s.delegate == nil {
 			return
 		}
 		msg := ""
 		if err != nil {
 			msg = err.Error()
 		}
-		c.handler.Disconnected(msg)
+		s.delegate.OnDisconnected(msg)
 	})
 }
 
-// Reload tells the running mihomo core to re-read runtime_settings.json
-// and the active profile YAML. Returns nil on success; on failure
-// returns an error whose message is the gRPC status message produced
-// by the server (e.g. "yaml: line 42: mapping values not allowed").
-//
-// Returns nil (not an error) when the connection isn't established:
-// the Swift wrapper guards on its goClient before getting here, so a
-// nil `c.cli` means the client raced with Disconnect between the
-// guard and the gomobile call. runtime_settings.json is the source of
-// truth — a missed nudge becomes a no-op, picked up on the next Start.
+// Reload tells the running mihomo core to re-read runtime_settings.json and the
+// active profile YAML. Returns nil when the connection is not currently open;
+// the on-disk settings remain the source of truth and will be picked up on the
+// next tunnel start.
 func (c *CommandClient) Reload() error {
-	cli := c.client()
+	cli := c.grpcClient()
 	if cli == nil {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), reloadTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), commandReloadTimeout)
 	defer cancel()
 	if _, err := cli.Reload(ctx, &pb.ReloadRequest{}); err != nil {
 		return fmt.Errorf("%s", grpcMessage(err))
@@ -267,17 +309,14 @@ func (c *CommandClient) Reload() error {
 	return nil
 }
 
-// SetLogLevel pushes a runtime log filter into the extension's mihomo
-// without triggering a hub.ApplyConfig. Levels: 0=DEBUG 1=INFO
-// 2=WARNING 3=ERROR 4=SILENT (clamped on the server). Returns nil when
-// the connection isn't established (same disconnect-race rationale as
-// Reload).
+// SetLogLevel pushes a runtime log filter into the extension's mihomo without
+// triggering hub.ApplyConfig. Levels are clamped on the server.
 func (c *CommandClient) SetLogLevel(level int) error {
-	cli := c.client()
+	cli := c.grpcClient()
 	if cli == nil {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), setLogLevelTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), commandSetLogLevelTimeout)
 	defer cancel()
 	if _, err := cli.SetLogLevel(ctx, &pb.SetLogLevelRequest{Level: int32(level)}); err != nil {
 		return fmt.Errorf("%s", grpcMessage(err))
@@ -285,17 +324,21 @@ func (c *CommandClient) SetLogLevel(level int) error {
 	return nil
 }
 
-func (c *CommandClient) client() pb.CommandClient {
+func (c *CommandClient) grpcClient() pb.CommandClient {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.cli
+	if c.session == nil {
+		return nil
+	}
+	return c.session.client
 }
 
-// grpcMessage strips the verbose `rpc error: code = X desc = ` prefix
-// gRPC adds to status.Error() so the message we surface in the host UI
-// is just the original Go error string ("mihomo not started",
-// "yaml: line 42: ..."). The status code itself isn't useful to the
-// user; the message is.
+func commandSocketTarget(socketPath string) string {
+	return "unix://" + socketPath
+}
+
+// grpcMessage strips the verbose "rpc error: code = X desc =" prefix gRPC adds
+// to status.Error so the host UI can show the original Go error text.
 func grpcMessage(err error) string {
 	if err == nil {
 		return ""

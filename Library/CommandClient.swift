@@ -1,10 +1,16 @@
 import Foundation
 import Observation
-// gomobile-generated types (LibmihomoCommandClient, LibmihomoStatus,
-// ClientBridge handler) lack Sendable conformance; @preconcurrency
-// downgrades the resulting strict-concurrency diagnostics on calls
-// across the host/Go boundary.
+// gomobile-generated types (LibmihomoCommandClient, LibmihomoCommandStatus,
+// ClientBridge delegate) lack Sendable conformance; @preconcurrency downgrades
+// the resulting strict-concurrency diagnostics on calls across the host/Go
+// boundary.
 @preconcurrency import Libmihomo
+
+public enum CommandConnectionState: Equatable, Sendable {
+    case disconnected
+    case connecting
+    case connected
+}
 
 /// Host-app-side counterpart to the gRPC command server running inside
 /// the Network Extension. Subscribes to `Status` (traffic + memory) and
@@ -19,7 +25,8 @@ import Observation
 /// footprint on the Swift side at zero (no grpc-swift).
 @MainActor @Observable
 public final class CommandClient {
-    public private(set) var isConnected: Bool = false
+    public private(set) var connectionState: CommandConnectionState = .disconnected
+    public private(set) var lastDisconnectMessage: String?
     public private(set) var logs: [LogEntry] = []
     public private(set) var traffic: TrafficSnapshot = .zero
     /// Memory used by the *extension* process. Reported by the server in
@@ -43,6 +50,7 @@ public final class CommandClient {
 
     @ObservationIgnored private var goClient: LibmihomoCommandClient?
     @ObservationIgnored private var bridge: ClientBridge?
+    @ObservationIgnored private var bridgeID: UUID?
 
     // Reconnect bookkeeping. The extension may not be up the moment the
     // host app first calls connect(); a simple capped backoff handles
@@ -52,9 +60,15 @@ public final class CommandClient {
 
     public init() {}
 
+    public var isConnected: Bool {
+        connectionState == .connected
+    }
+
     public func connect() {
         guard !shouldRun else { return }
         shouldRun = true
+        connectionState = .connecting
+        lastDisconnectMessage = nil
         startReconnectLoop()
     }
 
@@ -65,7 +79,9 @@ public final class CommandClient {
         let oldClient = goClient
         goClient = nil
         bridge = nil
-        isConnected = false
+        bridgeID = nil
+        connectionState = .disconnected
+        lastDisconnectMessage = nil
         // The last Status frame sticks around in `traffic`/`memory`
         // otherwise, so the Dashboard would keep rendering a non-zero
         // up/down rate and "N active" connections after disconnect —
@@ -74,11 +90,11 @@ public final class CommandClient {
         // from a fresh frame.
         traffic = .zero
         memory = .zero
-        // CommandClient.Disconnect() in Go calls wg.Wait() — gRPC stream
+        // CommandClient.Close() in Go calls wg.Wait() — gRPC stream
         // teardown can take 100–500ms on a Unix socket, so do it off the
         // main actor to keep the UI responsive.
         if let oldClient {
-            Task.detached { oldClient.disconnect() }
+            Task.detached { oldClient.close() }
         }
     }
 
@@ -169,27 +185,36 @@ public final class CommandClient {
         if let old = goClient {
             goClient = nil
             bridge = nil
-            Task.detached { old.disconnect() }
+            bridgeID = nil
+            Task.detached { old.close() }
         }
 
-        let options = LibmihomoCommandClientOptions()
-        options.subscribeStatus = true
-        options.subscribeLogs = true
-        options.statusIntervalMs = 1_000
+        connectionState = .connecting
+        lastDisconnectMessage = nil
+
+        let config = LibmihomoCommandClientConfig()
+        config.subscribeStatus = true
+        config.subscribeLogs = true
+        config.statusIntervalMs = 1_000
 
         let bridge = ClientBridge(owner: self)
-        guard let client = LibmihomoNewCommandClient(bridge, options) else {
+        guard let client = LibmihomoNewCommandClient(bridge, config) else {
+            connectionState = .disconnected
             return false
         }
         self.bridge = bridge
+        self.bridgeID = bridge.id
         self.goClient = client
         do {
             try client.connect(FilePath.commandSocketPath)
             return true
         } catch {
-            client.disconnect()
+            client.close()
             self.goClient = nil
             self.bridge = nil
+            self.bridgeID = nil
+            self.connectionState = .disconnected
+            self.lastDisconnectMessage = error.localizedDescription
             return false
         }
     }
@@ -201,15 +226,21 @@ public final class CommandClient {
 
     // MARK: - Bridge callbacks (called from Go via gomobile)
 
-    fileprivate func didConnect() {
-        isConnected = true
+    fileprivate func didConnect(from bridgeID: UUID) {
+        guard self.bridgeID == bridgeID else { return }
+        connectionState = .connected
+        lastDisconnectMessage = nil
     }
 
-    fileprivate func didDisconnect() {
-        isConnected = false
+    fileprivate func didDisconnect(from bridgeID: UUID, message: String?) {
+        guard self.bridgeID == bridgeID else { return }
+        connectionState = shouldRun ? .connecting : .disconnected
+        let message = message?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        lastDisconnectMessage = message.isEmpty ? nil : message
     }
 
-    fileprivate func didReceive(status: LibmihomoStatus) {
+    fileprivate func didReceive(status: LibmihomoCommandStatus, from bridgeID: UUID) {
+        guard self.bridgeID == bridgeID else { return }
         traffic = TrafficSnapshot(
             up: status.up,
             down: status.down,
@@ -223,7 +254,8 @@ public final class CommandClient {
         memory = MemoryStats(resident: resident, available: available)
     }
 
-    fileprivate func didReceive(log entry: LogEntry) {
+    fileprivate func didReceive(log entry: LogEntry, from bridgeID: UUID) {
+        guard self.bridgeID == bridgeID else { return }
         guard logBufferingEnabled else { return }
         logs.append(entry)
         if logs.count > Self.trimThreshold {
@@ -232,13 +264,14 @@ public final class CommandClient {
     }
 }
 
-/// Glue between the gomobile-generated handler protocol and our Swift
+/// Glue between the gomobile-generated delegate protocol and our Swift
 /// view-model. Methods are invoked from arbitrary Go-runtime threads,
 /// so every UI-touching update is dispatched onto the main actor.
 /// `@unchecked Sendable`: the only stored state is a weak ref to the
 /// MainActor owner and an actor-protected one-shot signal, both safe
 /// to read concurrently.
-private final class ClientBridge: NSObject, LibmihomoCommandClientHandlerProtocol, @unchecked Sendable {
+private final class ClientBridge: NSObject, LibmihomoCommandClientDelegateProtocol, @unchecked Sendable {
+    let id = UUID()
     private weak var owner: CommandClient?
     private let disconnect = AsyncOneShot()
 
@@ -250,25 +283,29 @@ private final class ClientBridge: NSObject, LibmihomoCommandClientHandlerProtoco
         await disconnect.wait()
     }
 
-    // MARK: LibmihomoCommandClientHandlerProtocol
+    // MARK: LibmihomoCommandClientDelegateProtocol
 
-    func connected() {
-        Task { @MainActor [weak owner] in owner?.didConnect() }
+    func onConnected() {
+        let id = id
+        Task { @MainActor [weak owner] in owner?.didConnect(from: id) }
     }
 
-    func disconnected(_: String?) {
-        Task { @MainActor [weak owner] in owner?.didDisconnect() }
+    func onDisconnected(_ message: String?) {
+        let id = id
+        Task { @MainActor [weak owner] in owner?.didDisconnect(from: id, message: message) }
         disconnect.signal()
     }
 
-    func write(_ status: LibmihomoStatus?) {
+    func onStatus(_ status: LibmihomoCommandStatus?) {
         guard let status else { return }
-        Task { @MainActor [weak owner] in owner?.didReceive(status: status) }
+        let id = id
+        Task { @MainActor [weak owner] in owner?.didReceive(status: status, from: id) }
     }
 
-    func writeLog(_ level: Int, payload: String?) {
+    func onLog(_ level: Int, payload: String?) {
         let entry = LogEntry(rawLevel: level, message: payload ?? "")
-        Task { @MainActor [weak owner] in owner?.didReceive(log: entry) }
+        let id = id
+        Task { @MainActor [weak owner] in owner?.didReceive(log: entry, from: id) }
     }
 }
 
@@ -295,4 +332,3 @@ private actor AsyncOneShot {
         continuations.removeAll()
     }
 }
-
