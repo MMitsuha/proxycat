@@ -14,12 +14,13 @@
 
 ## 本地化文案风格
 
-ProxyCat 的简体中文本地化采用统一的产品文案风格：
+ProxyCat 的简体中文与日文本地化采用统一的产品文案风格：
 
 - **语气**：简洁、中性、偏 iOS 系统设置风格；按钮和菜单使用短动词（如“保存”“取消”“重置”），提示语直接说明结果或前置条件。
 - **术语**：`profile` 统一译为“配置”，`Dashboard` 统一译为“仪表盘”，`Statistics` 译为“统计”，`Saved Logs` 译为“已保存日志”，`Web UI` 保留英文写法。
+- **日文术语**：`profile` 统一译为“プロファイル”，`Dashboard` 统一译为“ダッシュボード”，`Statistics` 译为“統計”，`Saved Logs` 译为“保存済みログ”，`Web UI` 保留英文写法。
 - **技术名词**：保留 `ProxyCat`、`mihomo`、`YAML`、`SSID`、`Wi-Fi`、`HTTP`、`URL`、`VPN`、`TUN`、`gRPC`、`App Group`、`GitHub`、`Go`、`iOS` 等原文。
-- **标点**：中文句子使用全角标点（`，。？！；（）`），UI 名称引用使用中文引号（`「…」`）；占位符（如 `%@`、`%lld`）和路径、命令、协议名保持原样。
+- **标点**：中文句子使用全角标点（`，。？！；（）`），日文句子使用日文标点（`、。`）；UI 名称引用使用中文 / 日文引号（`「…」`）；占位符（如 `%@`、`%lld`）和路径、命令、协议名保持原样。
 - **一致性**：相同功能入口在不同页面使用同一译名；说明文字不混用“链接 / URL”“仪表板 / 仪表盘”“网页 UI / Web UI”等变体。
 
 ## 目录结构
@@ -72,7 +73,7 @@ go install golang.org/x/mobile/cmd/gobind@latest
 gomobile init
 ```
 
-mihomo 源码以 git submodule 形式 vendored 在 `proxycat/mihomo/`，跟踪上游 `Alpha` 分支。`libmihomo/go.mod` 中的 `replace` 指向该子模块。
+mihomo 源码以 git submodule 形式 vendored 在 `proxycat/mihomo/`，跟踪上游 `Meta` 分支。`libmihomo/go.mod` 中的 `replace` 指向该子模块。
 
 ```bash
 git clone --recurse-submodules <proxycat repo>
@@ -80,19 +81,19 @@ git clone --recurse-submodules <proxycat repo>
 make mihomo-init        # 等价于 git submodule update --init --recursive mihomo
 ```
 
-升级到最新 Alpha tip 并重建 xcframework：
+升级到最新 Meta tip 并重建 xcframework：
 
 ```bash
 make mihomo-upgrade     # git submodule update --remote mihomo + ./scripts/build-libmihomo.sh
 git add mihomo && git commit -m "Bump mihomo to <sha>"
 ```
 
-或者钉到指定的 tag / commit / 分支（不跟踪 Alpha tip）：
+或者钉到指定的 tag / commit / 分支（不跟踪 Meta tip）：
 
 ```bash
 make mihomo-checkout REF=v1.19.5         # 锁定到一个稳定 tag
 make mihomo-checkout REF=35d5d4e44d7a    # 锁定到具体 commit
-make mihomo-checkout REF=Alpha           # 等效于 mihomo-upgrade（取 origin/Alpha 当前 tip）
+make mihomo-checkout REF=Meta            # 等效于 mihomo-upgrade（取 origin/Meta 当前 tip）
 git add mihomo && git commit -m "Pin mihomo to <sha> (<ref>)"
 ```
 
@@ -120,7 +121,7 @@ open ProxyCat.xcodeproj
 | `make version`        | 打印下一次 `make project` 会写入的版本/编号            |
 | `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
 | `make mihomo-init`    | 初始化或刷新 `mihomo/` submodule                       |
-| `make mihomo-upgrade` | 拉取最新 Alpha tip 并重建 xcframework                  |
+| `make mihomo-upgrade` | 拉取最新 Meta tip 并重建 xcframework                   |
 | `make mihomo-checkout REF=<ref>` | 钉到指定 tag / commit / 分支并重建 xcframework |
 | `make assets`         | 下载 geo 资源与 metacubexd 到 `BundledAssets/`         |
 | `make geo-assets` / `ui-assets` / `clean-assets` | 仅刷新 / 清空对应子集 |
