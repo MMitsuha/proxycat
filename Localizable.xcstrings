@@ -1,18 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "[truncated — showing last %lld of %lld bytes]\n\n" : {
-      "comment" : "Banner prepended to a saved log file's body when only the tail is shown. %1$lld is the number of bytes shown; %2$lld is the file's full size.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "[已截断 — 仅显示末尾 %1$lld / %2$lld 字节]\n\n"
-          }
-        }
-      }
-    },
     "%@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -58,18 +46,6 @@
         }
       }
     },
-    "7 days" : {
-      "comment" : "Statistics range picker: 7-day window.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 天"
-          }
-        }
-      }
-    },
     "14 days" : {
       "comment" : "Statistics range picker: 14-day window.",
       "extractionState" : "manual",
@@ -90,6 +66,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 天"
+          }
+        }
+      }
+    },
+    "7 days" : {
+      "comment" : "Statistics range picker: 7-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 天"
           }
         }
       }
@@ -145,18 +133,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "操作"
-          }
-        }
-      }
-    },
-    "active" : {
-      "comment" : "Caption shown under the live connections counter on the Dashboard.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "活动"
           }
         }
       }
@@ -310,7 +286,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "限制 Saved Logs 中保留的每会话日志文件数量。当前会话始终保留。修改此设置、应用进入前台或打开 Saved Logs 列表时会清理较旧的文件。"
+            "value" : "限制「已保存日志」中保留的单次会话日志数量。当前会话始终保留。修改此设置、App 进入前台或打开「已保存日志」列表时，会清理较旧的文件。"
           }
         }
       }
@@ -365,7 +341,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清除缓存?"
+            "value" : "清除缓存？"
           }
         }
       }
@@ -409,7 +385,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭所有连接?"
+            "value" : "关闭所有连接？"
           }
         }
       }
@@ -442,7 +418,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "配置有效。"
+            "value" : "配置可用。"
           }
         }
       }
@@ -464,7 +440,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先连接后再管理代理"
+            "value" : "连接后才能管理代理"
           }
         }
       }
@@ -475,7 +451,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先连接后再查看连接"
+            "value" : "连接后才能查看连接"
           }
         }
       }
@@ -487,7 +463,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接隧道以开始收集每日流量记录。"
+            "value" : "连接隧道后开始统计每日流量。"
           }
         }
       }
@@ -588,7 +564,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法关闭 (HTTP %lld)"
+            "value" : "无法关闭（HTTP %lld）"
           }
         }
       }
@@ -600,7 +576,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法全部关闭 (HTTP %lld)"
+            "value" : "无法全部关闭（HTTP %lld）"
           }
         }
       }
@@ -628,6 +604,17 @@
         }
       }
     },
+    "Daily Traffic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日流量"
+          }
+        }
+      }
+    },
     "Daily traffic" : {
       "comment" : "Statistics chart card title.",
       "extractionState" : "manual",
@@ -646,7 +633,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仪表板"
+            "value" : "仪表盘"
           }
         }
       }
@@ -701,7 +688,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除所有已保存日志?"
+            "value" : "删除所有已保存日志？"
           }
         }
       }
@@ -723,7 +710,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "诊断信息"
+            "value" : "诊断"
           }
         }
       }
@@ -734,7 +721,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "禁用网页控制器"
+            "value" : "停用 Web 控制器"
           }
         }
       }
@@ -794,17 +781,6 @@
         }
       }
     },
-    "Download from URL" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从链接下载"
-          }
-        }
-      }
-    },
     "Download Profile" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -816,13 +792,24 @@
         }
       }
     },
+    "Download from URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 URL 下载"
+          }
+        }
+      }
+    },
     "Drop GeoIP / GeoSite / MMDB files into BundledAssets/geo/ and an external-ui directory at BundledAssets/ui/, then re-run xcodegen and rebuild to embed them at compile time." : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将 GeoIP / GeoSite / MMDB 文件放入 BundledAssets/geo/，将外部 UI 目录放入 BundledAssets/ui/，然后重新运行 xcodegen 并重新构建以在编译时嵌入。"
+            "value" : "将 GeoIP / GeoSite / MMDB 文件放入 BundledAssets/geo/，将 external-ui 目录放入 BundledAssets/ui/，然后重新运行 xcodegen 并重建，即可在编译时嵌入。"
           }
         }
       }
@@ -834,7 +821,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清除本地保存的每日流量记录。仪表板的实时流量计数不受影响。"
+            "value" : "清除本地保存的每日流量统计。仪表盘上的实时流量计数不受影响。"
           }
         }
       }
@@ -861,6 +848,17 @@
         }
       }
     },
+    "Edited" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已编辑"
+          }
+        }
+      }
+    },
     "Edited %@" : {
       "comment" : "Profile list secondary text. %@ is a relative date like '2 hours ago'.",
       "extractionState" : "manual",
@@ -879,7 +877,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在编译时嵌入到应用中,并在首次运行时复制到工作目录。它们不会被「清除缓存」移除,mihomo 也不会重新下载。"
+            "value" : "在编译时嵌入 App，并在首次运行时复制到工作目录。它们不会被「清除缓存」移除，mihomo 也不会重新下载。"
           }
         }
       }
@@ -934,7 +932,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "外部网页 UI"
+            "value" : "外部 Web UI"
           }
         }
       }
@@ -1007,13 +1005,24 @@
         }
       }
     },
+    "Import YAML" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入 YAML"
+          }
+        }
+      }
+    },
     "Import a YAML config or paste one in." : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入 YAML 配置或粘贴一份。"
+            "value" : "导入或粘贴一份 YAML 配置。"
           }
         }
       }
@@ -1029,17 +1038,6 @@
         }
       }
     },
-    "Import YAML" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入 YAML"
-          }
-        }
-      }
-    },
     "Info" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1047,28 +1045,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "信息"
-          }
-        }
-      }
-    },
-    "iOS evaluates SSIDs case-sensitively. The first matching rule wins; networks not listed fall through to the Default action below." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS 区分大小写匹配 SSID。优先匹配最先命中的规则;未列出的网络将使用下方的「默认」操作。"
-          }
-        }
-      }
-    },
-    "iOS only auto-connects after you have tapped Connect on the Dashboard at least once on this device." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在本设备上至少在仪表盘点击一次「连接」后,iOS 才会启用自动连接。"
           }
         }
       }
@@ -1085,18 +1061,6 @@
         }
       }
     },
-    "Keep last 50 sessions" : {
-      "comment" : "Saved-log retention picker option.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留最近 50 次会话"
-          }
-        }
-      }
-    },
     "Keep last 100 sessions" : {
       "comment" : "Saved-log retention picker option.",
       "extractionState" : "manual",
@@ -1105,6 +1069,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保留最近 100 次会话"
+          }
+        }
+      }
+    },
+    "Keep last 50 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 50 次会话"
           }
         }
       }
@@ -1166,28 +1142,6 @@
         }
       }
     },
-    "mihomo Core" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mihomo 内核"
-          }
-        }
-      }
-    },
-    "mihomo on GitHub" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 GitHub 上查看 mihomo"
-          }
-        }
-      }
-    },
     "Name" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1238,7 +1192,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新建 / 粘贴 YAML"
+            "value" : "新建或粘贴 YAML"
           }
         }
       }
@@ -1294,7 +1248,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有匹配的日志"
+            "value" : "无匹配日志"
           }
         }
       }
@@ -1338,7 +1292,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂无已保存的日志"
+            "value" : "暂无已保存日志"
           }
         }
       }
@@ -1383,7 +1337,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开网页控制台"
+            "value" : "打开 Web UI"
           }
         }
       }
@@ -1427,7 +1381,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先选择一个配置。"
+            "value" : "请先选择配置。"
           }
         }
       }
@@ -1476,13 +1430,35 @@
         }
       }
     },
+    "Profile" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
+          }
+        }
+      }
+    },
+    "Profile file is missing." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置文件不存在。"
+          }
+        }
+      }
+    },
     "Profile has no remote URL" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "配置无远程链接"
+            "value" : "配置没有远程 URL"
           }
         }
       }
@@ -1515,7 +1491,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "配置将被保留。若隧道仍在运行,释放的空间将在下次重连后才会显现。"
+            "value" : "配置会保留。若隧道正在运行，释放的空间要到下次重连后才会显示。"
           }
         }
       }
@@ -1537,7 +1513,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 GitHub 上查看 ProxyCat"
+            "value" : "在 GitHub 查看 ProxyCat"
           }
         }
       }
@@ -1560,7 +1536,18 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重连中"
+            "value" : "重新连接中"
+          }
+        }
+      }
+    },
+    "Recent Days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近日期"
           }
         }
       }
@@ -1572,7 +1559,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "近期"
+            "value" : "最近日期"
           }
         }
       }
@@ -1595,7 +1582,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重载失败"
+            "value" : "重新加载失败"
           }
         }
       }
@@ -1606,7 +1593,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移除规则提供方缓存、已下载的 GeoIP / GeoSite 数据库及外部 UI。mihomo 将在下次启动时重新获取。内置资源会被保留。"
+            "value" : "移除 rule-provider 缓存、已下载的 GeoIP / GeoSite 数据库和外部 Web UI。mihomo 会在下次启动时重新获取。内置资源会保留。"
           }
         }
       }
@@ -1623,6 +1610,16 @@
         }
       }
     },
+    "Reset Statistics" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置统计"
+          }
+        }
+      }
+    },
     "Reset statistics" : {
       "comment" : "Statistics: button that clears the on-device daily totals.",
       "extractionState" : "manual",
@@ -1634,9 +1631,6 @@
           }
         }
       }
-    },
-    "Reset Statistics" : {
-
     },
     "Reset statistics?" : {
       "comment" : "Confirmation dialog title for the Reset Statistics action.",
@@ -1712,7 +1706,18 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "运行环境"
+            "value" : "运行时"
+          }
+        }
+      }
+    },
+    "SNI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SNI"
           }
         }
       }
@@ -1729,7 +1734,14 @@
       }
     },
     "Save downloads the profile, validates it with mihomo, then adds it. Nothing is written if validation fails." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存时会下载配置，并用 mihomo 校验后再添加。校验失败时不会写入。"
+          }
+        }
+      }
     },
     "Save failed" : {
       "extractionState" : "manual",
@@ -1738,6 +1750,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存失败"
+          }
+        }
+      }
+    },
+    "Save validates with mihomo before writing." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存时会先用 mihomo 校验，通过后再写入。"
+          }
+        }
+      }
+    },
+    "Saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存"
           }
         }
       }
@@ -1764,17 +1798,6 @@
         }
       }
     },
-    "Server returned an empty body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务器返回空内容"
-          }
-        }
-      }
-    },
     "Server returned HTTP %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1782,6 +1805,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器返回 HTTP %lld"
+          }
+        }
+      }
+    },
+    "Server returned an empty body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器返回空内容"
           }
         }
       }
@@ -1808,13 +1842,24 @@
         }
       }
     },
+    "Share" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享"
+          }
+        }
+      }
+    },
     "Share File" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "共享文件"
+            "value" : "分享文件"
           }
         }
       }
@@ -1826,17 +1871,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "静默"
-          }
-        }
-      }
-    },
-    "SNI" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SNI"
           }
         }
       }
@@ -1881,7 +1915,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "阻止 mihomo 的 HTTP 控制器与内置网页 UI 绑定监听。宿主应用通过其私有连接继续工作。已连接时立即生效。"
+            "value" : "阻止 mihomo 的 HTTP 控制器和内置 Web UI 绑定监听。宿主 App 会继续通过私有连接工作。已连接时立即生效。"
           }
         }
       }
@@ -1914,7 +1948,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存前请点击 **校验**。"
+            "value" : "保存前请点击「校验」。"
           }
         }
       }
@@ -1925,7 +1959,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存前请点击 **校验** 以使用 mihomo 下载并解析。"
+            "value" : "保存前请点击「校验」，用 mihomo 下载并解析。"
           }
         }
       }
@@ -1957,7 +1991,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这将删除 %@ 个已保存的日志文件。当前活动会话会被保留。"
+            "value" : "将删除 %@ 个已保存日志文件。当前会话会保留。"
           }
         }
       }
@@ -1969,7 +2003,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这将删除 %lld 个已保存的日志文件。当前活动会话会被保留。"
+            "value" : "将删除 %lld 个已保存日志文件。当前会话会保留。"
           }
         }
       }
@@ -2020,6 +2054,28 @@
         }
       }
     },
+    "URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL"
+          }
+        }
+      }
+    },
+    "URL is not valid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL 无效"
+          }
+        }
+      }
+    },
     "Unknown" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2042,24 +2098,13 @@
         }
       }
     },
-    "URL" : {
+    "Usage" : {
       "extractionState" : "manual",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "链接"
-          }
-        }
-      }
-    },
-    "URL is not valid" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接无效"
+            "value" : "用量"
           }
         }
       }
@@ -2070,7 +2115,18 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于上方未匹配的任何网络。"
+            "value" : "用于所有未被上方规则匹配的网络。"
+          }
+        }
+      }
+    },
+    "VPN configuration not loaded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 配置尚未加载"
           }
         }
       }
@@ -2097,17 +2153,6 @@
         }
       }
     },
-    "VPN configuration not loaded" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPN 配置尚未加载"
-          }
-        }
-      }
-    },
     "Warning" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2125,7 +2170,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开启后,ProxyCat 将根据下方规则自动连接或断开。关闭后,在仪表盘手动控制隧道。"
+            "value" : "开启后，ProxyCat 会按下方规则自动连接或断开。关闭后，请在仪表盘手动控制隧道。"
           }
         }
       }
@@ -2147,7 +2192,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "封装构建时间"
+            "value" : "封装层构建时间"
           }
         }
       }
@@ -2158,7 +2203,18 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "封装提交"
+            "value" : "封装层提交"
+          }
+        }
+      }
+    },
+    "YAML" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YAML"
           }
         }
       }
@@ -2171,6 +2227,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "昨天"
+          }
+        }
+      }
+    },
+    "[truncated — showing last %lld of %lld bytes]\n\n" : {
+      "comment" : "Banner prepended to a saved log file's body when only the tail is shown. %1$lld is the number of bytes shown; %2$lld is the file's full size.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[已截断：仅显示末尾 %1$lld / %2$lld 字节]\n\n"
+          }
+        }
+      }
+    },
+    "active" : {
+      "comment" : "Caption shown under the live connections counter on the Dashboard.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动"
+          }
+        }
+      }
+    },
+    "chars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字符"
+          }
+        }
+      }
+    },
+    "iOS evaluates SSIDs case-sensitively. The first matching rule wins; networks not listed fall through to the Default action below." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 会区分大小写匹配 SSID。首个匹配规则生效；未列出的网络会使用下方的「默认」操作。"
+          }
+        }
+      }
+    },
+    "iOS only auto-connects after you have tapped Connect on the Dashboard at least once on this device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在本设备上至少从仪表盘点过一次「连接」后，iOS 才会启用自动连接。"
+          }
+        }
+      }
+    },
+    "lines" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行"
+          }
+        }
+      }
+    },
+    "mihomo Core" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mihomo 内核"
+          }
+        }
+      }
+    },
+    "mihomo on GitHub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 查看 mihomo"
           }
         }
       }

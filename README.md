@@ -10,7 +10,17 @@
 | Dashboard | Profiles | Logs | Settings | Auto Connect |
 |:---:|:---:|:---:|:---:|:---:|
 | <img src="assets/IMG_2721.png" width="200"> | <img src="assets/IMG_2722.png" width="200"> | <img src="assets/IMG_2723.png" width="200"> | <img src="assets/IMG_2725.png" width="200"> | <img src="assets/IMG_2749.png" width="200"> |
-| 状态 / 流量 / 内存预算 / 活动连接 | YAML profile 管理 | 等级筛选 + 搜索 + 复制 | 隐私 / 存储 / 统计 / Auto Connect / 诊断 | SSID / 蜂窝 / 默认动作 |
+| 状态 / 流量 / 内存预算 / 活动连接 | YAML 配置管理 | 等级筛选 + 搜索 + 复制 | 隐私 / 存储 / 统计 / Auto Connect / 诊断 | SSID / 蜂窝 / 默认动作 |
+
+## 本地化文案风格
+
+ProxyCat 的简体中文本地化采用统一的产品文案风格：
+
+- **语气**：简洁、中性、偏 iOS 系统设置风格；按钮和菜单使用短动词（如“保存”“取消”“重置”），提示语直接说明结果或前置条件。
+- **术语**：`profile` 统一译为“配置”，`Dashboard` 统一译为“仪表盘”，`Statistics` 译为“统计”，`Saved Logs` 译为“已保存日志”，`Web UI` 保留英文写法。
+- **技术名词**：保留 `ProxyCat`、`mihomo`、`YAML`、`SSID`、`Wi-Fi`、`HTTP`、`URL`、`VPN`、`TUN`、`gRPC`、`App Group`、`GitHub`、`Go`、`iOS` 等原文。
+- **标点**：中文句子使用全角标点（`，。？！；（）`），UI 名称引用使用中文引号（`「…」`）；占位符（如 `%@`、`%lld`）和路径、命令、协议名保持原样。
+- **一致性**：相同功能入口在不同页面使用同一译名；说明文字不混用“链接 / URL”“仪表板 / 仪表盘”“网页 UI / Web UI”等变体。
 
 ## 目录结构
 

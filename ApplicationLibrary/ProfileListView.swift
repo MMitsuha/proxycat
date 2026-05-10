@@ -7,6 +7,7 @@ public struct ProfileListView: View {
     @State private var showImporter = false
     @State private var actionError: String?
     @State private var presentedSheet: EditorSheet?
+    @State private var shareItem: ProfileShareItem?
 
     public init() {}
 
@@ -33,6 +34,12 @@ public struct ProfileListView: View {
                             Label("Edit", systemImage: "pencil")
                         }
                         .tint(.blue)
+                        Button {
+                            share(profile)
+                        } label: {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                        }
+                        .tint(.green)
                         if profile.remoteURL != nil {
                             Button {
                                 refresh(profile)
@@ -111,6 +118,9 @@ public struct ProfileListView: View {
                 }
             }
         }
+        .sheet(item: $shareItem) { item in
+            ShareSheet(items: [item.url])
+        }
         .errorAlert($actionError, title: "Action failed")
     }
 
@@ -129,6 +139,14 @@ public struct ProfileListView: View {
             } catch {
                 actionError = error.localizedDescription
             }
+        }
+    }
+
+    private func share(_ profile: Profile) {
+        do {
+            shareItem = try ProfileShareItem(profile)
+        } catch {
+            actionError = error.localizedDescription
         }
     }
 
@@ -186,6 +204,55 @@ public struct ProfileListView: View {
             case .creating: return "creating"
             case .downloading: return "downloading"
             case let .editing(profile): return "editing-\(profile.id.uuidString)"
+            }
+        }
+    }
+
+    private struct ProfileShareItem: Identifiable {
+        let id = UUID()
+        let url: URL
+
+        init(_ profile: Profile) throws {
+            let source = FilePath.profilesDirectory.appendingPathComponent(profile.fileName)
+            guard FileManager.default.fileExists(atPath: source.path) else {
+                throw ProfileShareError.missingFile
+            }
+
+            let exportDirectory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("proxycat-profile-share", isDirectory: true)
+            try FileManager.default.createDirectory(
+                at: exportDirectory,
+                withIntermediateDirectories: true
+            )
+
+            let destination = exportDirectory.appendingPathComponent(Self.fileName(for: profile))
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try FileManager.default.removeItem(at: destination)
+            }
+            try FileManager.default.copyItem(at: source, to: destination)
+            url = destination
+        }
+
+        private static func fileName(for profile: Profile) -> String {
+            let invalid = CharacterSet(charactersIn: "/\\:?%*|\"<>")
+                .union(.newlines)
+                .union(.controlCharacters)
+            let sanitized = profile.name
+                .components(separatedBy: invalid)
+                .joined(separator: "-")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let base = sanitized.isEmpty ? "profile" : sanitized
+            return base.hasSuffix(".yaml") || base.hasSuffix(".yml") ? base : "\(base).yaml"
+        }
+    }
+
+    private enum ProfileShareError: LocalizedError {
+        case missingFile
+
+        var errorDescription: String? {
+            switch self {
+            case .missingFile:
+                return String(localized: "Profile file is missing.", bundle: .main)
             }
         }
     }

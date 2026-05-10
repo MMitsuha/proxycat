@@ -285,7 +285,7 @@ struct SavedLogEntry: Identifiable, Hashable {
 
 // MARK: - Share sheet bridge
 
-private struct ShareSheet: UIViewControllerRepresentable {
+struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
