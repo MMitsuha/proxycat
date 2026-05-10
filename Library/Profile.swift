@@ -42,6 +42,7 @@ public final class ProfileStore {
     /// the running tunnel hot-applies the new config without a full
     /// restart.
     public static let activeContentDidChange = Notification.Name("io.proxycat.ProfileStore.activeContentDidChange")
+    public static let catalogDidChange = Notification.Name("io.proxycat.ProfileStore.catalogDidChange")
 
     public private(set) var profiles: [Profile] = []
     /// Mirror of `RuntimeSettings.shared.activeProfileID`. Read-only
@@ -253,6 +254,32 @@ public final class ProfileStore {
     private func persist() throws {
         let data = try JSONEncoder().encode(profiles)
         try data.write(to: indexURL, options: .atomic)
+        NotificationCenter.default.post(name: Self.catalogDidChange, object: self)
+    }
+
+    public func replaceAll(
+        with profiles: [Profile],
+        contentsByID: [UUID: String],
+        activeProfileID requestedActiveProfileID: UUID?
+    ) async throws {
+        let restoredProfiles = try Self.validatedRestoreProfiles(profiles, contentsByID: contentsByID)
+        for profile in restoredProfiles {
+            guard let content = contentsByID[profile.id] else {
+                throw ProfileRestoreError.missingContent(profile.name)
+            }
+            _ = try await Self.validateYAML(content)
+        }
+
+        try await Self.replaceProfileDirectory(profiles: restoredProfiles, contentsByID: contentsByID)
+        self.profiles = restoredProfiles
+        let repairedID = Self.repairedActiveProfileID(
+            profiles: restoredProfiles,
+            storedID: requestedActiveProfileID
+        )
+        activeProfileID = repairedID
+        RuntimeSettings.shared.activeProfileID = repairedID
+        NotificationCenter.default.post(name: Self.catalogDidChange, object: self)
+        NotificationCenter.default.post(name: Self.activeContentDidChange, object: self)
     }
 
     nonisolated static func repairedActiveProfileID(profiles: [Profile], storedID: UUID?) -> UUID? {
@@ -260,6 +287,86 @@ public final class ProfileStore {
             return storedID
         }
         return profiles.first?.id
+    }
+
+    nonisolated static func validatedRestoreProfiles(
+        _ profiles: [Profile],
+        contentsByID: [UUID: String]
+    ) throws -> [Profile] {
+        var ids = Set<UUID>()
+        var fileNames = Set<String>()
+        for profile in profiles {
+            guard ids.insert(profile.id).inserted else {
+                throw ProfileRestoreError.duplicateProfileID(profile.id)
+            }
+            guard contentsByID[profile.id] != nil else {
+                throw ProfileRestoreError.missingContent(profile.name)
+            }
+            guard Self.isRestorableFileName(profile.fileName) else {
+                throw ProfileRestoreError.invalidFileName(profile.fileName)
+            }
+            guard fileNames.insert(profile.fileName).inserted else {
+                throw ProfileRestoreError.duplicateFileName(profile.fileName)
+            }
+        }
+        return profiles
+    }
+
+    private nonisolated static func isRestorableFileName(_ fileName: String) -> Bool {
+        guard !fileName.isEmpty,
+              fileName == URL(fileURLWithPath: fileName).lastPathComponent
+        else { return false }
+        let ext = URL(fileURLWithPath: fileName).pathExtension.lowercased()
+        return ext == "yaml" || ext == "yml"
+    }
+
+    private nonisolated static func replaceProfileDirectory(
+        profiles: [Profile],
+        contentsByID: [UUID: String]
+    ) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            let root = FilePath.sharedDirectory
+            let finalDirectory = root.appendingPathComponent("Profiles", isDirectory: true)
+            let tempDirectory = root.appendingPathComponent("Profiles.restore-\(UUID().uuidString)", isDirectory: true)
+            let backupDirectory = root.appendingPathComponent("Profiles.previous-\(UUID().uuidString)", isDirectory: true)
+
+            try fm.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+            do {
+                for profile in profiles {
+                    guard let content = contentsByID[profile.id] else {
+                        throw ProfileRestoreError.missingContent(profile.name)
+                    }
+                    let destination = tempDirectory.appendingPathComponent(profile.fileName)
+                    try content.write(to: destination, atomically: true, encoding: .utf8)
+                }
+                let indexData = try JSONEncoder().encode(profiles)
+                try indexData.write(
+                    to: tempDirectory.appendingPathComponent(AppConfiguration.profileIndexFileName),
+                    options: .atomic
+                )
+
+                if fm.fileExists(atPath: finalDirectory.path) {
+                    try fm.moveItem(at: finalDirectory, to: backupDirectory)
+                }
+
+                do {
+                    try fm.moveItem(at: tempDirectory, to: finalDirectory)
+                    if fm.fileExists(atPath: backupDirectory.path) {
+                        try? fm.removeItem(at: backupDirectory)
+                    }
+                } catch {
+                    if fm.fileExists(atPath: backupDirectory.path),
+                       !fm.fileExists(atPath: finalDirectory.path) {
+                        try? fm.moveItem(at: backupDirectory, to: finalDirectory)
+                    }
+                    throw error
+                }
+            } catch {
+                try? fm.removeItem(at: tempDirectory)
+                throw error
+            }
+        }.value
     }
 }
 
@@ -277,6 +384,26 @@ public enum ProfileError: LocalizedError {
         case .invalidURL: return String(localized: "URL is not valid", bundle: .main)
         case let .httpStatus(code): return String(localized: "Server returned HTTP \(code)", bundle: .main)
         case .emptyResponse: return String(localized: "Server returned an empty body", bundle: .main)
+        }
+    }
+}
+
+public enum ProfileRestoreError: LocalizedError, Equatable {
+    case duplicateProfileID(UUID)
+    case duplicateFileName(String)
+    case invalidFileName(String)
+    case missingContent(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case let .duplicateProfileID(id):
+            return String(localized: "Backup contains duplicate profile id \(id.uuidString).", bundle: .main)
+        case let .duplicateFileName(fileName):
+            return String(localized: "Backup contains duplicate profile file \(fileName).", bundle: .main)
+        case let .invalidFileName(fileName):
+            return String(localized: "Backup contains invalid profile file \(fileName).", bundle: .main)
+        case let .missingContent(name):
+            return String(localized: "Backup is missing YAML for \(name).", bundle: .main)
         }
     }
 }

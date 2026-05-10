@@ -380,6 +380,125 @@
         }
       }
     },
+    "Back Up Now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即备份"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐバックアップ"
+          }
+        }
+      }
+    },
+    "Backs up profiles, the active profile, runtime preferences, Auto Connect, and log-retention settings to iCloud Drive. Logs, cache files, usage history, and MITM keys are not included." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将配置、当前配置、运行时偏好、自动连接和日志保留设置备份到 iCloud Drive。不包含日志、缓存文件、用量历史和 MITM 密钥。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロファイル、アクティブなプロファイル、ランタイム設定、自動接続、ログ保持設定を iCloud Drive にバックアップします。ログ、キャッシュファイル、使用履歴、MITM キーは含まれません。"
+          }
+        }
+      }
+    },
+    "Backup contains duplicate profile file %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份包含重复的配置文件 %@。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップに重複したプロファイルファイル %@ が含まれています。"
+          }
+        }
+      }
+    },
+    "Backup contains duplicate profile id %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份包含重复的配置 ID %@。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップに重複したプロファイル ID %@ が含まれています。"
+          }
+        }
+      }
+    },
+    "Backup contains invalid profile file %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份包含无效的配置文件 %@。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップに無効なプロファイルファイル %@ が含まれています。"
+          }
+        }
+      }
+    },
+    "Backup is missing YAML for %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份缺少 %@ 的 YAML。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックアップに %@ の YAML がありません。"
+          }
+        }
+      }
+    },
+    "Both local data and the iCloud backup changed. Choose Back Up Now or Restore from iCloud." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本机数据和 iCloud 备份都已更改。请选择立即备份或从 iCloud 恢复。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ローカルデータと iCloud バックアップの両方が変更されています。今すぐバックアップするか、iCloud から復元してください。"
+          }
+        }
+      }
+    },
     "Built" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -768,6 +887,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日別使用量の収集を開始するにはトンネルに接続してください。"
+          }
+        }
+      }
+    },
+    "Conflict" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "冲突"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "競合"
           }
         }
       }
@@ -1787,6 +1923,40 @@
         }
       }
     },
+    "Last Backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次备份"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回のバックアップ"
+          }
+        }
+      }
+    },
+    "Last Sync" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次同步"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の同期"
+          }
+        }
+      }
+    },
     "LIVE" : {
       "comment" : "Badge on the saved-logs row marking the currently-active session file.",
       "extractionState" : "manual",
@@ -2027,6 +2197,23 @@
         }
       }
     },
+    "No iCloud backup was found." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到 iCloud 备份。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud バックアップが見つかりません。"
+          }
+        }
+      }
+    },
     "No daily totals yet." : {
       "comment" : "Statistics: empty list when no daily entries have been recorded.",
       "extractionState" : "manual",
@@ -2248,6 +2435,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
+          }
+        }
+      }
+    },
+    "Off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
           }
         }
       }
@@ -2559,6 +2763,23 @@
         }
       }
     },
+    "Ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就绪"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "準備完了"
+          }
+        }
+      }
+    },
     "Reasserting" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2763,6 +2984,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再開"
+          }
+        }
+      }
+    },
+    "Restore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復元"
+          }
+        }
+      }
+    },
+    "Restore from iCloud" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 iCloud 恢复"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud から復元"
+          }
+        }
+      }
+    },
+    "Restore from iCloud?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 iCloud 恢复？"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud から復元しますか？"
           }
         }
       }
@@ -3228,6 +3500,40 @@
         }
       }
     },
+    "Sync Now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ同期"
+          }
+        }
+      }
+    },
+    "Syncing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期中"
+          }
+        }
+      }
+    },
     "Tags" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3377,6 +3683,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 件の保存済みログファイルを削除します。アクティブなセッションは保持されます。"
+          }
+        }
+      }
+    },
+    "This iCloud backup uses unsupported schema version %lld." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 iCloud 备份使用不支持的架构版本 %lld。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この iCloud バックアップは未対応のスキーマバージョン %lld を使用しています。"
+          }
+        }
+      }
+    },
+    "This replaces local profiles and settings with the latest iCloud backup." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会用最新的 iCloud 备份替换本机配置和设置。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ローカルのプロファイルと設定を最新の iCloud バックアップで置き換えます。"
           }
         }
       }
@@ -3533,6 +3873,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不明"
+          }
+        }
+      }
+    },
+    "Unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不可用"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用不可"
           }
         }
       }
@@ -3808,6 +4165,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文字"
+          }
+        }
+      }
+    },
+    "iCloud Backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 备份"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud バックアップ"
+          }
+        }
+      }
+    },
+    "iCloud Drive is unavailable. Sign in to iCloud and enable iCloud Drive for ProxyCat." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Drive 不可用。请登录 iCloud，并为 ProxyCat 启用 iCloud Drive。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Drive を利用できません。iCloud にサインインし、ProxyCat の iCloud Drive を有効にしてください。"
+          }
+        }
+      }
+    },
+    "iCloud Sync" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同步"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同期"
           }
         }
       }

@@ -4,6 +4,7 @@ public enum AppConfiguration {
     public static let appGroupID = "group.io.proxycat"
     public static let appBundleID = "io.proxycat.Pcat"
     public static let extensionBundleID = "io.proxycat.Pcat.PcatExtension"
+    public static let iCloudContainerID = "iCloud.io.proxycat.Pcat"
 
     /// Filename of the Unix-domain command socket placed in the App
     /// Group container. The Network Extension's gRPC command server
@@ -32,6 +33,17 @@ public enum AppConfiguration {
     /// configured on `NETunnelProviderManager`). The Go core never
     /// reads this file.
     public static let hostSettingsFileName = "host_settings.json"
+
+    /// Filename of the local iCloud-sync metadata file. This is not
+    /// backed up to iCloud; it records whether sync is enabled on this
+    /// device and the checksum last reconciled with iCloud.
+    public static let iCloudSyncStateFileName = "icloud_sync_state.json"
+
+    /// Filename of the versioned iCloud snapshot. Stored under the app's
+    /// iCloud Documents container and contains only user-authored
+    /// profiles plus host/runtime settings. Logs, caches, usage history,
+    /// MITM keys, and downloaded assets are intentionally excluded.
+    public static let iCloudBackupFileName = "profile-settings-backup.json"
 
     /// Filename of the rolling daily-traffic log written by
     /// `DailyUsageStore`. Sits in the App Group root next to the other

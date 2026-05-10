@@ -27,6 +27,10 @@ public final class HostSettingsStore {
         }
     }
 
+    public var snapshot: HostSettings {
+        HostSettings(autoConnect: autoConnect, logRetention: logRetention)
+    }
+
     /// `didSet` doesn't fire during the constructor's stored-property
     /// init, so this gate is technically redundant for `init`; it's
     /// here as a defense-in-depth guard for any future code path that
@@ -56,5 +60,10 @@ public final class HostSettingsStore {
             category: "HostSettingsStore"
         ) else { return }
         NotificationCenter.default.post(name: AppConfiguration.hostSettingsDidChange, object: self)
+    }
+
+    public func replace(with snapshot: HostSettings) {
+        autoConnect = snapshot.autoConnect
+        logRetention = snapshot.logRetention
     }
 }

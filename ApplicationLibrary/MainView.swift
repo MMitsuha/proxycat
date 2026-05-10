@@ -46,7 +46,11 @@ public struct MainView: View {
         .environment(RuntimeSettings.shared)
         .environment(HostSettingsStore.shared)
         .environment(DailyUsageStore.shared)
-        .task { await environment.bootstrap() }
+        .environment(ICloudBackupStore.shared)
+        .task {
+            await environment.bootstrap()
+            ICloudBackupStore.shared.startAutoSync()
+        }
         .onOpenURL { url in
             Task { await handleIncomingFile(url) }
         }
@@ -54,7 +58,9 @@ public struct MainView: View {
             // Persist any buffered daily-usage deltas before the system
             // freezes or kills us. Other stores write synchronously on
             // mutation, so they don't need a flush hook.
-            if phase != .active {
+            if phase == .active {
+                ICloudBackupStore.shared.startAutoSync()
+            } else {
                 DailyUsageStore.shared.flushNow()
             }
         }

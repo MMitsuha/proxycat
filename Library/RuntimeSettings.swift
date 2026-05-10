@@ -70,6 +70,14 @@ public final class RuntimeSettings {
         }
     }
 
+    public var snapshot: Snapshot {
+        Snapshot(
+            activeProfileID: activeProfileID,
+            disableExternalController: disableExternalController,
+            logLevel: logLevel
+        )
+    }
+
     @ObservationIgnored private var loaded = false
 
     private init() {
@@ -96,6 +104,12 @@ public final class RuntimeSettings {
             to: FilePath.runtimeSettingsFilePath,
             category: "RuntimeSettings"
         )
+    }
+
+    public func replace(with snapshot: Snapshot) {
+        activeProfileID = snapshot.activeProfileID
+        disableExternalController = snapshot.disableExternalController
+        logLevel = snapshot.logLevel
     }
 
     /// Reads the active profile YAML directly off disk without touching

@@ -110,6 +110,13 @@ public enum FilePath {
         sharedDirectory.appendingPathComponent(AppConfiguration.hostSettingsFileName).path
     }
 
+    /// Local metadata for iCloud sync. Kept in the App Group so the app
+    /// preserves the user's sync preference across launches, but not
+    /// read by the Network Extension or mirrored to iCloud.
+    public static var iCloudSyncStateFilePath: String {
+        sharedDirectory.appendingPathComponent(AppConfiguration.iCloudSyncStateFileName).path
+    }
+
     /// Path of the rolling daily-traffic log JSON. Read/written only by
     /// the host app's `DailyUsageStore`.
     public static var dailyUsageFilePath: String {
