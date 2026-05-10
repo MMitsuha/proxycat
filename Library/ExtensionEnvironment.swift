@@ -110,9 +110,9 @@ public final class ExtensionEnvironment {
     private func startMemoryPressureWatch() {
         guard memoryObserverToken == nil else { return }
         MemoryMonitor.shared.start()
-        memoryObserverToken = MemoryMonitor.shared.observe { [weak self] pressure in
+        memoryObserverToken = MemoryMonitor.shared.observe { [weak self] snapshot in
             Task { @MainActor [weak self] in
-                self?.handleMemoryPressure(pressure)
+                self?.handleMemoryPressure(snapshot.pressure)
             }
         }
     }

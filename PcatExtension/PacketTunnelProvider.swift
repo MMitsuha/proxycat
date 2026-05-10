@@ -86,12 +86,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //     available) instead of the 50 MB sing-box default. iOS
         //     doesn't expose the real jetsam limit; this approximation
         //     captures it the moment we ask, before mihomo allocates much.
-        let resident = MemoryMonitor.residentBytes()
-        let available = MemoryMonitor.availableBytes()
-        let budget = Int64(resident + available)
+        let memory = MemoryMonitor.snapshot()
+        let budget = Int64(memory.estimatedLimit)
         if budget > 0 {
             LibmihomoBridge.setMemoryLimit(budget)
-            Self.logger.info("OOM budget set to \(budget, privacy: .public) (resident=\(resident, privacy: .public) available=\(available, privacy: .public))")
+            Self.logger.info("OOM budget set to \(budget, privacy: .public) (resident=\(memory.resident, privacy: .public) available=\(memory.available, privacy: .public))")
         }
 
         // 4c. Push the iOS fd into mihomo before starting so the parsed
@@ -285,15 +284,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private func startMemoryMonitor() {
         MemoryMonitor.shared.start()
-        memoryObserverToken = MemoryMonitor.shared.observe { [weak self] pressure in
-            self?.handleMemoryPressure(pressure)
+        memoryObserverToken = MemoryMonitor.shared.observe { [weak self] snapshot in
+            self?.handleMemoryPressure(snapshot)
         }
     }
 
-    private func handleMemoryPressure(_ pressure: MemoryMonitor.Pressure) {
-        let avail = MemoryMonitor.availableBytes()
-        Self.logger.warning("memory pressure=\(String(describing: pressure), privacy: .public) avail=\(avail, privacy: .public)")
-        switch pressure {
+    private func handleMemoryPressure(_ snapshot: MemoryMonitor.Snapshot) {
+        Self.logger.warning("memory pressure=\(snapshot.pressure.description, privacy: .public) resident=\(snapshot.resident, privacy: .public) available=\(snapshot.available, privacy: .public)")
+        switch snapshot.pressure {
         case .normal:
             return
         case .warning:

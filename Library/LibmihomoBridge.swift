@@ -200,7 +200,8 @@ public enum LibmihomoBridge {
         LibmihomoTrafficNow()
     }
 
-    public static func closeAllConnections() {
+    @discardableResult
+    public static func closeAllConnections() -> Int {
         LibmihomoCloseAllConnections()
     }
 

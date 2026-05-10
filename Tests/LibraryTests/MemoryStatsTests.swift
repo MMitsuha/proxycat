@@ -30,6 +30,32 @@ import Testing
     }
 }
 
+@Suite struct MemoryMonitorTests {
+    @Test func classifyUnknownAvailableAsNormal() {
+        #expect(MemoryMonitor.classify(availableBytes: 0) == .normal)
+    }
+
+    @Test func classifyWarningThreshold() {
+        #expect(MemoryMonitor.classify(availableBytes: 6 * 1024 * 1024) == .normal)
+        #expect(MemoryMonitor.classify(availableBytes: 6 * 1024 * 1024 - 1) == .warning)
+    }
+
+    @Test func classifyCriticalThreshold() {
+        #expect(MemoryMonitor.classify(availableBytes: 3 * 1024 * 1024) == .warning)
+        #expect(MemoryMonitor.classify(availableBytes: 3 * 1024 * 1024 - 1) == .critical)
+    }
+
+    @Test func snapshotLimitUsesResidentPlusAvailable() {
+        let snapshot = MemoryMonitor.Snapshot(resident: 5, available: 7, pressure: .normal)
+        #expect(snapshot.estimatedLimit == 12)
+    }
+
+    @Test func snapshotLimitIsUnknownWhenAvailableIsUnknown() {
+        let snapshot = MemoryMonitor.Snapshot(resident: 5, available: 0, pressure: .normal)
+        #expect(snapshot.estimatedLimit == 0)
+    }
+}
+
 @Suite struct TrafficSnapshotTests {
     @Test func zeroIsZero() {
         let z = TrafficSnapshot.zero

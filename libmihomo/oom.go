@@ -1,242 +1,267 @@
 package libmihomo
 
 import (
+	"context"
 	runtimeDebug "runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/metacubex/mihomo/log"
-	"github.com/metacubex/mihomo/tunnel/statistic"
 	smemory "github.com/metacubex/sing/common/memory"
 )
 
-// OOM-killer ported from sing-box's service/oomkiller (Apache-2.0).
-// The defense has three layers:
+// OOM watchdog for the Network Extension process.
 //
-//  1. Soft GC: runtime/debug.SetMemoryLimit(armed) tells the Go GC to try
-//     harder long before jetsam wakes up. It's a hint, not a hard cap.
-//  2. Adaptive timer: phys_footprint (mach task_vm_info) is polled every
-//     100 ms / 1 s / 10 s depending on pressure state. Pure Go, no
-//     reliance on the Swift dispatch source.
-//  3. Trigger response: runtime/debug.FreeOSMemory() to return slabs to
-//     the kernel + statistic.DefaultManager.Range(close) to drop every
-//     active proxy connection. This is roughly equivalent to sing-box's
-//     router.ResetNetwork() which it does for the same reason.
+// iOS jetsam compares a process' phys_footprint against an undocumented
+// per-process budget. Swift estimates that budget as
+// resident + os_proc_available_memory() at tunnel start and passes it through
+// SetMemoryLimit. The Go side then handles the memory-heavy mihomo runtime:
 //
-// Memory limits on iOS NE are undocumented (~15–50 MB historically). The
-// caller (Swift PacketTunnelProvider) supplies the actual budget by
-// summing phys_footprint + os_proc_available_memory at Start.
+//  1. Configure a soft runtime memory limit before the trigger point so GC
+//     starts working harder before jetsam.
+//  2. Poll phys_footprint inside the extension process; this keeps the guard
+//     independent of Swift dispatch-source delivery.
+//  3. On critical pressure, force a GC, close tracked connections, then force
+//     another GC so connection buffers can be returned to the kernel.
 
 const (
-	defaultMemoryLimit = 50 * 1024 * 1024
-	defaultSafety      = 5 * 1024 * 1024
+	defaultMemoryLimit  = 50 * 1024 * 1024
+	defaultMemorySafety = 5 * 1024 * 1024
 
-	oomMinPoll   = 100 * time.Millisecond
-	oomArmedPoll = 1 * time.Second
-	oomMaxPoll   = 10 * time.Second
+	oomFastPoll = 100 * time.Millisecond
+	oomWarnPoll = 1 * time.Second
+	oomSlowPoll = 10 * time.Second
 )
 
-type pressureState uint8
+type oomPressure uint8
 
 const (
-	pressureNormal pressureState = iota
-	pressureArmed
-	pressureTriggered
+	oomPressureNormal oomPressure = iota
+	oomPressureWarning
+	oomPressureCritical
 )
 
-type oomKiller struct {
+type oomPolicy struct {
 	limit     uint64
 	safety    uint64
+	warnAt    uint64
 	triggerAt uint64
-	armedAt   uint64
 	resumeAt  uint64
+}
 
-	state    atomic.Uint32 // pressureState
-	interval atomic.Int64  // time.Duration
-	running  atomic.Bool
+type oomWatchdog struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	done   chan struct{}
 
-	mu    sync.Mutex
-	timer *time.Timer
+	policyMu sync.RWMutex
+	policy   oomPolicy
+
+	state atomic.Uint32 // oomPressure
 }
 
 var (
-	killer        atomic.Pointer[oomKiller]
+	killer atomic.Pointer[oomWatchdog]
+
 	memoryLimitMu sync.Mutex
-	memoryLimit   int64 // 0 means use default
+	memoryLimit   int64 // 0 means use defaultMemoryLimit
 )
 
-// SetMemoryLimit configures the per-process memory budget (bytes) used by
-// the OOM killer. Pass 0 to fall back to the iOS-NE default of 50 MB
-// (matches sing-box). Call before Start; later calls take effect on the
-// next Start. The same value is surfaced to the host app's CommandClient
-// via StatusMessage.memory_budget so the dashboard can display it.
+// SetMemoryLimit configures the per-process memory budget (bytes) used by the
+// OOM watchdog. Pass 0 to fall back to the iOS-NE default of 50 MB. Calls made
+// while the watchdog is running take effect immediately.
 func SetMemoryLimit(limit int64) {
+	if limit < 0 {
+		limit = 0
+	}
 	memoryLimitMu.Lock()
 	memoryLimit = limit
 	memoryLimitMu.Unlock()
-	memBudget.Store(limit)
+
+	policy := newOOMPolicy(limit)
+	memBudget.Store(int64(policy.limit))
+	if watchdog := killer.Load(); watchdog != nil {
+		watchdog.updatePolicy(policy)
+	}
 }
 
-// MemoryUsage returns the process's phys_footprint in bytes — the same
-// value iOS jetsam compares to the per-process memory limit. Same source
-// the OOM killer reads, so dashboards using this match the killer's view.
+// MemoryUsage returns the process phys_footprint in bytes. It is the same
+// value iOS jetsam compares to the per-process memory budget.
 func MemoryUsage() int64 {
 	return int64(smemory.Total())
 }
 
 func startOOMKiller() {
-	memoryLimitMu.Lock()
-	limit := uint64(memoryLimit)
-	memoryLimitMu.Unlock()
-	if limit == 0 {
-		limit = defaultMemoryLimit
+	policy := configuredOOMPolicy()
+	watchdog := newOOMWatchdog(policy)
+	if !killer.CompareAndSwap(nil, watchdog) {
+		return
 	}
 
-	safety := uint64(defaultSafety)
-	if safety > limit/4 {
-		safety = limit / 4
-	}
+	memBudget.Store(int64(policy.limit))
+	runtimeDebug.SetMemoryLimit(int64(policy.warnAt))
+	log.Infoln("[OOM] watchdog armed: limit=%dMB warn=%dMB trigger=%dMB resume=%dMB",
+		policy.limit/1024/1024,
+		policy.warnAt/1024/1024,
+		policy.triggerAt/1024/1024,
+		policy.resumeAt/1024/1024,
+	)
 
-	k := &oomKiller{
-		limit:     limit,
-		safety:    safety,
-		triggerAt: limit - safety,
-		armedAt:   sub(limit, 2*safety),
-		resumeAt:  sub(limit, 4*safety),
-	}
-	k.interval.Store(int64(oomMaxPoll))
-
-	if !killer.CompareAndSwap(nil, k) {
-		return // already running
-	}
-
-	// Surface the resolved budget for the dashboard.
-	memBudget.Store(int64(limit))
-
-	// Tell the Go GC the budget. This is a soft cap; the runtime tries to
-	// keep heap below it but won't OOM-kill itself. The point is to make
-	// the GC ramp up before the kernel does.
-	runtimeDebug.SetMemoryLimit(int64(k.armedAt))
-
-	log.Infoln("[OOM] watchdog armed: limit=%dMB trigger=%dMB armed=%dMB",
-		k.limit/1024/1024, k.triggerAt/1024/1024, k.armedAt/1024/1024)
-
-	k.running.Store(true)
-	k.schedule(oomMinPoll)
+	go watchdog.run()
 }
 
 func stopOOMKiller() {
-	k := killer.Swap(nil)
-	if k == nil {
+	watchdog := killer.Swap(nil)
+	if watchdog == nil {
 		return
 	}
-	k.running.Store(false)
-	k.mu.Lock()
-	if k.timer != nil {
-		k.timer.Stop()
-		k.timer = nil
-	}
-	k.mu.Unlock()
-	// Lift the runtime cap.
+	watchdog.stop()
 	runtimeDebug.SetMemoryLimit(-1)
 }
 
-func (k *oomKiller) schedule(delay time.Duration) {
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	if !k.running.Load() {
-		return
-	}
-	if k.timer == nil {
-		k.timer = time.AfterFunc(delay, k.poll)
-		return
-	}
-	k.timer.Reset(delay)
+func configuredOOMPolicy() oomPolicy {
+	memoryLimitMu.Lock()
+	limit := memoryLimit
+	memoryLimitMu.Unlock()
+	return newOOMPolicy(limit)
 }
 
-func (k *oomKiller) poll() {
-	if !k.running.Load() {
-		return
+func newOOMWatchdog(policy oomPolicy) *oomWatchdog {
+	ctx, cancel := context.WithCancel(context.Background())
+	watchdog := &oomWatchdog{
+		ctx:    ctx,
+		cancel: cancel,
+		done:   make(chan struct{}),
+		policy: policy,
 	}
-
-	usage := smemory.Total()
-	prev := pressureState(k.state.Load())
-	next := k.classify(prev, usage)
-	k.state.Store(uint32(next))
-
-	if next == pressureTriggered && prev != pressureTriggered {
-		k.respond(usage)
-	}
-
-	k.schedule(k.intervalFor(next))
+	watchdog.state.Store(uint32(oomPressureNormal))
+	return watchdog
 }
 
-func (k *oomKiller) classify(prev pressureState, usage uint64) pressureState {
-	if prev == pressureTriggered {
-		if usage >= k.resumeAt {
-			return pressureTriggered
+func (w *oomWatchdog) stop() {
+	w.cancel()
+	<-w.done
+}
+
+func (w *oomWatchdog) updatePolicy(policy oomPolicy) {
+	w.policyMu.Lock()
+	w.policy = policy
+	w.policyMu.Unlock()
+	runtimeDebug.SetMemoryLimit(int64(policy.warnAt))
+	log.Infoln("[OOM] watchdog budget updated: limit=%dMB warn=%dMB trigger=%dMB",
+		policy.limit/1024/1024,
+		policy.warnAt/1024/1024,
+		policy.triggerAt/1024/1024,
+	)
+}
+
+func (w *oomWatchdog) currentPolicy() oomPolicy {
+	w.policyMu.RLock()
+	defer w.policyMu.RUnlock()
+	return w.policy
+}
+
+func (w *oomWatchdog) run() {
+	defer close(w.done)
+
+	timer := time.NewTimer(oomFastPoll)
+	defer timer.Stop()
+
+	interval := oomFastPoll
+	for {
+		select {
+		case <-w.ctx.Done():
+			return
+		case <-timer.C:
+			usage := uint64(smemory.Total())
+			policy := w.currentPolicy()
+			pressure := w.evaluate(policy, usage)
+			interval = nextOOMInterval(interval, pressure)
+			timer.Reset(interval)
 		}
-		return pressureNormal
 	}
-	if usage >= k.triggerAt {
-		return pressureTriggered
-	}
-	if usage >= k.armedAt {
-		return pressureArmed
-	}
-	return pressureNormal
 }
 
-func (k *oomKiller) intervalFor(state pressureState) time.Duration {
-	switch state {
-	case pressureTriggered:
-		return oomMinPoll
-	case pressureArmed:
-		return oomArmedPoll
+func (w *oomWatchdog) evaluate(policy oomPolicy, usage uint64) oomPressure {
+	previous := oomPressure(w.state.Load())
+	next := policy.classify(previous, usage)
+	w.state.Store(uint32(next))
+
+	if next == oomPressureCritical && previous != oomPressureCritical {
+		respondToMemoryPressure(policy, usage)
+	}
+	return next
+}
+
+func newOOMPolicy(limit int64) oomPolicy {
+	if limit <= 0 {
+		limit = defaultMemoryLimit
+	}
+	budget := uint64(limit)
+	safety := uint64(defaultMemorySafety)
+	if maxSafety := budget / 4; safety > maxSafety {
+		safety = maxSafety
+	}
+	if safety == 0 {
+		safety = 1
+	}
+
+	return oomPolicy{
+		limit:     budget,
+		safety:    safety,
+		warnAt:    saturatingSub(budget, 2*safety),
+		triggerAt: saturatingSub(budget, safety),
+		resumeAt:  saturatingSub(budget, 4*safety),
+	}
+}
+
+func (p oomPolicy) classify(previous oomPressure, usage uint64) oomPressure {
+	if previous == oomPressureCritical && usage >= p.resumeAt {
+		return oomPressureCritical
+	}
+	if usage >= p.triggerAt {
+		return oomPressureCritical
+	}
+	if usage >= p.warnAt {
+		return oomPressureWarning
+	}
+	return oomPressureNormal
+}
+
+func nextOOMInterval(current time.Duration, pressure oomPressure) time.Duration {
+	switch pressure {
+	case oomPressureCritical:
+		return oomFastPoll
+	case oomPressureWarning:
+		return oomWarnPoll
 	default:
-		// Exponential back-off up to oomMaxPoll while normal.
-		cur := time.Duration(k.interval.Load())
-		if cur < oomMinPoll {
-			cur = oomMinPoll
+		if current < oomFastPoll {
+			current = oomFastPoll
 		}
-		next := cur * 2
-		if next > oomMaxPoll {
-			next = oomMaxPoll
+		next := current * 2
+		if next > oomSlowPoll {
+			next = oomSlowPoll
 		}
-		k.interval.Store(int64(next))
 		return next
 	}
 }
 
-func (k *oomKiller) respond(usage uint64) {
-	log.Warnln("[OOM] threshold crossed: usage=%dMB/%dMB — releasing OS memory + dropping connections",
-		usage/1024/1024, k.limit/1024/1024)
+func respondToMemoryPressure(policy oomPolicy, usage uint64) {
+	log.Warnln("[OOM] pressure critical: usage=%dMB/%dMB — releasing memory and closing connections",
+		usage/1024/1024,
+		policy.limit/1024/1024,
+	)
 
-	// 1) Run the GC and hand pages back to the kernel right now.
 	runtimeDebug.FreeOSMemory()
-
-	// 2) Drop every active proxy connection. mihomo's per-connection
-	//    buffers are the biggest chunk of resident memory in steady
-	//    state; closing them frees the most for the least disruption.
-	if mgr := statistic.DefaultManager; mgr != nil {
-		count := 0
-		mgr.Range(func(t statistic.Tracker) bool {
-			_ = t.Close()
-			count++
-			return true
-		})
-		if count > 0 {
-			log.Warnln("[OOM] closed %d active connections", count)
-		}
+	closed := CloseAllConnections()
+	if closed > 0 {
+		log.Warnln("[OOM] closed %d active connections", closed)
 	}
-
-	// 3) Second FreeOSMemory after closing connections — the slabs that
-	//    backed those tracker buffers should now be returnable.
 	runtimeDebug.FreeOSMemory()
 }
 
-func sub(a, b uint64) uint64 {
+func saturatingSub(a, b uint64) uint64 {
 	if a < b {
 		return 0
 	}

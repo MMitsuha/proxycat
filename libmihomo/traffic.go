@@ -38,15 +38,19 @@ func TrafficNow() *Traffic {
 	}
 }
 
-// CloseAllConnections drops every active connection. Useful when memory
-// pressure climbs in the iOS extension.
-func CloseAllConnections() {
+// CloseAllConnections drops every active connection and returns how many
+// trackers were closed. Useful when memory pressure climbs in the iOS
+// extension.
+func CloseAllConnections() int {
 	mgr := statistic.DefaultManager
 	if mgr == nil {
-		return
+		return 0
 	}
+	count := 0
 	mgr.Range(func(t statistic.Tracker) bool {
 		_ = t.Close()
+		count++
 		return true
 	})
+	return count
 }
