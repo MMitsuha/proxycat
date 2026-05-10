@@ -15,7 +15,9 @@
 package libmihomo
 
 import (
+	"bytes"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -26,6 +28,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/metacubex/mihomo/component/ca"
 	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub"
@@ -98,6 +101,65 @@ func SetControllerSocketPath(path string) {
 func SetHomeDir(path string) {
 	homeDir.Store(path)
 	C.SetHomeDir(path)
+}
+
+// EnsureMitmCertificate creates the local MITM root CA and private key
+// if needed, validates the pair, and returns the certificate path.
+// The host app uses this to launch iOS's certificate install flow before
+// the Network Extension ever needs to intercept traffic.
+func EnsureMitmCertificate() (string, error) {
+	applyHomeDir()
+
+	caPath := C.Path.RootCA()
+	keyPath := C.Path.CAKey()
+	if _, certErr := os.Stat(caPath); certErr == nil {
+		if _, keyErr := os.Stat(keyPath); keyErr == nil {
+			if _, loadErr := ca.LoadMitmAuthority(caPath, keyPath); loadErr == nil {
+				return caPath, nil
+			}
+		}
+	}
+
+	if err := ca.GenerateAndSaveMitmCA(caPath, keyPath); err != nil {
+		return "", err
+	}
+	return caPath, nil
+}
+
+// MitmTrustProbePEM returns a PEM chain for a synthetic leaf certificate
+// signed by the local MITM CA. The host app evaluates this chain with
+// iOS's SSL trust policy to determine whether the CA is actually trusted
+// for HTTPS interception.
+func MitmTrustProbePEM(host string) ([]byte, error) {
+	applyHomeDir()
+
+	host = strings.TrimSpace(host)
+	if host == "" {
+		host = "mitm.mihomo"
+	}
+
+	authority, err := ca.LoadMitmAuthority(C.Path.RootCA(), C.Path.CAKey())
+	if err != nil {
+		return nil, err
+	}
+	cert, err := authority.GetOrCreateCert(host)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	for _, raw := range cert.Certificate {
+		if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: raw}); err != nil {
+			return nil, err
+		}
+	}
+	return buf.Bytes(), nil
+}
+
+func applyHomeDir() {
+	if hd := homeDir.Load(); hd != "" {
+		C.SetHomeDir(hd)
+	}
 }
 
 // SetProfilesDir tells the wrapper where the host app's `Profiles/`
@@ -250,9 +312,7 @@ func Reload() error {
 // (controller toggle, log level) on top of whatever the YAML carried.
 // The caller drives the actual hub.ApplyConfig.
 func prepareConfig(yamlConfig []byte, settings RuntimeSettings) (*config.Config, error) {
-	if hd := homeDir.Load(); hd != "" {
-		C.SetHomeDir(hd)
-	}
+	applyHomeDir()
 
 	cfg, err := executor.ParseWithBytes(yamlConfig)
 	if err != nil {

@@ -59,6 +59,32 @@ public enum LibmihomoBridge {
         LibmihomoSetHomeDir(path)
     }
 
+    /// Ensure mihomo's local MITM root CA exists and return the PEM
+    /// certificate file URL. The user still has to install and trust it
+    /// through iOS Settings; this only prepares the file for that flow.
+    public static func ensureMitmCertificate() throws -> URL {
+        var err: NSError?
+        let path = LibmihomoEnsureMitmCertificate(&err)
+        if let err {
+            throw err
+        }
+        guard !path.isEmpty else {
+            throw makeError("LibmihomoEnsureMitmCertificate returned an empty path")
+        }
+        return URL(fileURLWithPath: path)
+    }
+
+    /// Return a synthetic certificate chain signed by mihomo's MITM CA.
+    /// Used by the host app to evaluate iOS trust for HTTPS interception.
+    public static func mitmTrustProbePEM(host: String = "mitm.mihomo") throws -> Data {
+        var err: NSError?
+        let data = LibmihomoMitmTrustProbePEM(host, &err)
+        if let err {
+            throw err
+        }
+        return data ?? Data()
+    }
+
     /// Tell the embedded gRPC command server where to listen. Path must
     /// be inside the App Group container so the host app can connect.
     public static func setCommandSocketPath(_ path: String) {

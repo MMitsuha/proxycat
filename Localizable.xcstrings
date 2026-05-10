@@ -181,6 +181,17 @@
         }
       }
     },
+    "After opening the certificate, install the downloaded profile in iOS Settings > General > VPN & Device Management, then enable full trust in Settings > General > About > Certificate Trust Settings." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开证书后，请在 iOS 设置 > 通用 > VPN 与设备管理中安装下载的描述文件，再到设置 > 通用 > 关于本机 > 证书信任设置中开启完全信任。"
+          }
+        }
+      }
+    },
     "Already in the list." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -298,6 +309,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "蜂窝网络"
+          }
+        }
+      }
+    },
+    "Certificate install failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "证书安装失败"
           }
         }
       }
@@ -600,6 +622,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法保存"
+          }
+        }
+      }
+    },
+    "Create and install the local root CA before using MITM HTTPS rewriting." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 MITM HTTPS 重写前，请先创建并安装本地根 CA。"
           }
         }
       }
@@ -1049,6 +1082,28 @@
         }
       }
     },
+    "Install Certificate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装证书"
+          }
+        }
+      }
+    },
+    "Invalid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无效"
+          }
+        }
+      }
+    },
     "Keep last 10 sessions" : {
       "comment" : "Saved-log retention picker option.",
       "extractionState" : "manual",
@@ -1115,6 +1170,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日志"
+          }
+        }
+      }
+    },
+    "MITM Certificate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MITM 证书"
           }
         }
       }
@@ -1305,6 +1371,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无流量记录。"
+          }
+        }
+      }
+    },
+    "Not Created" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未创建"
+          }
+        }
+      }
+    },
+    "Not Trusted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未信任"
           }
         }
       }
@@ -1571,6 +1659,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "刷新"
+          }
+        }
+      }
+    },
+    "Refresh Status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新状态"
           }
         }
       }
@@ -1909,6 +2008,17 @@
         }
       }
     },
+    "Status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态"
+          }
+        }
+      }
+    },
     "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Applies immediately while connected." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1986,6 +2096,28 @@
         }
       }
     },
+    "The certificate file is invalid. Install again to create a fresh certificate." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "证书文件无效。请重新安装以创建新的证书。"
+          }
+        }
+      }
+    },
+    "The local MITM root CA is trusted by iOS. HTTPS rewriting can work for profiles that enable MITM." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本地 MITM 根 CA 已被 iOS 信任。启用 MITM 的配置可以使用 HTTPS 重写。"
+          }
+        }
+      }
+    },
     "This deletes %@ saved log files. The active session is preserved." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2039,6 +2171,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "流量"
+          }
+        }
+      }
+    },
+    "Trusted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已信任"
           }
         }
       }

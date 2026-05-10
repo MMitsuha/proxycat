@@ -43,6 +43,14 @@ public enum FilePath {
         ensureSubdirectory("Cache")
     }
 
+    public static var mitmCertificateFile: URL {
+        workingDirectory.appendingPathComponent("mitm_ca.crt")
+    }
+
+    public static var mitmPrivateKeyFile: URL {
+        workingDirectory.appendingPathComponent("mitm_ca.key")
+    }
+
     /// Where the Network Extension drops one log file per tunnel session
     /// (`mihomo-YYYYMMDD-HHMMSS.log`). The host app reads the same path
     /// through the App Group container to populate the Saved Logs list.
@@ -130,7 +138,7 @@ public enum FilePath {
     /// bundled assets (see BundledAssets) are also excluded since they
     /// don't represent reclaimable space.
     public static func cacheSize() -> Int64 {
-        let protected = BundledAssets.protectedTopLevelNames
+        let protected = protectedWorkingDirectoryNames
         let workingPath = workingDirectory.standardizedFileURL.path
         let keys: [URLResourceKey] = [.isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
         guard let enumerator = FileManager.default.enumerator(
@@ -209,12 +217,17 @@ public enum FilePath {
     /// reclaimed disk space won't actually free.
     public static func clearCache() throws {
         let fm = FileManager.default
-        let protected = BundledAssets.protectedTopLevelNames
+        let protected = protectedWorkingDirectoryNames
         let entries = try fm.contentsOfDirectory(at: workingDirectory, includingPropertiesForKeys: nil)
         for entry in entries {
             if protected.contains(entry.lastPathComponent) { continue }
             try fm.removeItem(at: entry)
         }
+    }
+
+    private static var protectedWorkingDirectoryNames: Set<String> {
+        BundledAssets.protectedTopLevelNames
+            .union([mitmCertificateFile.lastPathComponent, mitmPrivateKeyFile.lastPathComponent])
     }
 
     private static func isUnderProtectedTopLevel(
