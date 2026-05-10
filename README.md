@@ -242,12 +242,16 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 
 ### MITM HTTPS 重写
 
-ProxyCat 已接入 mihomo 的 `mitm` 配置块。它默认关闭，只有当前 profile 显式写入 `mitm.enable: true`，并且目标端口命中 `mitm.ports` 时，TCP 流量才会进入 MITM 处理。常见配置形态：
+ProxyCat 已接入 mihomo 的 `mitm` 配置块。它默认关闭，只有当前 profile 显式写入 `mitm.enable: true`，并且目标端口命中 `mitm.ports` 时，TCP 流量才会进入 MITM 处理。若配置了 `mitm.domain`，还会先用 TLS SNI / HTTP Host 做域名预筛选；不配置 `domain` 时仅按端口判断。常见配置形态：
 
 ```yaml
 mitm:
   enable: true
+  domain:
+    - +.example.com
+    - domain.com
   ports: [80, 443]
+  encrypted-sni-policy: skip
   rules:
     - url: '^https?://ads\.example\.com/.*'
       action: reject
@@ -261,6 +265,8 @@ mitm:
 ```
 
 HTTPS 重写前需要先在 Settings → MITM Certificate 中创建并安装本地根证书。iOS 打开证书后，还需要到 Settings → General → VPN & Device Management 安装描述文件，再到 Settings → General → About → Certificate Trust Settings 启用完整信任。证书和私钥保存在 App Group 的 `Working/mitm_ca.crt` 与 `Working/mitm_ca.key`，不要把私钥导出或提交到仓库。
+
+`domain` 的匹配语法与 mihomo 的 `sniffer.force-domain`、`dns.fake-ip-filter` 等域名配置一致：`example.com` 只匹配自身，`+.example.com` 匹配自身和所有子域名，也支持 `*.example.com`、`.example.com`、`geosite:` 和 `rule-set:`。`encrypted-sni-policy` 控制检测到 ECH / Encrypted ClientHello 时的行为，可选 `skip`（默认，跳过 MITM）、`mitm`（仍然 MITM）和 `reject`（关闭连接）。
 
 支持的 `action` 包括 `reject`、`reject-200`、`reject-img`、`reject-dict`、`reject-array`、`302`、`307`、`request-header`、`request-body`、`response-header`、`response-body`。Header / body 重写使用 `old` 正则匹配和 `new` 替换，支持 `$1`、`$2` 等捕获组引用；body 重写仅适用于有明确 `Content-Length` 的文本类内容。更完整的说明见 [docs/mitm.md](docs/mitm.md)，`sample-profile.yaml` 也包含一份默认注释掉的 MITM 示例块。
 

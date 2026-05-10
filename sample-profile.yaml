@@ -35,9 +35,13 @@ dns:
 #
 # mitm:
 #   enable: true
+#   domain:
+#     - +.example.com
+#     - domain.com
 #   ports:
 #     - 80
 #     - 443
+#   encrypted-sni-policy: skip
 #   rules:
 #     - url: '^https?://ads\.example\.com/.*'
 #       action: reject

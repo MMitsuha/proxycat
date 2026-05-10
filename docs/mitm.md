@@ -5,7 +5,9 @@ ProxyCat supports mihomo's `mitm` configuration block for HTTP and HTTPS rewrite
 - `mitm.enable` is `true`.
 - The intercepted TCP destination port is listed in `mitm.ports`.
 
-UDP traffic, inner MITM upstream legs, and traffic on unlisted ports bypass MITM.
+If `mitm.domain` is configured, mihomo also prefilters the connection by TLS SNI or HTTP Host before MITM handling. If `mitm.domain` is empty, matching is port-only.
+
+UDP traffic, inner MITM upstream legs, traffic on unlisted ports, and traffic outside the configured domain filter bypass MITM.
 
 ## Certificate Setup
 
@@ -32,9 +34,13 @@ Add a `mitm` block to a profile that needs rewrite behavior:
 ```yaml
 mitm:
   enable: true
+  domain:
+    - +.example.com
+    - domain.com
   ports:
     - 80
     - 443
+  encrypted-sni-policy: skip
   rules:
     - url: '^https?://ads\.example\.com/.*'
       action: reject
@@ -54,7 +60,15 @@ mitm:
       new: '"score":999'
 ```
 
-`url` is a regular expression matched against the request URL. Request rules and response rules are evaluated in profile order, and the first matching rule in each phase is used.
+`domain` is optional. Its syntax matches mihomo's domain-list syntax used by settings such as `sniffer.force-domain` and `dns.fake-ip-filter`: `example.com` matches only itself, `+.example.com` matches itself and all subdomains, and DomainTrie patterns such as `*.example.com`, `.example.com`, `geosite:`, and `rule-set:` are also supported.
+
+`encrypted-sni-policy` controls what happens when the MITM domain prefilter detects ECH / Encrypted ClientHello:
+
+- `skip`: skip MITM and continue as a normal connection. This is the default when the field is omitted.
+- `mitm`: still run MITM.
+- `reject`: close the connection.
+
+`url` is a regular expression matched against the request URL after MITM handling starts. Request rules and response rules are evaluated in profile order, and the first matching rule in each phase is used.
 
 ## Actions
 
