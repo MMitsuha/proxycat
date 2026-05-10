@@ -15,9 +15,9 @@ public struct ProfileListView: View {
         List {
             if profileStore.profiles.isEmpty {
                 ContentUnavailableView(
-                    "No profiles",
+                    localizedTitle: "No profiles",
                     systemImage: "doc.text",
-                    description: Text("Import a YAML config or paste one in.")
+                    localizedDescription: "Import a YAML config or paste one in."
                 )
             }
 

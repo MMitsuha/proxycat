@@ -113,9 +113,9 @@ public struct SavedLogsView: View {
 
     private var emptyState: some View {
         ContentUnavailableView(
-            "No saved logs yet",
+            localizedTitle: "No saved logs yet",
             systemImage: "doc.text.magnifyingglass",
-            description: Text("A new file is created each time the tunnel connects.")
+            localizedDescription: "A new file is created each time the tunnel connects."
         )
     }
 }

@@ -23,7 +23,7 @@ public struct ProxiesView: View {
         Group {
             if !profile.isConnected {
                 ContentUnavailableView(
-                    "Connect first to manage proxies",
+                    localizedTitle: "Connect first to manage proxies",
                     systemImage: "powerplug.portrait"
                 )
             } else {

@@ -15,7 +15,7 @@ public struct ConnectionsView: View {
         return Group {
             if !profile.isConnected {
                 ContentUnavailableView(
-                    "Connect first to view connections",
+                    localizedTitle: "Connect first to view connections",
                     systemImage: "powerplug.portrait"
                 )
             } else {
@@ -69,7 +69,7 @@ public struct ConnectionsView: View {
                 }
             } else if store.connections.isEmpty {
                 if store.isStreaming {
-                    ContentUnavailableView("No active connections", systemImage: "tray")
+                    ContentUnavailableView(localizedTitle: "No active connections", systemImage: "tray")
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -97,7 +97,11 @@ public struct ConnectionsView: View {
                     // nothing, the List would otherwise render blank and
                     // look like the data vanished.
                     if store.filteredConnections.isEmpty {
-                        ContentUnavailableView.search(text: store.searchQuery)
+                        ContentUnavailableView(
+                            localizedTitle: "No matching connections",
+                            systemImage: "magnifyingglass",
+                            localizedDescription: "Try another search term."
+                        )
                     }
                 }
             }

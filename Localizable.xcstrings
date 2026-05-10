@@ -2010,6 +2010,42 @@
         }
       }
     },
+    "No logs yet" : {
+      "comment" : "Empty-state title in the live log viewer before any log entries arrive.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无日志"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログはまだありません"
+          }
+        }
+      }
+    },
+    "No matching connections" : {
+      "comment" : "Search empty-state title in the live connections list.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无匹配连接"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致する接続はありません"
+          }
+        }
+      }
+    },
     "No matching logs" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3341,6 +3377,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通信量"
+          }
+        }
+      }
+    },
+    "Try another search term." : {
+      "comment" : "Search empty-state description for lists.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请尝试其他搜索词。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別の検索語を試してください。"
           }
         }
       }

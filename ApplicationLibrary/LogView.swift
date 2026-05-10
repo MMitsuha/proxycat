@@ -149,11 +149,15 @@ private struct LogStreamList: View {
     @ViewBuilder
     private var emptyState: some View {
         if !isConnected {
-            ContentUnavailableView("Service not started", systemImage: "powerplug.portrait")
+            ContentUnavailableView(localizedTitle: "Service not started", systemImage: "powerplug.portrait")
         } else if !query.isEmpty {
-            ContentUnavailableView.search(text: query)
+            ContentUnavailableView(
+                localizedTitle: "No matching logs",
+                systemImage: "magnifyingglass",
+                localizedDescription: "Try another search term."
+            )
         } else {
-            ContentUnavailableView("No logs yet", systemImage: "doc.text")
+            ContentUnavailableView(localizedTitle: "No logs yet", systemImage: "doc.text")
         }
     }
 }
