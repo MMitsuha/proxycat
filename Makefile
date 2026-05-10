@@ -45,16 +45,6 @@ mihomo-init:
 		echo "==> mihomo submodule already initialized ($$(git -C mihomo rev-parse --short=12 HEAD))"; \
 	fi
 
-mihomo-upgrade:
-	@echo "==> Fetching latest mihomo Alpha tip"
-	git submodule update --init --remote mihomo
-	@printf "    now at %s (%s)\n" "$$(git -C mihomo rev-parse --short=12 HEAD)" "$$(git -C mihomo log -1 --format=%s)"
-	@echo "==> Rebuilding xcframework"
-	./scripts/build-libmihomo.sh
-	@echo ""
-	@echo "Mihomo upgraded. Commit the new pointer with:"
-	@echo "  git add mihomo && git commit -m \"Bump mihomo to $$(git -C mihomo rev-parse --short=12 HEAD)\""
-
 mihomo-checkout:
 	@if [ -z "$(REF)" ]; then \
 		echo "error: REF is required" >&2; \

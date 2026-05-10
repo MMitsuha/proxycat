@@ -1,4 +1,4 @@
 [submodule "mihomo"]
 	path = mihomo
-	url = https://github.com/MetaCubeX/mihomo.git
-	branch = Alpha
+	url = https://github.com/MMitsuha/mihomo.git
+	branch = Meta
