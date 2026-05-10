@@ -29,6 +29,30 @@ dns:
     - https://1.1.1.1/dns-query
     - https://8.8.8.8/dns-query
 
+# MITM is disabled by default. Enable it only for profiles that need
+# HTTP/HTTPS rewrite rules. For HTTPS, install and fully trust the local
+# root CA from ProxyCat Settings > MITM Certificate before connecting.
+#
+# mitm:
+#   enable: true
+#   ports:
+#     - 80
+#     - 443
+#   rules:
+#     - url: '^https?://ads\.example\.com/.*'
+#       action: reject
+#     - url: '^https?://api\.example\.com/v1/(.*)'
+#       action: '302'
+#       new: 'https://api.example.com/v2/$1'
+#     - url: '^https?://example\.com/.*'
+#       action: request-header
+#       old: 'User-Agent: .*'
+#       new: 'User-Agent: mihomo-mitm'
+#     - url: '^https?://example\.com/score'
+#       action: response-body
+#       old: '"score":\d+'
+#       new: '"score":999'
+
 proxies:
   - { name: "DIRECT", type: direct }
 

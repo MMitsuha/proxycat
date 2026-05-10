@@ -55,6 +55,7 @@ proxycat/
 │                           Settings (含 Statistics / AutoConnect / Advanced)
 ├── Pcat/                   iOS App target（入口、Info.plist、entitlements）
 ├── PcatExtension/          Network Extension target（PacketTunnelProvider）
+├── docs/                   ProxyCat 专属文档（MITM 证书与 YAML 配置等）
 ├── Tests/LibraryTests/     Swift Testing 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
 │                           AutoConnect / DailyUsage / MemoryStats / TrafficSnapshot /
 │                           ByteFormatter / LogEntry / Profile codable / MihomoController，
@@ -238,6 +239,30 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 | `general.interface` / `routing-mark`    | 空 / 0                 | iOS NE 已豁免扩展自身 socket，不要重复绑定                   |
 
 `sample-profile.yaml` 是最小可运行的范本。
+
+### MITM HTTPS 重写
+
+ProxyCat 已接入 mihomo 的 `mitm` 配置块。它默认关闭，只有当前 profile 显式写入 `mitm.enable: true`，并且目标端口命中 `mitm.ports` 时，TCP 流量才会进入 MITM 处理。常见配置形态：
+
+```yaml
+mitm:
+  enable: true
+  ports: [80, 443]
+  rules:
+    - url: '^https?://ads\.example\.com/.*'
+      action: reject
+    - url: '^https?://api\.example\.com/v1/(.*)'
+      action: '302'
+      new: 'https://api.example.com/v2/$1'
+    - url: '^https?://example\.com/score'
+      action: response-body
+      old: '"score":\d+'
+      new: '"score":999'
+```
+
+HTTPS 重写前需要先在 Settings → MITM Certificate 中创建并安装本地根证书。iOS 打开证书后，还需要到 Settings → General → VPN & Device Management 安装描述文件，再到 Settings → General → About → Certificate Trust Settings 启用完整信任。证书和私钥保存在 App Group 的 `Working/mitm_ca.crt` 与 `Working/mitm_ca.key`，不要把私钥导出或提交到仓库。
+
+支持的 `action` 包括 `reject`、`reject-200`、`reject-img`、`reject-dict`、`reject-array`、`302`、`307`、`request-header`、`request-body`、`response-header`、`response-body`。Header / body 重写使用 `old` 正则匹配和 `new` 替换，支持 `$1`、`$2` 等捕获组引用；body 重写仅适用于有明确 `Content-Length` 的文本类内容。更完整的说明见 [docs/mitm.md](docs/mitm.md)，`sample-profile.yaml` 也包含一份默认注释掉的 MITM 示例块。
 
 ## 代理组延迟测试
 
