@@ -259,6 +259,9 @@ var controllerHTTPClient = &http.Client{
 			return d.DialContext(ctx, "unix", path)
 		},
 	},
+	CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
 }
 
 var (

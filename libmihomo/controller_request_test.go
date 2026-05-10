@@ -16,6 +16,7 @@ import (
 )
 
 func TestControllerRequestUsesUnixHTTPAndPreservesEscapedPath(t *testing.T) {
+	oldPath := controllerSocketPath.Load()
 	dir, err := os.MkdirTemp("/tmp", "pctl-")
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
@@ -55,7 +56,7 @@ func TestControllerRequestUsesUnixHTTPAndPreservesEscapedPath(t *testing.T) {
 	}()
 	t.Cleanup(func() {
 		_ = server.Close()
-		controllerSocketPath.Store("")
+		controllerSocketPath.Store(oldPath)
 	})
 
 	controllerSocketPath.Store(socketPath)
