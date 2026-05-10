@@ -32,10 +32,12 @@ GEO_FILES=(
 UI_TARBALL="${UI_TARBALL:-https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz}"
 
 require() {
-    command -v "$1" >/dev/null 2>&1 || { echo "missing tool: $1" >&2; exit 1; }
+    command -v "$1" >/dev/null 2>&1 || { echo "error: missing tool: $1" >&2; exit 127; }
 }
 require curl
 require tar
+require cp
+require find
 
 # Replace contents of $1 with everything in $2, preserving the .gitkeep
 # marker so git keeps tracking the directory after a clean.
@@ -61,7 +63,7 @@ fetch_geo() {
         fi
         # Stage to .tmp and rename so an interrupted curl never leaves
         # a half-written file mihomo would mmap as a corrupt database.
-        curl -fL --progress-bar -o "$GEO_DIR/$local_name.tmp" "$GEO_BASE/$remote"
+        curl -fL --retry 3 --retry-delay 1 --progress-bar -o "$GEO_DIR/$local_name.tmp" "$GEO_BASE/$remote"
         mv "$GEO_DIR/$local_name.tmp" "$GEO_DIR/$local_name"
     done
     echo "  ✓ geo databases → $GEO_DIR"
@@ -74,7 +76,7 @@ fetch_ui() {
     trap 'rm -rf "$tmp"' RETURN
 
     echo "  ↓ metacubexd"
-    curl -fL --progress-bar -o "$tmp/ui.tgz" "$UI_TARBALL"
+    curl -fL --retry 3 --retry-delay 1 --progress-bar -o "$tmp/ui.tgz" "$UI_TARBALL"
 
     mkdir -p "$tmp/extracted"
     tar -xzf "$tmp/ui.tgz" -C "$tmp/extracted"

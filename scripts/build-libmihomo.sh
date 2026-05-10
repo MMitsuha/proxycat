@@ -14,6 +14,7 @@
 #   ./scripts/build-libmihomo.sh sim       # simulator-only (faster iteration)
 #
 # Env:
+#   GOMOBILE                 gomobile binary or path; defaults to `gomobile`
 #   LIBMIHOMO_OBFUSCATE=1     build through garble (see `make libmihomo-obf`)
 #   LIBMIHOMO_GARBLE_FLAGS    extra garble flags (e.g. "-literals -tiny");
 #                             empty by default. Only consulted when
@@ -27,16 +28,38 @@ ROOT="$PWD"
 OUT="$ROOT/Frameworks"
 mkdir -p "$OUT"
 
+require() {
+  command -v "$1" >/dev/null 2>&1 || { echo "error: missing tool: $1" >&2; exit 127; }
+}
+
+GOMOBILE_BIN="${GOMOBILE:-gomobile}"
+require go
+require git
+require "$GOMOBILE_BIN"
+require strip
+
+if [[ ! -f "$ROOT/mihomo/go.mod" ]]; then
+  echo "error: mihomo submodule is not initialized" >&2
+  echo "       run: make mihomo-init" >&2
+  exit 2
+fi
+
 cd "$ROOT/libmihomo"
 
 # Tidy with module replacement to local mihomo. tools.go pins
 # golang.org/x/mobile/bind so gobind can resolve it.
 go mod tidy
 
-TARGETS="ios,iossimulator"
-if [[ "${1-}" == "sim" ]]; then
-  TARGETS="iossimulator"
-fi
+MODE="${1:-all}"
+case "$MODE" in
+  all) TARGETS="ios,iossimulator" ;;
+  device) TARGETS="ios" ;;
+  sim) TARGETS="iossimulator" ;;
+  *)
+    echo "usage: $0 [all|device|sim]" >&2
+    exit 2
+    ;;
+esac
 
 # Optional garble obfuscation. App Store "Design - Spam" rejections happen
 # when the binary similarity hash matches other apps embedding mihomo; garble
@@ -162,7 +185,7 @@ LDFLAGS+=" -X 'github.com/proxycat/libmihomo.wrapperCommit=$WRAPPER_COMMIT'"
 
 echo "==> gomobile bind target=$TARGETS tags=$BUILD_TAGS"
 echo "    mihomo $MIHOMO_VERSION ($MIHOMO_COMMIT) built $BUILD_TIME"
-gomobile bind \
+"$GOMOBILE_BIN" bind \
   -target="$TARGETS" \
   -tags="$BUILD_TAGS" \
   -trimpath \

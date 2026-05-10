@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="assets/app-icon.png" width="160" alt="ProxyCat app icon">
+</p>
+
 # ProxyCat
 
 [mihomo](https://github.com/MetaCubeX/mihomo) 的原生 iOS 客户端。架构参考 [sing-box-for-apple](https://github.com/SagerNet/sing-box-for-apple)：SwiftUI 宿主 App 通过 `NEPacketTunnelProvider` 扩展承载网络隧道，扩展内嵌一份由 `gomobile` 生成的 mihomo XCFramework。
+
+应用图标使用 Xcode 26 的 Icon Composer 格式（`AppIcon.icon/`），单一 SVG 源 + `icon.json` 描述图层、阴影、半透明，在打包时自动渲染出 iOS 26 Liquid Glass 所需的全部尺寸/外观（Default / Tinted / Dark / Clear）。
 
 > [!NOTE]
 > **TestFlight 公测即将开放 / TestFlight beta coming very soon** — 公开邀请链接将很快在此 README 发布，敬请关注本仓库。
@@ -62,6 +68,7 @@ proxycat/
 │                           Storage / MitmCertificate / Advanced)
 ├── Pcat/                   iOS App target（入口、Info.plist、entitlements）
 ├── PcatExtension/          Network Extension target（PacketTunnelProvider）
+├── AppIcon.icon/           Xcode 26 Icon Composer 资源（单一 SVG + icon.json 图层描述）
 ├── docs/                   ProxyCat 专属文档（MITM 证书与 YAML 配置等）
 ├── Tests/LibraryTests/     Swift Testing 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
 │                           AutoConnect / DailyUsage / MemoryStats / TrafficSnapshot /
@@ -92,7 +99,7 @@ make mihomo-init        # 等价于 git submodule update --init --recursive miho
 升级到最新 Meta tip 并重建 xcframework：
 
 ```bash
-make mihomo-upgrade     # git submodule update --remote mihomo + ./scripts/build-libmihomo.sh
+make mihomo-upgrade     # checkout origin/Meta + ./scripts/build-libmihomo.sh
 git add mihomo && git commit -m "Bump mihomo to <sha>"
 ```
 
@@ -105,7 +112,7 @@ make mihomo-checkout REF=Meta            # 等效于 mihomo-upgrade（取 origin
 git add mihomo && git commit -m "Pin mihomo to <sha> (<ref>)"
 ```
 
-`mihomo-checkout` 会先 `git fetch --tags origin`，再以 detached HEAD 方式 checkout 给定的 ref，最后调用 `./scripts/build-libmihomo.sh` 重建 xcframework。
+`mihomo-upgrade` / `mihomo-checkout` 会先 `git fetch --tags origin`，再以 detached HEAD 方式 checkout 给定的 ref，最后调用 `./scripts/build-libmihomo.sh` 重建 xcframework。
 
 `libmihomo/tools.go` 显式 import 了 `golang.org/x/mobile/bind`。没有这个文件 `gomobile bind` 会报错 `unable to import bind: no Go package in golang.org/x/mobile/bind`，因为 `go mod tidy` 会把没有源码引用的依赖剪掉，而 `gobind` 只在临时目录里 import 它。
 
@@ -119,7 +126,7 @@ make all          # 构建 xcframework + 生成 xcodeproj
 open ProxyCat.xcodeproj
 ```
 
-`make project` / `make all` 会从 `XCODE_DEVELOPMENT_TEAM` 自动填入 `DEVELOPMENT_TEAM`。未设置时生成的项目不会写入开发者团队；真机构建或 Archive 前需要设置该环境变量，或临时在 Xcode 中选择 Team。
+`make project` / `make all` 会从 `XCODE_DEVELOPMENT_TEAM` 自动填入 `DEVELOPMENT_TEAM`。未设置时生成的项目不会写入开发者团队；真机构建或 Archive 前需要设置该环境变量，或临时在 Xcode 中选择 Team。`make sim` 会先重新生成项目并关闭签名；`make build` 会先检查 `XCODE_DEVELOPMENT_TEAM`，再重新生成项目和执行真机构建。
 
 常用 Make target：
 
@@ -129,6 +136,7 @@ open ProxyCat.xcodeproj
 | `make project`        | 运行 `xcodegen` 并自动注入版本号与 `XCODE_DEVELOPMENT_TEAM`（见下） |
 | `make version`        | 打印下一次 `make project` 会写入的版本/编号            |
 | `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
+| `make all-obf`        | `mihomo-init` + obfuscated `libmihomo` + `project`，用于提交前构建 |
 | `make mihomo-init`    | 初始化或刷新 `mihomo/` submodule                       |
 | `make mihomo-upgrade` | 拉取最新 Meta tip 并重建 xcframework                   |
 | `make mihomo-checkout REF=<ref>` | 钉到指定 tag / commit / 分支并重建 xcframework |

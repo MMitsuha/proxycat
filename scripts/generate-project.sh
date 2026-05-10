@@ -19,6 +19,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+XCODEGEN_BIN="${XCODEGEN:-xcodegen}"
+
+if ! command -v "$XCODEGEN_BIN" >/dev/null 2>&1; then
+  echo "error: xcodegen not found: $XCODEGEN_BIN" >&2
+  echo "       install: brew install xcodegen" >&2
+  exit 127
+fi
+
 : "${PROXYCAT_MARKETING_VERSION:=$(cat VERSION 2>/dev/null || echo 0.1.0)}"
 : "${PROXYCAT_BUILD_NUMBER:=$(git rev-list --count HEAD 2>/dev/null || echo 1)}"
 : "${XCODE_DEVELOPMENT_TEAM:=}"
@@ -30,4 +38,4 @@ if [[ -n "${XCODE_DEVELOPMENT_TEAM}" ]]; then
 else
   echo "==> development team unset (set XCODE_DEVELOPMENT_TEAM to auto-fill signing)"
 fi
-exec "${XCODEGEN:-xcodegen}" generate "$@"
+exec "$XCODEGEN_BIN" generate "$@"

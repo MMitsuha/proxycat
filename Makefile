@@ -1,9 +1,14 @@
-.PHONY: all libmihomo libmihomo-obf project version clean build sim help \
+.PHONY: all all-obf libmihomo libmihomo-obf project version clean build sim help \
         assets geo-assets ui-assets clean-assets \
-        mihomo-init mihomo-upgrade mihomo-checkout
+        mihomo-init mihomo-upgrade mihomo-checkout require-development-team
 
 XCODEGEN ?= xcodegen
+XCODEBUILD ?= xcodebuild
 GOMOBILE ?= gomobile
+CONFIGURATION ?= Debug
+SCHEME ?= Pcat
+SIM_DESTINATION ?= generic/platform=iOS Simulator
+DEVICE_DESTINATION ?= generic/platform=iOS
 
 help:
 	@echo "ProxyCat — iOS client for mihomo"
@@ -15,6 +20,7 @@ help:
 	@echo "  make project        run xcodegen (auto-fills version + XCODE_DEVELOPMENT_TEAM)"
 	@echo "  make version        print the marketing version + build number"
 	@echo "  make all            libmihomo + project (run after first checkout)"
+	@echo "  make all-obf        obfuscated libmihomo + project"
 	@echo "  make build          full xcodebuild for the iOS app (needs codesigning)"
 	@echo "  make sim            build for iOS Simulator (no codesigning)"
 	@echo "  make assets         download geo dbs + metacubexd into BundledAssets/"
@@ -22,7 +28,7 @@ help:
 	@echo "  make ui-assets      download metacubexd only"
 	@echo "  make clean-assets   empty BundledAssets/{geo,ui} (keeps .gitkeep)"
 	@echo "  make mihomo-init    init/refresh the mihomo submodule (run after clone)"
-	@echo "  make mihomo-upgrade pull latest mihomo Alpha tip + rebuild xcframework"
+	@echo "  make mihomo-upgrade pull latest mihomo Meta tip + rebuild xcframework"
 	@echo "  make mihomo-checkout REF=<ref>"
 	@echo "                      pin mihomo to a tag/commit/branch + rebuild"
 	@echo "                      (e.g. REF=v1.19.5, REF=35d5d4e4, REF=Alpha)"
@@ -44,6 +50,16 @@ mihomo-init:
 	else \
 		echo "==> mihomo submodule already initialized ($$(git -C mihomo rev-parse --short=12 HEAD))"; \
 	fi
+
+mihomo-upgrade: mihomo-init
+	@echo "==> Fetching latest mihomo Meta"
+	git -C mihomo fetch --tags --force origin
+	git -C mihomo checkout --detach origin/Meta
+	@printf "    now at %s (%s)\n" "$$(git -C mihomo rev-parse --short=12 HEAD)" "$$(git -C mihomo log -1 --format=%s)"
+	$(MAKE) libmihomo
+	@echo ""
+	@echo "Mihomo upgraded to origin/Meta. Commit the new pointer with:"
+	@echo "  git add mihomo && git commit -m \"Bump mihomo to $$(git -C mihomo rev-parse --short=12 HEAD)\""
 
 mihomo-checkout:
 	@if [ -z "$(REF)" ]; then \
@@ -72,37 +88,46 @@ mihomo-checkout:
 		git -C mihomo checkout --detach "$(REF)"; \
 	fi
 	@printf "    now at %s (%s)\n" "$$(git -C mihomo rev-parse --short=12 HEAD)" "$$(git -C mihomo log -1 --format=%s)"
+	$(MAKE) libmihomo
 	@echo ""
 	@echo "Mihomo pinned to $(REF). Commit the new pointer with:"
 	@echo "  git add mihomo && git commit -m \"Pin mihomo to $$(git -C mihomo rev-parse --short=12 HEAD) ($(REF))\""
 
 libmihomo:
-	./scripts/build-libmihomo.sh
+	GOMOBILE="$(GOMOBILE)" ./scripts/build-libmihomo.sh
 
 libmihomo-obf:
-	LIBMIHOMO_OBFUSCATE=1 LIBMIHOMO_GARBLE_FLAGS="$(GARBLE_FLAGS)" ./scripts/build-libmihomo.sh
+	GOMOBILE="$(GOMOBILE)" LIBMIHOMO_OBFUSCATE=1 LIBMIHOMO_GARBLE_FLAGS="$(GARBLE_FLAGS)" ./scripts/build-libmihomo.sh
 
 project:
-	XCODEGEN=$(XCODEGEN) ./scripts/generate-project.sh
+	XCODEGEN="$(XCODEGEN)" XCODE_DEVELOPMENT_TEAM="$(XCODE_DEVELOPMENT_TEAM)" ./scripts/generate-project.sh
 
 version:
 	@printf "MARKETING_VERSION  %s\n" "$$(cat VERSION 2>/dev/null || echo 0.1.0)"
 	@printf "BUILD_NUMBER       %s\n" "$$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 	@printf "GIT_DESCRIBE       %s\n" "$$(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
+	@team="$(XCODE_DEVELOPMENT_TEAM)"; printf "DEVELOPMENT_TEAM   %s\n" "$${team:-<unset>}"
 
-build:
-	xcodebuild -project ProxyCat.xcodeproj \
-		-scheme Pcat \
-		-configuration Debug \
-		-destination 'generic/platform=iOS' \
+require-development-team:
+	@if [ -z "$(XCODE_DEVELOPMENT_TEAM)" ]; then \
+		echo "error: XCODE_DEVELOPMENT_TEAM is required for make build" >&2; \
+		echo "       usage: XCODE_DEVELOPMENT_TEAM=ABCDE12345 make build" >&2; \
+		exit 2; \
+	fi
+
+build: require-development-team project
+	$(XCODEBUILD) -project ProxyCat.xcodeproj \
+		-scheme $(SCHEME) \
+		-configuration $(CONFIGURATION) \
+		-destination '$(DEVICE_DESTINATION)' \
 		build
 
-sim:
-	xcodebuild -project ProxyCat.xcodeproj \
-		-scheme Pcat \
-		-configuration Debug \
+sim: project
+	$(XCODEBUILD) -project ProxyCat.xcodeproj \
+		-scheme $(SCHEME) \
+		-configuration $(CONFIGURATION) \
 		-sdk iphonesimulator \
-		-destination 'generic/platform=iOS Simulator' \
+		-destination '$(SIM_DESTINATION)' \
 		CODE_SIGN_IDENTITY="" \
 		CODE_SIGNING_REQUIRED=NO \
 		CODE_SIGNING_ALLOWED=NO \
@@ -126,4 +151,4 @@ clean:
 	rm -rf Frameworks/Libmihomo.xcframework
 	rm -rf ProxyCat.xcodeproj
 	rm -rf build
-	cd libmihomo && go clean -cache -modcache 2>/dev/null || true
+	cd libmihomo && go clean -cache 2>/dev/null || true
