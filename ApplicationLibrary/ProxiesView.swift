@@ -3,9 +3,11 @@ import SwiftUI
 
 public struct ProxiesView: View {
     @Environment(ExtensionProfile.self) private var profile
-    @State private var store = ProxiesStore()
+    @State private var store: ProxiesStore
 
-    public init() {}
+    public init(transport: any ControllerTransport) {
+        _store = State(initialValue: ProxiesStore(transport: transport))
+    }
 
     private var isReady: Bool {
         profile.isConnected

@@ -8,8 +8,9 @@ option go_package = "github.com/proxycat/libmihomo/proto/command;command";
 // used by the iOS host app. Mirrors the shape of sing-box's
 // daemon.StartedService (gRPC over Unix domain socket inside the App
 // Group container) but trimmed to the fields ProxyCat actually needs.
-// Mihomo's REST controller is intentionally NOT used here — that
-// surface is for the end-user.
+// Host-facing control traffic stays on this gRPC channel; when the
+// native UI needs mihomo's REST handlers, the extension proxies the
+// request internally to mihomo's private Unix-domain controller socket.
 service Command {
   // Streams a Status message every IntervalMs (default 1000).
   rpc SubscribeStatus(StatusRequest) returns (stream StatusMessage);
@@ -30,6 +31,14 @@ service Command {
   // (clamped on the server). Mirrors mihomo's own /configs PATCH
   // log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
   rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
+
+  // Proxies a single native-controller HTTP request through the command
+  // IPC channel. The extension side executes the request with Go's
+  // net/http client over mihomo's private Unix-domain controller socket.
+  // This keeps host ↔ extension IPC on one gRPC transport while still
+  // reusing mihomo's existing REST handlers for /proxies, /connections,
+  // /group/.../delay, etc.
+  rpc ControllerRequest(ControllerRequestRequest) returns (ControllerRequestResponse);
 }
 
 message StatusRequest {
@@ -70,3 +79,18 @@ message SetLogLevelRequest {
 }
 
 message SetLogLevelResponse {}
+
+message ControllerRequestRequest {
+  string method = 1;
+  // Absolute path plus optional query string, e.g. "/proxies" or
+  // "/group/JP%2FTokyo/delay?timeout=5000". The caller is responsible
+  // for percent-encoding path segments.
+  string path = 2;
+  string content_type = 3;
+  bytes body = 4;
+}
+
+message ControllerRequestResponse {
+  int32 status = 1;
+  bytes body = 2;
+}

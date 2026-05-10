@@ -24,7 +24,7 @@ public enum CommandConnectionState: Equatable, Sendable {
 /// protocol the Go runtime calls back into; this keeps the dependency
 /// footprint on the Swift side at zero (no grpc-swift).
 @MainActor @Observable
-public final class CommandClient {
+public final class CommandClient: ControllerTransport {
     public private(set) var connectionState: CommandConnectionState = .disconnected
     public private(set) var lastDisconnectMessage: String?
     public private(set) var logs: [LogEntry] = []
@@ -133,6 +133,30 @@ public final class CommandClient {
     public func setLogLevel(_ level: Int) async throws {
         guard let client = goClient else { return }
         try await Task.detached { try client.setLogLevel(level) }.value
+    }
+
+    /// Sends a native-controller REST request through the command IPC
+    /// channel. The Go side executes the HTTP request with net/http over
+    /// mihomo's private controller Unix socket, so Swift never parses raw
+    /// HTTP-over-UDS frames itself.
+    public func sendControllerRequest(
+        _ request: ControllerHTTPRequest,
+        timeout: TimeInterval = 5
+    ) async throws -> ControllerHTTPResponse {
+        guard let client = goClient else { throw ControllerIPCError.notConnected }
+        let timeoutMs = max(100, Int64((timeout * 1_000).rounded(.up)))
+        let contentType = request.contentType ?? ""
+        let body = request.body ?? Data()
+        let response = try await Task.detached {
+            try client.controllerRequest(
+                request.method,
+                path: request.path,
+                contentType: contentType,
+                body: body,
+                timeoutMs: timeoutMs
+            )
+        }.value
+        return ControllerHTTPResponse(status: response.status, body: response.body ?? Data())
     }
 
     /// Turn on log buffering. Subsequent log frames from the extension

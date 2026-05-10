@@ -93,9 +93,10 @@ public enum LibmihomoBridge {
 
     /// Tell mihomo where to bind its REST controller's Unix-domain
     /// listener. Path must be inside the App Group container so the
-    /// host app's `MihomoController` can dial it. Pass "" to leave the
-    /// Unix listener off (the loopback HTTP listener is governed
-    /// separately by `disableExternalController`).
+    /// extension-side command server can proxy native UI controller
+    /// requests to it. Pass "" to leave the Unix listener off (the
+    /// loopback HTTP listener is governed separately by
+    /// `disableExternalController`).
     public static func setControllerSocketPath(_ path: String) {
         LibmihomoSetControllerSocketPath(path)
     }

@@ -56,7 +56,7 @@ public struct DelayResponse: Codable {
 
 public enum MihomoControllerError: LocalizedError {
     case requestFailed(status: Int, body: String)
-    case transport(UnixHTTPError)
+    case transport(Error)
     case encoding(Error)
     case decoding(Error)
     case invalidResponse
@@ -79,13 +79,13 @@ public enum MihomoControllerError: LocalizedError {
 
 // MARK: - Client
 
-/// Talks to mihomo's external-controller over a Unix-domain socket in
-/// the App Group container. The Network Extension binds the listener
-/// via `cfg.Controller.ExternalControllerUnix` (see libmihomo/binding.go
-/// and PacketTunnelProvider's `setControllerSocketPath` call), and this
-/// client dials the same path. Loopback HTTP (port 9090) still exists
-/// for the in-app metacubexd web view, but the host's native UI never
-/// touches it.
+/// Talks to mihomo's external-controller through the command IPC channel.
+/// The Network Extension still binds mihomo's REST controller to a private
+/// App-Group Unix socket, but the host app no longer dials or parses that
+/// socket directly. Instead, `CommandClient` forwards these requests over
+/// gRPC and the Go side uses the standard `net/http` client against the
+/// controller socket. Loopback HTTP (port 9090) still exists for the in-app
+/// metacubexd web view, but the host's native UI never touches it.
 ///
 /// `@unchecked Sendable` because JSONDecoder isn't formally Sendable but
 /// our instance is configured once at init and used read-only thereafter.
@@ -98,22 +98,22 @@ public struct MihomoController: @unchecked Sendable {
     public static let defaultTestURL = "https://www.gstatic.com/generate_204"
     public static let defaultTimeoutMs = 5000
 
-    public let client: UnixHTTPClient
+    public let transport: any ControllerTransport
     private let decoder: JSONDecoder
 
-    /// Default ctor: dial the App-Group controller socket. Tests pass a
-    /// custom path or a pre-built client.
-    public init(socketPath: String = FilePath.controllerSocketPath) {
-        self.client = UnixHTTPClient(socketPath: socketPath)
-        self.decoder = JSONDecoder()
+    @MainActor
+    public init() {
+        self.init(transport: UnavailableControllerTransport.shared)
     }
 
-    public init(client: UnixHTTPClient) {
-        self.client = client
+    @MainActor
+    public init(transport: any ControllerTransport) {
+        self.transport = transport
         self.decoder = JSONDecoder()
     }
 
     /// `GET /proxies` → `{ "proxies": { name: Proxy } }`.
+    @MainActor
     public func proxies() async throws(MihomoControllerError) -> [String: Proxy] {
         let data = try await perform(method: "GET", path: Self.makePath("proxies"), timeout: 5)
         do {
@@ -125,6 +125,7 @@ public struct MihomoController: @unchecked Sendable {
 
     /// `PUT /proxies/{group}` body `{"name": <node>}`. 204 on success.
     /// 400 if the group is not a Selector (URLTest/Fallback/LoadBalance).
+    @MainActor
     public func select(group: String, name: String) async throws(MihomoControllerError) {
         let body: Data
         do {
@@ -148,6 +149,7 @@ public struct MihomoController: @unchecked Sendable {
     /// when nil so callers can pass through the group's own settings
     /// straight from the `/proxies` response (testUrl/timeout are optional
     /// in mihomo's marshaller — Selector omits them when at the default).
+    @MainActor
     public func groupDelay(
         name: String,
         url: String? = nil,
@@ -220,6 +222,7 @@ public struct MihomoController: @unchecked Sendable {
 
     // MARK: - Private
 
+    @MainActor
     private func perform(
         method: String,
         path: String,
@@ -227,14 +230,20 @@ public struct MihomoController: @unchecked Sendable {
         body: Data? = nil,
         timeout: TimeInterval
     ) async throws(MihomoControllerError) -> Data {
-        let request = UnixHTTPRequest(method: method, path: path, headers: headers, body: body)
-        let response: UnixHTTPResponse
+        let contentType = headers.first {
+            $0.0.caseInsensitiveCompare("Content-Type") == .orderedSame
+        }?.1
+        let request = ControllerHTTPRequest(
+            method: method,
+            path: path,
+            contentType: contentType,
+            body: body
+        )
+        let response: ControllerHTTPResponse
         do {
-            response = try await client.send(request, timeout: timeout)
-        } catch let err as UnixHTTPError {
-            throw MihomoControllerError.transport(err)
+            response = try await transport.sendControllerRequest(request, timeout: timeout)
         } catch {
-            throw MihomoControllerError.invalidResponse
+            throw MihomoControllerError.transport(error)
         }
         guard response.isSuccess else {
             let bodyText = String(data: response.body, encoding: .utf8) ?? ""
@@ -246,4 +255,16 @@ public struct MihomoController: @unchecked Sendable {
 
 private struct ProxySelectionRequest: Encodable {
     let name: String
+}
+
+@MainActor
+private final class UnavailableControllerTransport: ControllerTransport {
+    static let shared = UnavailableControllerTransport()
+
+    func sendControllerRequest(
+        _ request: ControllerHTTPRequest,
+        timeout: TimeInterval
+    ) async throws -> ControllerHTTPResponse {
+        throw ControllerIPCError.notConnected
+    }
 }

@@ -32,11 +32,24 @@ public final class ProxiesStore {
     private var selecting: Set<ProxySelectionID> = []
 
     public init(
-        controller: MihomoController = MihomoController(),
+        transport: any ControllerTransport,
+        defaults: UserDefaults = .standard
+    ) {
+        self.controller = MihomoController(transport: transport)
+        self.defaults = defaults
+        loadCollapsed(defaults: defaults)
+    }
+
+    public init(
+        controller: MihomoController,
         defaults: UserDefaults = .standard
     ) {
         self.controller = controller
         self.defaults = defaults
+        loadCollapsed(defaults: defaults)
+    }
+
+    private func loadCollapsed(defaults: UserDefaults) {
         if let data = defaults.data(forKey: Self.collapsedKey),
            let arr = try? JSONDecoder().decode([String].self, from: data) {
             self.collapsed = Set(arr)

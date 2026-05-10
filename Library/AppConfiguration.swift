@@ -12,10 +12,10 @@ public enum AppConfiguration {
 
     /// Filename of the Unix-domain socket where mihomo's REST controller
     /// listens (in addition to its HTTP loopback for the in-app web UI).
-    /// `MihomoController` dials this path to talk to /proxies,
-    /// /connections, /group/.../delay etc. — keeping the host's native
-    /// UI on a sandboxed App-Group transport rather than the loopback
-    /// the user can toggle off.
+    /// The extension-side `ControllerRequest` RPC uses this private
+    /// socket to talk to /proxies, /connections, /group/.../delay etc. —
+    /// keeping the host's native UI off the loopback listener the user
+    /// can toggle off.
     public static let controllerSocketName = "controller.sock"
 
     /// Filename of the shared runtime-settings JSON. Written by the host

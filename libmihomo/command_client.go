@@ -110,6 +110,13 @@ var commandConnectBackoff = backoff.Config{
 	MaxDelay:   2 * time.Second,
 }
 
+// ControllerResponse is a gomobile-friendly copy of the ControllerRequest
+// gRPC response.
+type ControllerResponse struct {
+	Status int
+	Body   []byte
+}
+
 // NewCommandClient builds a client. Call Connect to dial the socket and start
 // the configured streams.
 func NewCommandClient(delegate CommandClientDelegate, config *CommandClientConfig) *CommandClient {
@@ -142,6 +149,10 @@ func (c *CommandClient) Connect(socketPath string) error {
 			Backoff:           commandConnectBackoff,
 			MinConnectTimeout: time.Second,
 		}),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(controllerMaxMessageBytes),
+			grpc.MaxCallSendMsgSize(controllerMaxMessageBytes),
+		),
 	)
 	if err != nil {
 		c.mu.Unlock()
@@ -322,6 +333,40 @@ func (c *CommandClient) SetLogLevel(level int) error {
 		return fmt.Errorf("%s", grpcMessage(err))
 	}
 	return nil
+}
+
+// ControllerRequest forwards one native-controller HTTP request through
+// the command server. `path` is an absolute, already-escaped request
+// target (`/proxies`, `/connections/{id}`, `/group/{name}/delay?...`).
+func (c *CommandClient) ControllerRequest(
+	method string,
+	path string,
+	contentType string,
+	body []byte,
+	timeoutMs int64,
+) (*ControllerResponse, error) {
+	cli := c.grpcClient()
+	if cli == nil {
+		return nil, errors.New("command IPC is not connected")
+	}
+	if timeoutMs <= 0 {
+		timeoutMs = 5000
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
+	defer cancel()
+	resp, err := cli.ControllerRequest(ctx, &pb.ControllerRequestRequest{
+		Method:      method,
+		Path:        path,
+		ContentType: contentType,
+		Body:        body,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s", grpcMessage(err))
+	}
+	return &ControllerResponse{
+		Status: int(resp.GetStatus()),
+		Body:   resp.GetBody(),
+	}, nil
 }
 
 func (c *CommandClient) grpcClient() pb.CommandClient {

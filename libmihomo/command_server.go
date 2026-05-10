@@ -1,11 +1,16 @@
 package libmihomo
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,6 +36,8 @@ const (
 	statusMaxInterval = 10 * time.Second
 	statusDefault     = 1 * time.Second
 	commandStopGrace  = 750 * time.Millisecond
+
+	controllerMaxMessageBytes = 32 * 1024 * 1024
 )
 
 type commandServer struct {
@@ -70,7 +77,10 @@ func StartCommandServer(socketPath string) error {
 	// but be explicit anyway.
 	_ = os.Chmod(socketPath, 0o600)
 
-	gs := grpc.NewServer()
+	gs := grpc.NewServer(
+		grpc.MaxRecvMsgSize(controllerMaxMessageBytes),
+		grpc.MaxSendMsgSize(controllerMaxMessageBytes),
+	)
 	pb.RegisterCommandServer(gs, &commandServiceImpl{})
 
 	srv := &commandServer{listener: l, grpcServer: gs}
@@ -204,6 +214,23 @@ func (s *commandServiceImpl) SetLogLevel(_ context.Context, req *pb.SetLogLevelR
 	return &pb.SetLogLevelResponse{}, nil
 }
 
+// ControllerRequest executes a mihomo REST-controller request on behalf
+// of the host app. The host talks to this command server over gRPC; the
+// extension process then talks to mihomo's private Unix-domain controller
+// socket using Go's standard net/http client. Keeping the Unix HTTP client
+// in Go avoids a second hand-written HTTP parser in Swift while preserving
+// mihomo's existing controller handlers.
+func (s *commandServiceImpl) ControllerRequest(
+	ctx context.Context,
+	req *pb.ControllerRequestRequest,
+) (*pb.ControllerRequestResponse, error) {
+	resp, err := doControllerRequest(ctx, req)
+	if err != nil {
+		return nil, controllerStatusError(err)
+	}
+	return resp, nil
+}
+
 func buildStatus() *pb.StatusMessage {
 	t := TrafficNow()
 	if t == nil {
@@ -218,4 +245,94 @@ func buildStatus() *pb.StatusMessage {
 		MemoryResident: MemoryUsage(),
 		MemoryBudget:   memBudget.Load(),
 	}
+}
+
+var controllerHTTPClient = &http.Client{
+	Transport: &http.Transport{
+		DisableKeepAlives: true,
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			path := controllerSocketPath.Load()
+			if path == "" {
+				return nil, errControllerSocketUnconfigured
+			}
+			var d net.Dialer
+			return d.DialContext(ctx, "unix", path)
+		},
+	},
+}
+
+var (
+	errControllerSocketUnconfigured = errors.New("controller socket path is not configured")
+	errControllerResponseTooLarge   = errors.New("controller response exceeds IPC size limit")
+)
+
+func doControllerRequest(
+	ctx context.Context,
+	req *pb.ControllerRequestRequest,
+) (*pb.ControllerRequestResponse, error) {
+	method := strings.ToUpper(strings.TrimSpace(req.GetMethod()))
+	if method == "" {
+		return nil, status.Error(codes.InvalidArgument, "controller method is empty")
+	}
+
+	path := req.GetPath()
+	if !strings.HasPrefix(path, "/") {
+		return nil, status.Error(codes.InvalidArgument, "controller path must start with /")
+	}
+	u, err := url.ParseRequestURI(path)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid controller path: %v", err)
+	}
+	u.Scheme = "http"
+	u.Host = "unix"
+
+	httpReq, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(req.GetBody()))
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "build controller request: %v", err)
+	}
+	httpReq.Host = "unix"
+	httpReq.Header.Set("Accept", "*/*")
+	if ct := strings.TrimSpace(req.GetContentType()); ct != "" {
+		httpReq.Header.Set("Content-Type", ct)
+	}
+
+	httpResp, err := controllerHTTPClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer httpResp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(httpResp.Body, controllerMaxMessageBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > controllerMaxMessageBytes {
+		return nil, errControllerResponseTooLarge
+	}
+	return &pb.ControllerRequestResponse{
+		Status: int32(httpResp.StatusCode),
+		Body:   body,
+	}, nil
+}
+
+func controllerStatusError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if _, ok := status.FromError(err); ok {
+		return err
+	}
+	if errors.Is(err, errControllerSocketUnconfigured) || errors.Is(err, errMihomoNotStarted) {
+		return status.Error(codes.FailedPrecondition, err.Error())
+	}
+	if errors.Is(err, errControllerResponseTooLarge) {
+		return status.Error(codes.ResourceExhausted, err.Error())
+	}
+	if errors.Is(err, context.Canceled) {
+		return status.Error(codes.Canceled, err.Error())
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return status.Error(codes.DeadlineExceeded, err.Error())
+	}
+	return status.Error(codes.Unavailable, err.Error())
 }

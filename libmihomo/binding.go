@@ -85,11 +85,12 @@ func SetCommandSocketPath(path string) {
 }
 
 // SetControllerSocketPath chooses where mihomo's REST controller binds
-// its Unix-domain listener. The host app's MihomoController dials this
-// path to issue /proxies, /connections, /group/.../delay etc. requests
-// without going through the loopback HTTP listener. Must point at a path
-// inside an App Group container. Pass "" to leave the Unix listener off.
-// Call before Start; mid-run changes take effect on the next Reload.
+// its Unix-domain listener. The command server's ControllerRequest RPC
+// proxies native UI requests to this path to issue /proxies, /connections,
+// /group/.../delay etc. without going through the loopback HTTP listener.
+// Must point at a path inside an App Group container. Pass "" to leave
+// the Unix listener off. Call before Start; mid-run changes take effect
+// on the next Reload.
 func SetControllerSocketPath(path string) {
 	controllerSocketPath.Store(path)
 }

@@ -172,15 +172,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // Tell mihomo where to expose the gRPC command server. Same
         // path the host app's CommandClient dials. mihomo's REST API
         // remains user-facing (the in-app metacubexd web view still
-        // uses HTTP loopback when enabled), but the host app's native
-        // UI dials a sibling Unix socket instead — see below.
+        // uses HTTP loopback when enabled), and native UI controller
+        // requests now ride this gRPC channel too.
         LibmihomoBridge.setCommandSocketPath(FilePath.commandSocketPath)
 
         // Tell mihomo where to bind its REST controller's Unix-domain
-        // listener. The host app's `MihomoController` and
-        // `ConnectionsStore` dial this socket so /proxies, /connections,
-        // and /group/.../delay traffic stays in the App Group sandbox
-        // instead of the toggleable loopback HTTP listener.
+        // listener. `CommandClient.ControllerRequest` executes /proxies,
+        // /connections, /group/.../delay, etc. against this private socket
+        // inside the extension, so the host app never depends on the
+        // toggleable loopback HTTP listener.
         LibmihomoBridge.setControllerSocketPath(FilePath.controllerSocketPath)
 
         // Wire the on-disk shared state Go reads on every Reload:

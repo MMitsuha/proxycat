@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v7.34.1
-// source: proto/command/command.proto
+// source: libmihomo/proto/command/command.proto
 
 package command
 
@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Command_SubscribeStatus_FullMethodName = "/proxycat.command.Command/SubscribeStatus"
-	Command_SubscribeLogs_FullMethodName   = "/proxycat.command.Command/SubscribeLogs"
-	Command_Reload_FullMethodName          = "/proxycat.command.Command/Reload"
-	Command_SetLogLevel_FullMethodName     = "/proxycat.command.Command/SetLogLevel"
+	Command_SubscribeStatus_FullMethodName   = "/proxycat.command.Command/SubscribeStatus"
+	Command_SubscribeLogs_FullMethodName     = "/proxycat.command.Command/SubscribeLogs"
+	Command_Reload_FullMethodName            = "/proxycat.command.Command/Reload"
+	Command_SetLogLevel_FullMethodName       = "/proxycat.command.Command/SetLogLevel"
+	Command_ControllerRequest_FullMethodName = "/proxycat.command.Command/ControllerRequest"
 )
 
 // CommandClient is the client API for Command service.
@@ -33,8 +34,9 @@ const (
 // used by the iOS host app. Mirrors the shape of sing-box's
 // daemon.StartedService (gRPC over Unix domain socket inside the App
 // Group container) but trimmed to the fields ProxyCat actually needs.
-// Mihomo's REST controller is intentionally NOT used here — that
-// surface is for the end-user.
+// Host-facing control traffic stays on this gRPC channel; when the
+// native UI needs mihomo's REST handlers, the extension proxies the
+// request internally to mihomo's private Unix-domain controller socket.
 type CommandClient interface {
 	// Streams a Status message every IntervalMs (default 1000).
 	SubscribeStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StatusMessage], error)
@@ -52,6 +54,13 @@ type CommandClient interface {
 	// (clamped on the server). Mirrors mihomo's own /configs PATCH
 	// log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
 	SetLogLevel(ctx context.Context, in *SetLogLevelRequest, opts ...grpc.CallOption) (*SetLogLevelResponse, error)
+	// Proxies a single native-controller HTTP request through the command
+	// IPC channel. The extension side executes the request with Go's
+	// net/http client over mihomo's private Unix-domain controller socket.
+	// This keeps host ↔ extension IPC on one gRPC transport while still
+	// reusing mihomo's existing REST handlers for /proxies, /connections,
+	// /group/.../delay, etc.
+	ControllerRequest(ctx context.Context, in *ControllerRequestRequest, opts ...grpc.CallOption) (*ControllerRequestResponse, error)
 }
 
 type commandClient struct {
@@ -120,6 +129,16 @@ func (c *commandClient) SetLogLevel(ctx context.Context, in *SetLogLevelRequest,
 	return out, nil
 }
 
+func (c *commandClient) ControllerRequest(ctx context.Context, in *ControllerRequestRequest, opts ...grpc.CallOption) (*ControllerRequestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ControllerRequestResponse)
+	err := c.cc.Invoke(ctx, Command_ControllerRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CommandServer is the server API for Command service.
 // All implementations must embed UnimplementedCommandServer
 // for forward compatibility.
@@ -128,8 +147,9 @@ func (c *commandClient) SetLogLevel(ctx context.Context, in *SetLogLevelRequest,
 // used by the iOS host app. Mirrors the shape of sing-box's
 // daemon.StartedService (gRPC over Unix domain socket inside the App
 // Group container) but trimmed to the fields ProxyCat actually needs.
-// Mihomo's REST controller is intentionally NOT used here — that
-// surface is for the end-user.
+// Host-facing control traffic stays on this gRPC channel; when the
+// native UI needs mihomo's REST handlers, the extension proxies the
+// request internally to mihomo's private Unix-domain controller socket.
 type CommandServer interface {
 	// Streams a Status message every IntervalMs (default 1000).
 	SubscribeStatus(*StatusRequest, grpc.ServerStreamingServer[StatusMessage]) error
@@ -147,6 +167,13 @@ type CommandServer interface {
 	// (clamped on the server). Mirrors mihomo's own /configs PATCH
 	// log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
 	SetLogLevel(context.Context, *SetLogLevelRequest) (*SetLogLevelResponse, error)
+	// Proxies a single native-controller HTTP request through the command
+	// IPC channel. The extension side executes the request with Go's
+	// net/http client over mihomo's private Unix-domain controller socket.
+	// This keeps host ↔ extension IPC on one gRPC transport while still
+	// reusing mihomo's existing REST handlers for /proxies, /connections,
+	// /group/.../delay, etc.
+	ControllerRequest(context.Context, *ControllerRequestRequest) (*ControllerRequestResponse, error)
 	mustEmbedUnimplementedCommandServer()
 }
 
@@ -168,6 +195,9 @@ func (UnimplementedCommandServer) Reload(context.Context, *ReloadRequest) (*Relo
 }
 func (UnimplementedCommandServer) SetLogLevel(context.Context, *SetLogLevelRequest) (*SetLogLevelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetLogLevel not implemented")
+}
+func (UnimplementedCommandServer) ControllerRequest(context.Context, *ControllerRequestRequest) (*ControllerRequestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ControllerRequest not implemented")
 }
 func (UnimplementedCommandServer) mustEmbedUnimplementedCommandServer() {}
 func (UnimplementedCommandServer) testEmbeddedByValue()                 {}
@@ -248,6 +278,24 @@ func _Command_SetLogLevel_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Command_ControllerRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ControllerRequestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommandServer).ControllerRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Command_ControllerRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommandServer).ControllerRequest(ctx, req.(*ControllerRequestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Command_ServiceDesc is the grpc.ServiceDesc for Command service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -263,6 +311,10 @@ var Command_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "SetLogLevel",
 			Handler:    _Command_SetLogLevel_Handler,
 		},
+		{
+			MethodName: "ControllerRequest",
+			Handler:    _Command_ControllerRequest_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -276,5 +328,5 @@ var Command_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "proto/command/command.proto",
+	Metadata: "libmihomo/proto/command/command.proto",
 }

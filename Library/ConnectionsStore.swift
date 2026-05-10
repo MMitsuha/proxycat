@@ -74,8 +74,8 @@ public struct ConnectionsSnapshot: Codable, Sendable {
 /// loopback HTTP listener. The wire shape is identical (mihomo's
 /// connectionRouter returns the same snapshot JSON whether the request
 /// upgrades or not), so the rate of UI refresh is the same — it just
-/// rides the App-Group Unix socket now and stays up regardless of the
-/// user's "Disable Web Controller" toggle.
+/// rides the command IPC now and stays up regardless of the user's
+/// "Disable Web Controller" toggle.
 @MainActor @Observable
 public final class ConnectionsStore {
     public private(set) var connections: [Connection] = []
@@ -106,7 +106,7 @@ public final class ConnectionsStore {
     /// `speedGroupByName`. Useful for color-coding rows by outbound.
     public private(set) var speedByChain: [String: Int64] = [:]
 
-    @ObservationIgnored private let client: UnixHTTPClient
+    @ObservationIgnored private let transport: any ControllerTransport
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var filterDebounceTask: Task<Void, Never>?
 
@@ -159,8 +159,8 @@ public final class ConnectionsStore {
     /// /connections endpoint pushes at, so the UI feels identical.
     private static let pollInterval: Duration = .milliseconds(1_000)
 
-    public init(client: UnixHTTPClient = UnixHTTPClient(socketPath: FilePath.controllerSocketPath)) {
-        self.client = client
+    public init(transport: any ControllerTransport) {
+        self.transport = transport
     }
 
     private func scheduleFilterDebounce() {
@@ -254,9 +254,9 @@ public final class ConnectionsStore {
     // MARK: - Private
 
     private func sendDelete(path: String, errorPrefix: String) async {
-        let request = UnixHTTPRequest(method: "DELETE", path: path)
+        let request = ControllerHTTPRequest(method: "DELETE", path: path)
         do {
-            let response = try await client.send(request, timeout: 5)
+            let response = try await transport.sendControllerRequest(request, timeout: 5)
             if !response.isSuccess {
                 loadError = "\(errorPrefix) (HTTP \(response.status))"
             }
@@ -274,9 +274,9 @@ public final class ConnectionsStore {
             "connections",
             queryItems: [URLQueryItem(name: "interval", value: "1000")]
         )
-        let request = UnixHTTPRequest(method: "GET", path: path)
+        let request = ControllerHTTPRequest(method: "GET", path: path)
         do {
-            let response = try await client.send(request, timeout: 5)
+            let response = try await transport.sendControllerRequest(request, timeout: 5)
             try Task.checkCancellation()
             guard response.isSuccess else {
                 loadError = "Controller returned HTTP \(response.status)"

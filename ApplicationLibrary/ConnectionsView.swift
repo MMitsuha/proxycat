@@ -4,11 +4,13 @@ import SwiftUI
 public struct ConnectionsView: View {
     @Environment(ExtensionProfile.self) private var profile
 
-    @State private var store = ConnectionsStore()
+    @State private var store: ConnectionsStore
     @State private var confirmCloseAll: Bool = false
     @State private var detail: Connection?
 
-    public init() {}
+    public init(transport: any ControllerTransport) {
+        _store = State(initialValue: ConnectionsStore(transport: transport))
+    }
 
     public var body: some View {
         @Bindable var store = store

@@ -104,7 +104,7 @@ public struct DashboardView: View {
     private var proxiesRow: some View {
         if profile.isConnected {
             NavigationLink {
-                ProxiesView()
+                ProxiesView(transport: commandClient)
             } label: {
                 dashboardActionLabel(
                     title: "Proxies",
@@ -236,7 +236,7 @@ public struct DashboardView: View {
         let isInteractive = profile.isConnected
         if isInteractive {
             NavigationLink {
-                ConnectionsView()
+                ConnectionsView(transport: commandClient)
             } label: {
                 connectionsLabel(isInteractive: true)
             }
