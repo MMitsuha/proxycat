@@ -1,5 +1,4 @@
 import Library
-import QuickLook
 import SwiftUI
 import UIKit
 
@@ -7,10 +6,9 @@ import UIKit
 /// in the App Group container. The extension opens a fresh
 /// `mihomo-YYYYMMDD-HHMMSS.log` whenever it starts the tunnel; this
 /// view lists them newest-first with size + modified date and opens
-/// files through the system Quick Look preview.
+/// files through an in-app UTF-8 text viewer.
 public struct SavedLogsView: View {
     @State private var model = SavedLogsViewModel()
-    @State private var previewURL: URL?
 
     public init() {}
 
@@ -22,13 +20,11 @@ public struct SavedLogsView: View {
             } else {
                 List {
                     ForEach(model.entries) { entry in
-                        Button {
-                            previewURL = entry.url
+                        NavigationLink {
+                            SavedLogFileView(entry: entry)
                         } label: {
                             row(for: entry)
                         }
-                        .buttonStyle(.plain)
-                        .contentShape(Rectangle())
                         .contextMenu {
                             ShareLink(item: entry.url) {
                                 Label("Share File", systemImage: "square.and.arrow.up")
@@ -81,7 +77,6 @@ public struct SavedLogsView: View {
             // Chinese form that doesn't need a plural marker either.
             Text("This deletes \(model.entries.count) saved log files. The active session is preserved.")
         }
-        .quickLookPreview($previewURL)
         .onAppear { model.reload() }
     }
 
@@ -117,6 +112,136 @@ public struct SavedLogsView: View {
             systemImage: "doc.text.magnifyingglass",
             localizedDescription: "A new file is created each time the tunnel connects."
         )
+    }
+}
+
+// MARK: - Text viewer
+
+private struct SavedLogFileView: View {
+    let entry: SavedLogEntry
+
+    @State private var model = SavedLogFileViewModel()
+
+    var body: some View {
+        Group {
+            if let document = model.document {
+                SavedLogTextList(document: document)
+            } else if let error = model.loadError {
+                ContentUnavailableView {
+                    Label("Could not open log", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Retry") {
+                        Task { await model.load(path: entry.url.path, force: true) }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationTitle(entry.fileName)
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: entry.id) {
+            await model.load(path: entry.url.path)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                ShareLink(item: entry.url) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                Button {
+                    Task { await model.load(path: entry.url.path, force: true) }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(model.isLoading)
+            }
+        }
+    }
+}
+
+private struct SavedLogTextList: View {
+    let document: SavedLogDocument
+
+    private var lineNumberWidth: CGFloat {
+        max(28, CGFloat(String(max(document.lines.count, 1)).count) * 8 + 10)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Label(ByteFormatter.fileSize(document.size), systemImage: "doc.text")
+                    Spacer()
+                    Text("\(document.lines.count) lines")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                if document.replacedInvalidUTF8 {
+                    Label("Some invalid UTF-8 bytes were replaced.", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+
+            Section {
+                ForEach(document.lines) { line in
+                    SavedLogLineRow(line: line, lineNumberWidth: lineNumberWidth)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+}
+
+private struct SavedLogLineRow: View {
+    let line: SavedLogLine
+    let lineNumberWidth: CGFloat
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("\(line.number)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.tertiary)
+                .frame(width: lineNumberWidth, alignment: .trailing)
+                .textSelection(.disabled)
+
+            Text(line.text.isEmpty ? " " : line.text)
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(.primary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 1)
+    }
+}
+
+@MainActor @Observable
+private final class SavedLogFileViewModel {
+    var document: SavedLogDocument?
+    var loadError: String?
+    var isLoading = false
+
+    func load(path: String, force: Bool = false) async {
+        guard force || document == nil else { return }
+        isLoading = true
+        loadError = nil
+        do {
+            let loaded = try await Task.detached(priority: .userInitiated) {
+                try SavedLogFileReader.load(path: path)
+            }.value
+            document = loaded
+        } catch is CancellationError {
+        } catch {
+            loadError = error.localizedDescription
+        }
+        isLoading = false
     }
 }
 
