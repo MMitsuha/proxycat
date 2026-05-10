@@ -161,8 +161,10 @@ public enum LibmihomoBridge {
         LibmihomoStopLogFile()
     }
 
-    /// Path of the in-progress log file, or nil when no session is
-    /// currently being persisted.
+    /// Path of the in-progress log file in this process's Go runtime,
+    /// or nil when no session is currently being persisted here. The
+    /// host app reads `FilePath.activeLogFilePath()` for extension-owned
+    /// log files because the extension runs in a separate process.
     public static func currentLogFilePath() -> String? {
         let s = LibmihomoCurrentLogFilePath()
         return s.isEmpty ? nil : s

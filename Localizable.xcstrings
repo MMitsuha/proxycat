@@ -1635,6 +1635,9 @@
         }
       }
     },
+    "Reset Statistics" : {
+
+    },
     "Reset statistics?" : {
       "comment" : "Confirmation dialog title for the Reset Statistics action.",
       "extractionState" : "manual",
@@ -1724,6 +1727,9 @@
           }
         }
       }
+    },
+    "Save downloads the profile, validates it with mihomo, then adds it. Nothing is written if validation fails." : {
+
     },
     "Save failed" : {
       "extractionState" : "manual",

@@ -212,7 +212,7 @@ final class SavedLogsViewModel {
 
     func reload() {
         let dir = FilePath.logsDirectory
-        let active = LibmihomoBridge.currentLogFilePath()
+        let active = FilePath.activeLogFilePath()
         // Apply user retention policy before listing so the user
         // sees a fresh state. No-op when policy is .keepAll.
         FilePath.pruneSavedLogs(

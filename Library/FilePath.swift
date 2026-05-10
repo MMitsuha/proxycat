@@ -50,6 +50,24 @@ public enum FilePath {
         ensureSubdirectory("Logs")
     }
 
+    /// Marker written by the Network Extension's Go runtime while a
+    /// per-session log file is open. The host app reads it to avoid
+    /// deleting or pruning the live file.
+    public static var activeLogMarkerFile: URL {
+        logsDirectory.appendingPathComponent(AppConfiguration.activeLogMarkerFileName)
+    }
+
+    public static func activeLogFilePath() -> String? {
+        guard let data = try? Data(contentsOf: activeLogMarkerFile),
+              let raw = String(data: data, encoding: .utf8)
+        else { return nil }
+        let path = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !path.isEmpty, FileManager.default.fileExists(atPath: path) else {
+            return nil
+        }
+        return path
+    }
+
     /// Path of the Unix-domain command socket. Both the Network
     /// Extension (server) and the host app (client) compute it the
     /// same way, so they meet at the App Group container. The path
@@ -137,12 +155,11 @@ public enum FilePath {
     /// Enforce the user's saved-log retention policy. Counts only
     /// `mihomo-*.log` files in `logsDirectory`, sorts newest-first by
     /// mtime, and deletes everything past the policy's keep count.
-    /// The file the extension is currently writing to (`activePath`,
-    /// from `LibmihomoBridge.currentLogFilePath()`) is always
+    /// The file the extension is currently writing to is always
     /// preserved — deleting an open inode silently keeps growing it.
     /// Idempotent and cheap; safe to call from app foreground, view
     /// reload, and settings-change sinks.
-    public static func pruneSavedLogs(policy: LogRetention, activePath: String?) {
+    public static func pruneSavedLogs(policy: LogRetention, activePath: String? = activeLogFilePath()) {
         let keep = policy.rawValue
         guard keep > 0 else { return }
 

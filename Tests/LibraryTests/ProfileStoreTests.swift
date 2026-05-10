@@ -35,4 +35,37 @@ import Testing
         let back = try JSONDecoder().decode(Profile.self, from: data)
         #expect(back.id == id)
     }
+
+    @Test func activeProfileRepairKeepsValidStoredSelection() {
+        let first = Profile(id: UUID(), name: "first", fileName: "first.yaml")
+        let second = Profile(id: UUID(), name: "second", fileName: "second.yaml")
+
+        let repaired = ProfileStore.repairedActiveProfileID(
+            profiles: [first, second],
+            storedID: second.id
+        )
+
+        #expect(repaired == second.id)
+    }
+
+    @Test func activeProfileRepairFallsBackWhenStoredSelectionIsStale() {
+        let first = Profile(id: UUID(), name: "first", fileName: "first.yaml")
+        let second = Profile(id: UUID(), name: "second", fileName: "second.yaml")
+
+        let repaired = ProfileStore.repairedActiveProfileID(
+            profiles: [first, second],
+            storedID: UUID()
+        )
+
+        #expect(repaired == first.id)
+    }
+
+    @Test func activeProfileRepairClearsSelectionWhenCatalogIsEmpty() {
+        let repaired = ProfileStore.repairedActiveProfileID(
+            profiles: [],
+            storedID: UUID()
+        )
+
+        #expect(repaired == nil)
+    }
 }

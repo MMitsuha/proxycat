@@ -38,6 +38,13 @@ public enum AppConfiguration {
     /// host-side JSONs; the Go core never touches it.
     public static let dailyUsageFileName = "daily_usage.json"
 
+    /// Hidden marker inside `Logs/` containing the absolute path of the
+    /// session log currently being written by the Network Extension.
+    /// The host app reads this file when pruning or deleting saved logs;
+    /// it cannot use `LibmihomoBridge.currentLogFilePath()` because that
+    /// would query the host process' separate Go runtime.
+    public static let activeLogMarkerFileName = ".active-log-path"
+
     /// Filename of the profile catalog index. Lives inside
     /// `Profiles/` alongside the per-profile YAMLs and maps each
     /// profile UUID to its display name and on-disk filename. Written

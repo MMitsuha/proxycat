@@ -17,8 +17,7 @@ struct ProxyCatApp: App {
             // Saved Logs but still wants the on-disk count bounded.
             guard phase == .active else { return }
             FilePath.pruneSavedLogs(
-                policy: HostSettingsStore.shared.logRetention,
-                activePath: LibmihomoBridge.currentLogFilePath()
+                policy: HostSettingsStore.shared.logRetention
             )
         }
     }

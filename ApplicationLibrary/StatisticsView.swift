@@ -11,24 +11,19 @@ public struct StatisticsView: View {
     public init() {}
 
     public var body: some View {
-        // Build the windowed slice and chart series once per body
-        // evaluation. Three downstream cards (summary / chart / list) all
-        // need the same window, and SwiftUI re-evaluates body on every
-        // dailyUsage publish; threading the precomputed values through
-        // avoids repeating the dictionary build and reduce three times
-        // per redraw.
-        let bucketed = bucketedEntries()
-        let series = chartSeries()
+        // Build the windowed model once per body evaluation. All cards need
+        // the same slice, and SwiftUI re-evaluates body on every dailyUsage
+        // publish; threading a single model through avoids duplicate reduces.
+        let model = usageModel()
         return ScrollView {
-            VStack(spacing: 14) {
-                rangePicker
-                summaryCard(bucketed: bucketed)
-                chartCard(series: series)
-                listCard(bucketed: bucketed)
-                resetButton
+            VStack(spacing: ProxyCatUI.pageSpacing) {
+                overviewCard(model)
+                chartCard(model)
+                listCard(model)
+                resetAction
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
+            .padding(.top, ProxyCatUI.pageTopPadding)
             .padding(.bottom, 24)
         }
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
@@ -60,47 +55,60 @@ public struct StatisticsView: View {
         .pickerStyle(.segmented)
     }
 
-    private func summaryCard(bucketed: [DailyUsageEntry]) -> some View {
-        let totalUp = bucketed.reduce(into: Int64(0)) { $0 &+= $1.up }
-        let totalDown = bucketed.reduce(into: Int64(0)) { $0 &+= $1.down }
-        let total = totalUp &+ totalDown
+    private func overviewCard(_ model: UsageModel) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ProxyCatMetricHeader(
+                title: "Usage",
+                systemImage: "chart.bar.xaxis",
+                tint: .accentColor,
+                iconFont: .subheadline,
+                titleFont: .subheadline.weight(.semibold)
+            )
 
-        return HStack(alignment: .top, spacing: 12) {
+            rangePicker
+
+            Divider()
+
+            summaryGrid(model)
+        }
+        .proxyCatCard()
+    }
+
+    private func summaryGrid(_ model: UsageModel) -> some View {
+        HStack(alignment: .top, spacing: 12) {
             summaryColumn(
                 title: "Total",
-                value: ByteFormatter.string(total),
+                value: ByteFormatter.string(model.total),
                 color: .accentColor,
                 symbol: "sum"
             )
             Divider().frame(height: 36)
             summaryColumn(
                 title: "Upload",
-                value: ByteFormatter.string(totalUp),
+                value: ByteFormatter.string(model.totalUp),
                 color: .blue,
                 symbol: "arrow.up.circle.fill"
             )
             Divider().frame(height: 36)
             summaryColumn(
                 title: "Download",
-                value: ByteFormatter.string(totalDown),
+                value: ByteFormatter.string(model.totalDown),
                 color: .green,
                 symbol: "arrow.down.circle.fill"
             )
         }
         .frame(maxWidth: .infinity)
-        .card()
     }
 
     private func summaryColumn(title: LocalizedStringKey, value: String, color: Color, symbol: String) -> some View {
         VStack(spacing: 4) {
-            HStack(spacing: 4) {
-                Image(systemName: symbol)
-                    .font(.caption2)
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
+            ProxyCatMetricHeader(
+                title: title,
+                systemImage: symbol,
+                tint: color,
+                iconFont: .caption2,
+                titleFont: .caption2.weight(.medium)
+            )
             Text(value)
                 .font(.subheadline.weight(.semibold).monospacedDigit())
                 .foregroundStyle(.primary)
@@ -110,14 +118,43 @@ public struct StatisticsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func chartCard(series: [ChartPoint]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Daily traffic")
-                .font(.subheadline.weight(.semibold))
-            chartContent(series: series)
+    private func chartCard(_ model: UsageModel) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                ProxyCatMetricHeader(
+                    title: "Daily Traffic",
+                    systemImage: "chart.bar.fill",
+                    tint: .accentColor,
+                    iconFont: .subheadline,
+                    titleFont: .subheadline.weight(.semibold)
+                )
+                Spacer()
+                chartLegend
+            }
+
+            chartContent(series: model.series)
                 .frame(height: 180)
         }
-        .card()
+        .proxyCatCard()
+    }
+
+    private var chartLegend: some View {
+        HStack(spacing: 10) {
+            legendItem("Upload", color: .blue)
+            legendItem("Download", color: .green)
+        }
+    }
+
+    private func legendItem(_ title: LocalizedStringKey, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
     }
 
     @ViewBuilder
@@ -139,6 +176,7 @@ public struct StatisticsView: View {
                 ChartDirection.up.localizedTitle: Color.blue,
                 ChartDirection.down.localizedTitle: Color.green,
             ])
+            .chartLegend(.hidden)
             .chartYAxis {
                 AxisMarks(position: .leading) { value in
                     AxisGridLine()
@@ -180,43 +218,77 @@ public struct StatisticsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func listCard(bucketed: [DailyUsageEntry]) -> some View {
+    private func listCard(_ model: UsageModel) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Recent days")
-                .font(.subheadline.weight(.semibold))
-                .padding(.bottom, 8)
+            ProxyCatMetricHeader(
+                title: "Recent Days",
+                systemImage: "calendar",
+                tint: .accentColor,
+                iconFont: .subheadline,
+                titleFont: .subheadline.weight(.semibold)
+            )
 
-            let recent = Array(bucketed.reversed())
-            if recent.isEmpty {
-                Text("No daily totals yet.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
+            if model.recent.isEmpty {
+                emptyList
             } else {
-                ForEach(Array(recent.enumerated()), id: \.element.id) { index, entry in
+                ForEach(Array(model.recent.enumerated()), id: \.element.id) { index, entry in
                     if index > 0 { Divider() }
                     DailyUsageRow(entry: entry)
                         .padding(.vertical, 8)
                 }
             }
         }
-        .card()
+        .proxyCatCard()
     }
 
-    private var resetButton: some View {
+    private var emptyList: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Text("No daily totals yet.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var resetAction: some View {
         Button(role: .destructive) {
             showResetConfirm = true
         } label: {
-            Label("Reset statistics", systemImage: "trash")
-                .frame(maxWidth: .infinity)
+            HStack(spacing: 8) {
+                Image(systemName: "trash")
+                Text("Reset Statistics")
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .opacity(dailyUsage.entries.isEmpty ? 0.35 : 1)
+            }
+            .font(.subheadline)
+            .foregroundStyle(dailyUsage.entries.isEmpty ? Color.secondary : Color.red)
+            .opacity(dailyUsage.entries.isEmpty ? 0.48 : 1)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
+        .buttonStyle(.plain)
         .disabled(dailyUsage.entries.isEmpty)
+        .proxyCatCard()
     }
 
     // MARK: - Data shaping
+
+    private func usageModel() -> UsageModel {
+        let bucketed = bucketedEntries()
+        let totalUp = bucketed.reduce(into: Int64(0)) { $0 &+= $1.up }
+        let totalDown = bucketed.reduce(into: Int64(0)) { $0 &+= $1.down }
+        return UsageModel(
+            recent: Array(bucketed.reversed()),
+            series: chartSeries(),
+            totalUp: totalUp,
+            totalDown: totalDown
+        )
+    }
 
     /// Entries whose day falls within the currently selected calendar
     /// window ending today. Filtering by date (not by entry count)
@@ -326,71 +398,80 @@ public struct StatisticsView: View {
         let bytes: Int64
         let direction: ChartDirection
     }
+
+    private struct UsageModel {
+        let recent: [DailyUsageEntry]
+        let series: [ChartPoint]
+        let totalUp: Int64
+        let totalDown: Int64
+
+        var total: Int64 { totalUp &+ totalDown }
+    }
 }
 
 private struct DailyUsageRow: View {
     let entry: DailyUsageEntry
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.day)
                     .font(.subheadline.weight(.medium))
                     .monospacedDigit()
+                    .lineLimit(1)
                 Text(formattedRelative)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 5) {
                 Text(ByteFormatter.string(entry.total))
                     .font(.subheadline.weight(.semibold).monospacedDigit())
-                HStack(spacing: 6) {
-                    Label(ByteFormatter.string(entry.up), systemImage: "arrow.up")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.blue)
-                    Label(ByteFormatter.string(entry.down), systemImage: "arrow.down")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.green)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                HStack(spacing: 8) {
+                    directionAmount(ByteFormatter.string(entry.up), systemImage: "arrow.up", color: .blue)
+                    directionAmount(ByteFormatter.string(entry.down), systemImage: "arrow.down", color: .green)
                 }
-                .labelStyle(.titleAndIcon)
             }
         }
+    }
+
+    private func directionAmount(_ value: String, systemImage: String, color: Color) -> some View {
+        Label {
+            Text(value)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        } icon: {
+            Image(systemName: systemImage)
+        }
+        .font(.caption2.monospacedDigit())
+        .foregroundStyle(color)
+        .labelStyle(.titleAndIcon)
     }
 
     private var formattedRelative: String {
         // Best-effort localized relative day name ("Today", "Yesterday",
         // "Mon"). Falls back to the raw key when parsing fails.
-        let parser = DateFormatter()
-        parser.calendar = Calendar.current
-        parser.locale = Locale(identifier: "en_US_POSIX")
-        parser.dateFormat = "yyyy-MM-dd"
-        guard let date = parser.date(from: entry.day) else { return "" }
+        guard let date = Self.date(fromDayKey: entry.day) else { return "" }
 
         let calendar = Calendar.current
         if calendar.isDateInToday(date) { return String(localized: "Today", bundle: .main) }
         if calendar.isDateInYesterday(date) { return String(localized: "Yesterday", bundle: .main) }
 
-        let display = DateFormatter()
-        display.calendar = calendar
-        display.locale = Locale.autoupdatingCurrent
-        display.setLocalizedDateFormatFromTemplate("EEE")
-        return display.string(from: date)
+        return date.formatted(Date.FormatStyle().weekday(.abbreviated))
     }
-}
 
-private struct StatisticsCard: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-            )
+    private static func date(fromDayKey key: String) -> Date? {
+        let parts = key.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2])
+        else { return nil }
+
+        var calendar = Calendar.current
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
     }
-}
-
-private extension View {
-    func card() -> some View { modifier(StatisticsCard()) }
 }

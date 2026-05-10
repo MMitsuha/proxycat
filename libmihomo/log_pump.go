@@ -40,10 +40,6 @@ func startLogPump(handler func(log.Event)) *logPump {
 
 func (p *logPump) run(handler func(log.Event)) {
 	defer close(p.done)
-	defer func() {
-		// Defensive: a faulty handler must not crash mihomo.
-		recover()
-	}()
 	for {
 		select {
 		case <-p.stop:
@@ -52,9 +48,18 @@ func (p *logPump) run(handler func(log.Event)) {
 			if !ok {
 				return
 			}
-			handler(event)
+			safeHandleLogEvent(handler, event)
 		}
 	}
+}
+
+func safeHandleLogEvent(handler func(log.Event), event log.Event) {
+	defer func() {
+		// Defensive: a faulty callback must not crash mihomo or
+		// permanently kill the subscription.
+		_ = recover()
+	}()
+	handler(event)
 }
 
 // Close terminates the pump, unsubscribes from the observable, and

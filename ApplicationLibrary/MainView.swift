@@ -5,7 +5,6 @@ public struct MainView: View {
     @State private var environment = ExtensionEnvironment()
     @State private var selection: Tab = .dashboard
     @State private var importError: String?
-    @State private var showImportError = false
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -59,14 +58,7 @@ public struct MainView: View {
                 DailyUsageStore.shared.flushNow()
             }
         }
-        .alert("Import failed", isPresented: $showImportError) {
-            Button("OK") {}
-        } message: {
-            Text(importError ?? "")
-        }
-        .onChange(of: showImportError) { _, isShowing in
-            if !isShowing { importError = nil }
-        }
+        .errorAlert($importError, title: "Import failed")
         // Hosted at TabView level so a reload failure triggered from
         // Settings, Logs, or any other tab still surfaces — settings
         // changes go through SettingsChangeCoordinator regardless of
@@ -85,7 +77,6 @@ public struct MainView: View {
             selection = .profiles
         } catch {
             importError = error.localizedDescription
-            showImportError = true
         }
     }
 

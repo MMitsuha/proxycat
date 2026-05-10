@@ -22,8 +22,7 @@ public final class HostSettingsStore {
         didSet {
             persistAndBroadcast()
             FilePath.pruneSavedLogs(
-                policy: logRetention,
-                activePath: LibmihomoBridge.currentLogFilePath()
+                policy: logRetention
             )
         }
     }

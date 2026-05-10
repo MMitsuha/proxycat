@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net"
 	"os"
+	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -28,6 +30,7 @@ const (
 	statusMinInterval = 100 * time.Millisecond
 	statusMaxInterval = 10 * time.Second
 	statusDefault     = 1 * time.Second
+	commandStopGrace  = 750 * time.Millisecond
 )
 
 type commandServer struct {
@@ -36,16 +39,26 @@ type commandServer struct {
 }
 
 var (
-	cmdSrv     atomic.Pointer[commandServer]
-	memBudget  atomic.Int64 // set by SetMemoryLimit, surfaced to clients via StatusMessage
+	cmdSrvMu  sync.Mutex
+	cmdSrv    atomic.Pointer[commandServer]
+	memBudget atomic.Int64 // set by SetMemoryLimit, surfaced to clients via StatusMessage
 )
 
 // StartCommandServer starts a gRPC server listening on `socketPath`.
 // Idempotent — second call while running is a no-op. Cleans up any stale
 // socket file from a prior crashed run.
 func StartCommandServer(socketPath string) error {
+	cmdSrvMu.Lock()
+	defer cmdSrvMu.Unlock()
+
 	if cmdSrv.Load() != nil {
 		return nil
+	}
+	if socketPath == "" {
+		return errors.New("command socket path is empty")
+	}
+	if err := os.MkdirAll(filepath.Dir(socketPath), 0o755); err != nil {
+		return err
 	}
 	_ = os.Remove(socketPath) // stale leftover
 
@@ -77,14 +90,28 @@ func StartCommandServer(socketPath string) error {
 	return nil
 }
 
-// StopCommandServer gracefully tears down the server. Streams in flight
-// finish their current send and exit.
+// StopCommandServer tears down the server. It first gives streams a
+// short grace window to finish, then forces shutdown so a connected host
+// app cannot keep the Network Extension stuck in stopTunnel.
 func StopCommandServer() {
+	cmdSrvMu.Lock()
+	defer cmdSrvMu.Unlock()
+
 	srv := cmdSrv.Swap(nil)
 	if srv == nil {
 		return
 	}
-	srv.grpcServer.GracefulStop()
+	done := make(chan struct{})
+	go func() {
+		srv.grpcServer.GracefulStop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(commandStopGrace):
+		srv.grpcServer.Stop()
+		<-done
+	}
 	_ = srv.listener.Close()
 }
 

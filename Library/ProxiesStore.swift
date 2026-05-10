@@ -12,8 +12,6 @@ public final class ProxiesStore {
     public private(set) var isRefreshing: Bool = false
     /// Group names with an in-flight health-check.
     public private(set) var groupTesting: Set<String> = []
-    /// `"<group>/<node>"` pairs with an in-flight selection.
-    public private(set) var selecting: Set<String> = []
     /// Group names whose node list is currently collapsed in the UI.
     public private(set) var collapsed: Set<String> = []
 
@@ -27,6 +25,11 @@ public final class ProxiesStore {
     /// can't repopulate `groups` or surface a stale error against the
     /// new controller state.
     @ObservationIgnored private var generation: Int = 0
+
+    /// In-flight group/node selections. Stored as a typed pair instead
+    /// of a joined string so names containing "/" cannot collide
+    /// internally (`a/b` + `c` vs `a` + `b/c`).
+    private var selecting: Set<ProxySelectionID> = []
 
     public init(
         controller: MihomoController = MihomoController(),
@@ -81,7 +84,7 @@ public final class ProxiesStore {
     public func select(group: Proxy, name: String) async {
         guard group.isSelectable else { return }
         let gen = generation
-        let key = selectingKey(group: group.name, node: name)
+        let key = ProxySelectionID(group: group.name, node: name)
         selecting.insert(key)
         defer {
             if gen == generation { selecting.remove(key) }
@@ -139,7 +142,7 @@ public final class ProxiesStore {
     }
 
     public func isSelecting(group: String, node: String) -> Bool {
-        selecting.contains(selectingKey(group: group, node: node))
+        selecting.contains(ProxySelectionID(group: group, node: node))
     }
 
     public func isCollapsed(_ group: String) -> Bool {
@@ -166,6 +169,7 @@ public final class ProxiesStore {
     }
 }
 
-private func selectingKey(group: String, node: String) -> String {
-    "\(group)/\(node)"
+private struct ProxySelectionID: Hashable {
+    let group: String
+    let node: String
 }

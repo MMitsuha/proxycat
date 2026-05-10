@@ -116,6 +116,8 @@ func (c *CommandClient) Connect(socketPath string) error {
 	c.cancel = cancel
 	cli := pb.NewCommandClient(conn)
 	c.cli = cli
+	c.connectOnce = sync.Once{}
+	c.disconnectOnce = sync.Once{}
 
 	subscribed := false
 	if c.options.SubscribeStatus {

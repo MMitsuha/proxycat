@@ -17,11 +17,37 @@ public struct SettingsView: View {
         @Bindable var hostSettings = hostSettings
         return Form {
             Section {
+                NavigationLink {
+                    AutoConnectSettingsView()
+                } label: {
+                    Label("Auto Connect", systemImage: "wifi.circle")
+                }
+                NavigationLink {
+                    StatisticsView()
+                } label: {
+                    Label("Statistics", systemImage: "chart.bar.xaxis")
+                }
+            }
+
+            Section {
                 Toggle("Disable Web Controller", isOn: $settings.disableExternalController)
             } header: {
                 Text("Privacy")
             } footer: {
                 Text("Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Applies immediately while connected.")
+            }
+
+            Section {
+                Picker("Retention", selection: $hostSettings.logRetention) {
+                    Text("Forever").tag(LogRetention.keepAll)
+                    Text("Keep last 10 sessions").tag(LogRetention.last10)
+                    Text("Keep last 50 sessions").tag(LogRetention.last50)
+                    Text("Keep last 100 sessions").tag(LogRetention.last100)
+                }
+            } header: {
+                Text("Logs")
+            } footer: {
+                Text("Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened.")
             }
 
             Section {
@@ -49,41 +75,22 @@ public struct SettingsView: View {
             }
 
             Section {
-                Picker("Retention", selection: $hostSettings.logRetention) {
-                    Text("Forever").tag(LogRetention.keepAll)
-                    Text("Keep last 10 sessions").tag(LogRetention.last10)
-                    Text("Keep last 50 sessions").tag(LogRetention.last50)
-                    Text("Keep last 100 sessions").tag(LogRetention.last100)
+                NavigationLink {
+                    AdvancedSettingsView()
+                } label: {
+                    Label("Advanced", systemImage: "wrench.and.screwdriver")
                 }
-            } header: {
-                Text("Logs")
-            } footer: {
-                Text("Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened.")
             }
 
             Section("About") {
                 LabeledContent("App Version") {
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                 }
-                Link("ProxyCat on GitHub", destination: URL(string: "https://github.com/MMitsuha/proxycat")!)
-                Link("mihomo on GitHub", destination: URL(string: "https://github.com/MetaCubeX/mihomo")!)
-            }
-
-            Section {
-                NavigationLink {
-                    StatisticsView()
-                } label: {
-                    Label("Statistics", systemImage: "chart.bar.xaxis")
+                if let proxyCatURL = SettingsLinks.proxyCat {
+                    Link("ProxyCat on GitHub", destination: proxyCatURL)
                 }
-                NavigationLink {
-                    AutoConnectSettingsView()
-                } label: {
-                    Label("Auto Connect", systemImage: "wifi.circle")
-                }
-                NavigationLink {
-                    AdvancedSettingsView()
-                } label: {
-                    Label("Advanced", systemImage: "wrench.and.screwdriver")
+                if let mihomoURL = SettingsLinks.mihomo {
+                    Link("mihomo on GitHub", destination: mihomoURL)
                 }
             }
         }
@@ -138,4 +145,9 @@ public struct SettingsView: View {
             isClearing = false
         }
     }
+}
+
+private enum SettingsLinks {
+    static let proxyCat = URL(string: "https://github.com/MMitsuha/proxycat")
+    static let mihomo = URL(string: "https://github.com/MetaCubeX/mihomo")
 }

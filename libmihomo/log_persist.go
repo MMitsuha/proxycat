@@ -21,6 +21,7 @@ import (
 
 type logFileSession struct {
 	path string
+	dir  string
 	file *os.File
 	pump *logPump
 }
@@ -51,6 +52,8 @@ func StartLogFile() (string, error) {
 	sessionMu.Lock()
 	if currentSession != nil {
 		path := currentSession.path
+		dir := currentSession.dir
+		writeActiveLogMarker(dir, path)
 		sessionMu.Unlock()
 		return path, nil
 	}
@@ -95,13 +98,15 @@ func StartLogFile() (string, error) {
 	sessionMu.Lock()
 	if currentSession != nil {
 		existing := currentSession.path
+		dir := currentSession.dir
+		writeActiveLogMarker(dir, existing)
 		sessionMu.Unlock()
 		_ = f.Close()
 		_ = os.Remove(path)
 		return existing, nil
 	}
 
-	s := &logFileSession{path: path, file: f}
+	s := &logFileSession{path: path, dir: dir, file: f}
 	header := fmt.Sprintf("=== mihomo session started %s ===\n",
 		time.Now().Format(time.RFC3339))
 	_, _ = f.WriteString(header)
@@ -120,6 +125,7 @@ func StartLogFile() (string, error) {
 		_, _ = s.file.WriteString(line)
 	})
 	currentSession = s
+	writeActiveLogMarker(dir, path)
 	sessionMu.Unlock()
 
 	return path, nil
@@ -137,15 +143,16 @@ func StopLogFile() {
 		return
 	}
 	s.pump.Close()
+	removeActiveLogMarker(s.dir, s.path)
 	_, _ = fmt.Fprintf(s.file, "=== mihomo session ended %s ===\n",
 		time.Now().Format(time.RFC3339))
 	_ = s.file.Sync()
 	_ = s.file.Close()
 }
 
-// CurrentLogFilePath returns the path of the active log file, or "" if
-// no session is currently being persisted. Surfaced so the host app's
-// "Saved Logs" UI can highlight the in-progress file.
+// CurrentLogFilePath returns the process-local active log file path, or
+// "" if no session is currently being persisted in this Go runtime.
+// Cross-process host UI state should use the active log marker instead.
 func CurrentLogFilePath() string {
 	sessionMu.Lock()
 	defer sessionMu.Unlock()
@@ -153,4 +160,41 @@ func CurrentLogFilePath() string {
 		return ""
 	}
 	return currentSession.path
+}
+
+const activeLogMarkerName = ".active-log-path"
+
+func activeLogMarkerPath(dir string) string {
+	return filepath.Join(dir, activeLogMarkerName)
+}
+
+func writeActiveLogMarker(dir, path string) {
+	if dir == "" || path == "" {
+		return
+	}
+	if err := os.WriteFile(activeLogMarkerPath(dir), []byte(path+"\n"), 0o644); err != nil {
+		log.Warnln("[log] write active marker: %v", err)
+	}
+}
+
+func removeActiveLogMarker(dir, path string) {
+	if dir == "" {
+		return
+	}
+	marker := activeLogMarkerPath(dir)
+	data, err := os.ReadFile(marker)
+	switch {
+	case err == nil:
+		if string(data) != path+"\n" {
+			return
+		}
+	case os.IsNotExist(err):
+		return
+	default:
+		log.Warnln("[log] read active marker: %v", err)
+		return
+	}
+	if err := os.Remove(marker); err != nil && !os.IsNotExist(err) {
+		log.Warnln("[log] remove active marker: %v", err)
+	}
 }

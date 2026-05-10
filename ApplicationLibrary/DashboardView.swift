@@ -21,14 +21,14 @@ public struct DashboardView: View {
     public init() {}
 
     public var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: ProxyCatUI.pageSpacing) {
             statusCard
             trafficGrid
             bottomCard
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
+        .padding(.top, ProxyCatUI.pageTopPadding)
         .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("ProxyCat")
         .navigationBarTitleDisplayMode(.large)
@@ -37,11 +37,7 @@ public struct DashboardView: View {
         // start failures don't move status; the `catch` arm in `toggle`
         // clears `isStarting` itself.)
         .onChange(of: profile.status) { _, _ in isStarting = false }
-        .alert("Cannot connect", isPresented: .constant(connectError != nil)) {
-            Button("OK") { connectError = nil }
-        } message: {
-            Text(connectError ?? "")
-        }
+        .errorAlert($connectError, title: "Cannot connect")
     }
 
     // MARK: - Status
@@ -76,36 +72,74 @@ public struct DashboardView: View {
             .tint(profile.isConnected ? .red : .accentColor)
             .disabled(profileStore.active == nil || isInTransition || isStarting)
 
-            if profile.isConnected, !settings.disableExternalController, let url = URL(string: "http://127.0.0.1:9090/ui/") {
-                Link(destination: url) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "safari")
-                        Text("Open Web UI")
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
-                    }
-                    .font(.subheadline)
-                }
-            }
-
-            if profile.isConnected {
-                NavigationLink {
-                    ProxiesView()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "globe.asia.australia")
-                        Text("Proxies")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.subheadline)
-                }
-            }
+            webUIRow
+            proxiesRow
         }
-        .card()
+        .proxyCatCard()
+    }
+
+    @ViewBuilder
+    private var webUIRow: some View {
+        let isAvailable = profile.isConnected && !settings.disableExternalController
+        if isAvailable, let url = URL(string: "http://127.0.0.1:9090/ui/") {
+            Link(destination: url) {
+                dashboardActionLabel(
+                    title: "Open Web UI",
+                    systemImage: "safari",
+                    trailingImage: "arrow.up.right",
+                    isAvailable: true
+                )
+            }
+        } else {
+            dashboardActionLabel(
+                title: "Open Web UI",
+                systemImage: "safari",
+                trailingImage: "arrow.up.right",
+                isAvailable: false
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var proxiesRow: some View {
+        if profile.isConnected {
+            NavigationLink {
+                ProxiesView()
+            } label: {
+                dashboardActionLabel(
+                    title: "Proxies",
+                    systemImage: "globe.asia.australia",
+                    trailingImage: "chevron.right",
+                    isAvailable: true
+                )
+            }
+        } else {
+            dashboardActionLabel(
+                title: "Proxies",
+                systemImage: "globe.asia.australia",
+                trailingImage: "chevron.right",
+                isAvailable: false
+            )
+        }
+    }
+
+    private func dashboardActionLabel(
+        title: LocalizedStringKey,
+        systemImage: String,
+        trailingImage: String,
+        isAvailable: Bool
+    ) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+            Text(title)
+            Spacer()
+            Image(systemName: trailingImage)
+                .font(.caption)
+        }
+        .font(.subheadline)
+        .foregroundStyle(isAvailable ? Color.accentColor : Color.secondary)
+        .opacity(isAvailable ? 1 : 0.48)
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder
@@ -194,7 +228,7 @@ public struct DashboardView: View {
             Divider().frame(height: 36)
             connectionsCell
         }
-        .card()
+        .proxyCatCard()
     }
 
     @ViewBuilder
@@ -204,31 +238,31 @@ public struct DashboardView: View {
             NavigationLink {
                 ConnectionsView()
             } label: {
-                connectionsLabel(showsChevron: true)
+                connectionsLabel(isInteractive: true)
             }
             .buttonStyle(.plain)
         } else {
-            connectionsLabel(showsChevron: false)
+            connectionsLabel(isInteractive: false)
         }
     }
 
-    private func connectionsLabel(showsChevron: Bool) -> some View {
+    private func connectionsLabel(isInteractive: Bool) -> some View {
         HStack(spacing: 4) {
             VStack(spacing: 2) {
                 Text("\(commandClient.traffic.connections)")
                     .font(.title3.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(profile.isConnected ? Color.primary : .secondary)
+                    .foregroundStyle(isInteractive ? Color.primary : Color.secondary)
                 Text("active")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            if showsChevron {
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .opacity(isInteractive ? 1 : 0.35)
         }
-        .frame(width: showsChevron ? 72 : 56)
+        .frame(width: 72)
+        .opacity(isInteractive ? 1 : 0.48)
         .contentShape(Rectangle())
     }
 
@@ -282,13 +316,8 @@ private struct TrafficCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.subheadline)
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+            HStack {
+                ProxyCatMetricHeader(title: title, systemImage: symbol, tint: color)
                 Spacer()
             }
             Text(ByteFormatter.rate(rate))
@@ -300,8 +329,7 @@ private struct TrafficCard: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .card()
+        .proxyCatCard()
     }
 }
 
@@ -311,13 +339,8 @@ private struct MemoryBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "memorychip")
-                    .font(.subheadline)
-                    .foregroundStyle(tint)
-                Text("Memory")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+            HStack {
+                ProxyCatMetricHeader(title: "Memory", systemImage: "memorychip", tint: tint)
                 Spacer()
                 Text(displayValue)
                     .font(.caption.monospacedDigit())
@@ -372,21 +395,4 @@ private struct StatusDot: View {
         }
         .frame(width: 18, height: 18)
     }
-}
-
-// MARK: - Card modifier
-
-private struct Card: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-            )
-    }
-}
-
-private extension View {
-    func card() -> some View { modifier(Card()) }
 }

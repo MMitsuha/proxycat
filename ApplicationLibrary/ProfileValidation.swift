@@ -1,18 +1,14 @@
 import SwiftUI
 
-/// Result of running mihomo's YAML parser on a profile candidate. Shared
-/// between `ProfileEditorView` (typed YAML) and `ProfileDownloadView`
-/// (fetched YAML). `pristine` is the UI's "not yet validated" state, not
-/// a parser outcome.
+/// Result of running mihomo's YAML parser on a profile candidate.
+/// `pristine` is the UI's "not yet validated" state, not a parser outcome.
 public enum ProfileValidation: Equatable {
     case pristine
     case ok
     case failed(String)
 }
 
-/// Form footer that surfaces a `ProfileValidation`. Each call site supplies
-/// its own `pristineHint` because the action prompt differs (typed YAML vs.
-/// fetched URL).
+/// Form footer that surfaces a `ProfileValidation`.
 public struct ProfileValidationFooter: View {
     public let validation: ProfileValidation
     public let pristineHint: LocalizedStringKey

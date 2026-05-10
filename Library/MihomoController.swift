@@ -57,6 +57,7 @@ public struct DelayResponse: Codable {
 public enum MihomoControllerError: LocalizedError {
     case requestFailed(status: Int, body: String)
     case transport(UnixHTTPError)
+    case encoding(Error)
     case decoding(Error)
     case invalidResponse
 
@@ -66,6 +67,8 @@ public enum MihomoControllerError: LocalizedError {
             return "Controller returned HTTP \(status): \(body.prefix(160))"
         case .transport(let err):
             return err.localizedDescription
+        case .encoding(let err):
+            return "Could not encode controller request: \(err.localizedDescription)"
         case .decoding(let err):
             return "Could not decode controller response: \(err.localizedDescription)"
         case .invalidResponse:
@@ -125,9 +128,9 @@ public struct MihomoController: @unchecked Sendable {
     public func select(group: String, name: String) async throws(MihomoControllerError) {
         let body: Data
         do {
-            body = try JSONSerialization.data(withJSONObject: ["name": name])
+            body = try JSONEncoder().encode(ProxySelectionRequest(name: name))
         } catch {
-            throw MihomoControllerError.decoding(error)
+            throw MihomoControllerError.encoding(error)
         }
         let path = Self.makePath("proxies/\(Self.percentEncodeSegment(group))")
         _ = try await perform(
@@ -151,7 +154,12 @@ public struct MihomoController: @unchecked Sendable {
         timeoutMs: Int? = nil,
         expectedStatus: String? = nil
     ) async throws(MihomoControllerError) -> [String: Int] {
-        let resolvedURL = (url?.isEmpty == false) ? url! : Self.defaultTestURL
+        let resolvedURL: String
+        if let url, !url.isEmpty {
+            resolvedURL = url
+        } else {
+            resolvedURL = Self.defaultTestURL
+        }
         let resolvedTimeout = timeoutMs ?? Self.defaultTimeoutMs
         var queryItems = [
             URLQueryItem(name: "url", value: resolvedURL),
@@ -234,4 +242,8 @@ public struct MihomoController: @unchecked Sendable {
         }
         return response.body
     }
+}
+
+private struct ProxySelectionRequest: Encodable {
+    let name: String
 }

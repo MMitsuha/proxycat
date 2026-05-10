@@ -17,6 +17,14 @@ public struct Profile: Identifiable, Equatable, Hashable, Codable, Sendable {
     }
 }
 
+public struct ValidatedProfileYAML: Equatable, Sendable {
+    public let content: String
+
+    fileprivate init(content: String) {
+        self.content = content
+    }
+}
+
 /// File-based profile catalog stored in the shared app-group container.
 /// Each profile is one YAML file in `Profiles/` plus a metadata index at
 /// `Profiles/index.json`. The active profile UUID lives in
@@ -57,15 +65,14 @@ public final class ProfileStore {
             profiles = []
         }
         // RuntimeSettings is the single source of truth across host /
-        // extension. Mirror its `activeProfileID` here for SwiftUI
-        // observation; fall back to the first profile so a fresh
-        // install with no selection persisted still has *something*
-        // selectable in the UI.
-        if let id = RuntimeSettings.shared.activeProfileID,
-           profiles.contains(where: { $0.id == id }) {
-            activeProfileID = id
-        } else {
-            activeProfileID = profiles.first?.id
+        // extension. Repair it when the stored id is missing from the
+        // index; otherwise SwiftUI would show the first profile as
+        // selected while the Go core still reads the stale id from disk.
+        let storedID = RuntimeSettings.shared.activeProfileID
+        let repairedID = Self.repairedActiveProfileID(profiles: profiles, storedID: storedID)
+        activeProfileID = repairedID
+        if repairedID != storedID {
+            RuntimeSettings.shared.activeProfileID = repairedID
         }
     }
 
@@ -112,9 +119,13 @@ public final class ProfileStore {
     /// be 100KB–1MB for large rule sets, and a synchronous write on the
     /// MainActor would visibly hitch the editor's save action.
     public func updateContent(of profile: Profile, yaml: String, name: String? = nil) async throws {
-        try await LibmihomoBridge.validateAsync(yaml: Data(yaml.utf8))
+        let validated = try await Self.validateYAML(yaml)
+        try await updateContent(of: profile, validatedYAML: validated, name: name)
+    }
+
+    public func updateContent(of profile: Profile, validatedYAML: ValidatedProfileYAML, name: String? = nil) async throws {
         let fileName = profile.fileName
-        try await Self.writeYAML(yaml, fileName: fileName)
+        try await Self.writeYAML(validatedYAML.content, fileName: fileName)
         if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
             profiles[idx].lastUpdated = .init()
             if let name, !name.isEmpty, name != profiles[idx].name {
@@ -133,10 +144,15 @@ public final class ProfileStore {
     /// whether the caller validated interactively first.
     @discardableResult
     public func importYAML(_ content: String, name: String, remoteURL: URL? = nil) async throws -> Profile {
-        try await LibmihomoBridge.validateAsync(yaml: Data(content.utf8))
+        let validated = try await Self.validateYAML(content)
+        return try await importYAML(validated, name: name, remoteURL: remoteURL)
+    }
+
+    @discardableResult
+    public func importYAML(_ validatedYAML: ValidatedProfileYAML, name: String, remoteURL: URL? = nil) async throws -> Profile {
         let id = UUID()
         let fileName = id.uuidString + ".yaml"
-        try await Self.writeYAML(content, fileName: fileName)
+        try await Self.writeYAML(validatedYAML.content, fileName: fileName)
 
         let profile = Profile(
             id: id,
@@ -151,6 +167,15 @@ public final class ProfileStore {
             try setActive(profile)
         }
         return profile
+    }
+
+    /// Downloads, validates, and imports a remote profile in one pipeline.
+    /// The validated token is passed directly into `importYAML` so the same
+    /// fetched YAML is never parsed twice before being written.
+    @discardableResult
+    public func importRemote(from url: URL, name: String) async throws -> Profile {
+        let validated = try await Self.fetchAndValidateRemote(url)
+        return try await importYAML(validated, name: name, remoteURL: url)
     }
 
     /// Imports a YAML profile from a file URL, handling iOS security-scoped
@@ -176,8 +201,8 @@ public final class ProfileStore {
     /// bumps `lastUpdated`. Throws if the profile has no remote URL.
     public func refreshRemote(_ profile: Profile) async throws {
         guard let url = profile.remoteURL else { throw ProfileError.notRemote }
-        let content = try await RemoteProfileFetcher.fetch(url)
-        try await updateContent(of: profile, yaml: content)
+        let validated = try await Self.fetchAndValidateRemote(url)
+        try await updateContent(of: profile, validatedYAML: validated)
     }
 
     /// Writes a YAML payload to the profiles directory off the MainActor.
@@ -188,6 +213,16 @@ public final class ProfileStore {
         try await Task.detached(priority: .userInitiated) {
             try content.write(to: url, atomically: true, encoding: .utf8)
         }.value
+    }
+
+    public nonisolated static func validateYAML(_ content: String) async throws -> ValidatedProfileYAML {
+        try await LibmihomoBridge.validateAsync(yaml: Data(content.utf8))
+        return ValidatedProfileYAML(content: content)
+    }
+
+    private nonisolated static func fetchAndValidateRemote(_ url: URL) async throws -> ValidatedProfileYAML {
+        let content = try await RemoteProfileFetcher.fetch(url)
+        return try await validateYAML(content)
     }
 
     public func delete(_ profile: Profile) throws {
@@ -218,6 +253,13 @@ public final class ProfileStore {
     private func persist() throws {
         let data = try JSONEncoder().encode(profiles)
         try data.write(to: indexURL, options: .atomic)
+    }
+
+    nonisolated static func repairedActiveProfileID(profiles: [Profile], storedID: UUID?) -> UUID? {
+        if let storedID, profiles.contains(where: { $0.id == storedID }) {
+            return storedID
+        }
+        return profiles.first?.id
     }
 }
 

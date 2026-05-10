@@ -1,16 +1,8 @@
 import Library
 import SwiftUI
 
-/// In-app YAML editor with live validation.
-///
-/// Two modes:
-///   • `.create` — typing a brand-new profile into an empty buffer.
-///   • `.edit(profile)` — reading the existing YAML from disk and saving
-///     changes back through `ProfileStore.updateContent`.
-///
-/// Validation runs through the gomobile-bound `LibmihomoBridge.validate`,
-/// which delegates to mihomo's own `executor.ParseWithBytes`. We refuse
-/// to save unless the YAML parses cleanly.
+/// In-app YAML editor for creating and editing local profiles. The single
+/// Save action validates with mihomo and writes only after parsing succeeds.
 public struct ProfileEditorView: View {
     public enum Mode: Equatable {
         case create
@@ -23,20 +15,14 @@ public struct ProfileEditorView: View {
     private let mode: Mode
 
     @State private var name: String
+    @State private var originalName: String
     @State private var yaml: String
+    @State private var originalYAML: String?
     @State private var validation: ProfileValidation = .pristine
-    /// True while validate-or-save is running. One flag for both phases
-    /// (rather than separate isValidating/isSaving) so a save() that
-    /// internally calls validate() keeps the toolbar disabled across the
-    /// whole flow — otherwise the import phase would re-enable Save and
-    /// a second tap could queue a duplicate import for the same YAML.
+    @State private var validatedYAML: ValidatedProfileYAML?
     @State private var isWorking = false
     @State private var saveError: String?
     @State private var loadError: String?
-    /// True only while the on-disk YAML is being read in edit mode. The
-    /// editor is locked during this window so a user typing on the still-
-    /// empty buffer doesn't have their input clobbered when the load
-    /// finally assigns to `yaml`.
     @State private var isLoading: Bool
     @FocusState private var editorFocused: Bool
 
@@ -44,37 +30,41 @@ public struct ProfileEditorView: View {
         self.mode = mode
         switch mode {
         case .create:
-            _name = State(initialValue: "New Profile")
+            let initialName = "New Profile"
+            _name = State(initialValue: initialName)
+            _originalName = State(initialValue: initialName)
             _yaml = State(initialValue: "")
+            _originalYAML = State(initialValue: "")
             _isLoading = State(initialValue: false)
         case let .edit(profile):
             _name = State(initialValue: profile.name)
+            _originalName = State(initialValue: profile.name)
             _yaml = State(initialValue: "")
+            _originalYAML = State(initialValue: nil)
             _isLoading = State(initialValue: true)
         }
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: ProxyCatUI.pageSpacing) {
             if let loadError {
                 loadErrorBanner(loadError)
             }
-            nameRow
-            Divider()
-            editor
-            Divider()
+            nameCard
+            editorCard
+        }
+        .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
+        .padding(.top, ProxyCatUI.pageTopPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color(uiColor: .systemGroupedBackground))
+        .safeAreaInset(edge: .bottom) {
             statusBar
         }
-        .background(Color(.systemGroupedBackground))
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .task { await loadInitial() }
-        .alert("Save failed", isPresented: .constant(saveError != nil)) {
-            Button("OK") { saveError = nil }
-        } message: {
-            Text(saveError ?? "")
-        }
+        .errorAlert($saveError, title: "Save failed")
     }
 
     // MARK: - Subviews
@@ -84,98 +74,144 @@ public struct ProfileEditorView: View {
             .font(.caption)
             .foregroundStyle(.red)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(Color.red.opacity(0.12))
+            .padding(.horizontal, ProxyCatUI.cardPadding)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: ProxyCatUI.cardCornerRadius, style: .continuous)
+                    .fill(Color.red.opacity(0.12))
+            )
     }
 
-    private var nameRow: some View {
-        HStack {
-            Text("Name")
-                .foregroundStyle(.secondary)
-            TextField("Profile name", text: $name)
-                .multilineTextAlignment(.trailing)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+    private var nameCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ProxyCatMetricHeader(title: "Profile", systemImage: "doc.text", tint: .accentColor)
+            HStack(spacing: 12) {
+                Text("Name")
+                    .foregroundStyle(.secondary)
+                TextField("Profile name", text: $name)
+                    .multilineTextAlignment(.trailing)
+                    .font(.body.weight(.medium))
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .disabled(isWorking)
+            }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 11)
-        .background(Color(.secondarySystemGroupedBackground))
+        .proxyCatCard()
     }
 
-    private var editor: some View {
-        TextEditor(text: $yaml)
-            .focused($editorFocused)
-            .font(.system(.caption, design: .monospaced))
-            .autocorrectionDisabled()
-            .textInputAutocapitalization(.never)
-            .scrollContentBackground(.hidden)
-            .background(Color(.systemBackground))
-            .disabled(isLoading)
-            .overlay(alignment: .topLeading) {
+    private var editorCard: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                ProxyCatMetricHeader(title: "YAML", systemImage: "curlybraces.square", tint: .blue)
+                Spacer(minLength: 8)
+                editorStat("\(lineCount)", systemImage: "list.number", label: "lines")
+                editorStat("\(yaml.count)", systemImage: "textformat.size", label: "chars")
+            }
+            .padding(.horizontal, ProxyCatUI.cardPadding)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $yaml)
+                    .focused($editorFocused)
+                    .font(.system(.caption, design: .monospaced))
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 4)
+                    .disabled(isLoading || isWorking)
+                    .onChange(of: yaml) { _, _ in
+                        invalidateValidation()
+                    }
+
                 if !isLoading, yaml.isEmpty {
                     Text("Paste or type YAML here…")
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                         .allowsHitTesting(false)
                 }
-            }
-            .overlay {
+
                 if isLoading {
                     ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onChange(of: yaml) { validation = .pristine }
+            .background(Color(uiColor: .systemBackground))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: ProxyCatUI.cardCornerRadius, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: ProxyCatUI.cardCornerRadius, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+    }
+
+    private func editorStat(_ value: String, systemImage: String, label: LocalizedStringKey) -> some View {
+        Label {
+            Text(value)
+                .font(.caption2.monospacedDigit())
+            Text(label)
+                .font(.caption2)
+        } icon: {
+            Image(systemName: systemImage)
+        }
+        .foregroundStyle(.secondary)
+        .labelStyle(.titleAndIcon)
     }
 
     private var statusBar: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 10) {
+            if isWorking {
+                ProgressView()
+                    .controlSize(.small)
+            }
             ProfileValidationFooter(
                 validation: validation,
-                pristineHint: "Tap **Validate** before saving."
+                pristineHint: "Save validates with mihomo before writing."
             )
             .font(.caption)
-            Spacer(minLength: 12)
-            Text("\(yaml.count)")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+            .lineLimit(2)
+
+            Spacer(minLength: 10)
+
+            Label(hasChanges ? "Edited" : "Saved", systemImage: hasChanges ? "pencil" : "checkmark.circle")
+                .font(.caption2)
+                .foregroundStyle(hasChanges ? Color.secondary : Color.green)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(Color(.secondarySystemGroupedBackground))
+        .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
+        .padding(.vertical, 9)
+        .background(.bar)
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button("Cancel") { dismiss() }
+                .disabled(isWorking)
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    Task { await validate() }
-                } label: {
-                    Label("Validate", systemImage: "checkmark.shield")
-                }
-                .disabled(isWorking)
+            if isWorking {
+                ProgressView()
+            } else {
                 Button {
                     Task { await save() }
                 } label: {
-                    Label("Save", systemImage: "tray.and.arrow.down")
+                    Label("Save", systemImage: "checkmark.circle")
                 }
                 .disabled(!canSave)
-            } label: {
-                if isWorking {
-                    ProgressView()
-                } else {
-                    Image(systemName: "ellipsis.circle")
-                }
             }
         }
         ToolbarItemGroup(placement: .keyboard) {
+            Button {
+                Task { await save() }
+            } label: {
+                Label("Save", systemImage: "checkmark.circle")
+            }
+            .disabled(!canSave)
             Spacer()
             Button("Done") { editorFocused = false }
         }
@@ -194,19 +230,34 @@ public struct ProfileEditorView: View {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var canSave: Bool {
-        guard !trimmedName.isEmpty, !yaml.isEmpty else { return false }
-        if case .failed = validation { return false }
-        // Suppress Save while a validate-or-save is already running so a
-        // second tap can't kick off a parallel import for the same YAML.
-        if isWorking { return false }
-        return true
+    private var lineCount: Int {
+        guard !yaml.isEmpty else { return 0 }
+        return yaml.reduce(1) { count, character in
+            character == "\n" ? count + 1 : count
+        }
     }
 
-    /// Reads the YAML off disk on a background queue. Synchronously
-    /// reading on the main actor would freeze the UI for large configs
-    /// (especially under filesystem contention from the running NE) —
-    /// matches the same Task.detached pattern SavedLogDetailView uses.
+    private var hasChanges: Bool {
+        switch mode {
+        case .create:
+            return !yaml.isEmpty || trimmedName != originalName
+        case .edit:
+            guard let originalYAML else {
+                return !yaml.isEmpty || trimmedName != originalName
+            }
+            return yaml != originalYAML || trimmedName != originalName
+        }
+    }
+
+    private var canSave: Bool {
+        guard !isLoading, !isWorking, !trimmedName.isEmpty else { return false }
+        guard !yaml.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        if case .failed = validation { return false }
+        return hasChanges
+    }
+
+    /// Reads the YAML off disk on a background queue. Synchronously reading
+    /// on the main actor would freeze the UI for large configs.
     private func loadInitial() async {
         guard case let .edit(profile) = mode else { return }
         let fileName = profile.fileName
@@ -219,65 +270,74 @@ public struct ProfileEditorView: View {
             }
         }.value
         switch result {
-        case let .success(text): yaml = text
-        case let .failure(error): loadError = error.localizedDescription
+        case let .success(text):
+            yaml = text
+            originalYAML = text
+        case let .failure(error):
+            loadError = error.localizedDescription
         }
-        // Unlock the editor regardless of outcome — on failure the user
-        // can still paste fresh YAML rather than being stuck behind a
-        // spinner.
         isLoading = false
     }
 
-    /// Runs the parser without managing `isWorking`. Caller owns the flag
-    /// so `save()` can hold one guard across validate-then-import.
-    @MainActor
-    private func performValidation() async {
-        // Snapshot the YAML the user submitted for parsing. If they keep
-        // typing while validateAsync is still running, the result belongs
-        // to old input and should not be applied — the footer would
-        // otherwise say "valid" for buffer contents that no longer match.
-        let submittedYAML = yaml
-        let data = Data(submittedYAML.utf8)
-        do {
-            try await LibmihomoBridge.validateAsync(yaml: data)
-            guard yaml == submittedYAML else { return }
-            validation = .ok
-        } catch {
-            guard yaml == submittedYAML else { return }
-            validation = .failed(error.localizedDescription)
-        }
+    private func invalidateValidation() {
+        validation = .pristine
+        validatedYAML = nil
     }
 
     @MainActor
-    private func validate() async {
-        guard !isWorking else { return }
-        isWorking = true
-        defer { isWorking = false }
-        await performValidation()
+    private func validatedDraft() async -> ValidatedProfileYAML? {
+        if let validatedYAML, validatedYAML.content == yaml {
+            return validatedYAML
+        }
+        return await validateCurrentYAML()
+    }
+
+    @MainActor
+    private func validateCurrentYAML() async -> ValidatedProfileYAML? {
+        let submittedYAML = yaml
+        guard !submittedYAML.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            validatedYAML = nil
+            validation = .failed(String(localized: "YAML is empty.", bundle: .main))
+            return nil
+        }
+
+        do {
+            let validated = try await ProfileStore.validateYAML(submittedYAML)
+            guard yaml == submittedYAML else { return nil }
+            validatedYAML = validated
+            validation = .ok
+            return validated
+        } catch {
+            guard yaml == submittedYAML else { return nil }
+            validatedYAML = nil
+            validation = .failed(error.localizedDescription)
+            return nil
+        }
     }
 
     @MainActor
     private func save() async {
-        // Hold `isWorking` across the whole flow (validate + import) so a
-        // second tap can't queue a duplicate import for the same YAML.
-        guard !isWorking else { return }
+        guard canSave else { return }
         isWorking = true
         defer { isWorking = false }
-        await performValidation()
-        if case let .failed(msg) = validation {
-            saveError = msg
+
+        guard let validated = await validatedDraft() else {
+            if case let .failed(message) = validation {
+                saveError = message
+            }
             return
         }
+
         let finalName = trimmedName
         do {
             switch mode {
             case .create:
-                try await store.importYAML(yaml, name: finalName)
+                try await store.importYAML(validated, name: finalName)
             case let .edit(profile):
-                // Atomic rename + content write so the in-memory and on-disk
-                // index can't disagree on the profile's name after a partial failure.
-                try await store.updateContent(of: profile, yaml: yaml, name: finalName)
+                try await store.updateContent(of: profile, validatedYAML: validated, name: finalName)
             }
+            originalName = finalName
+            originalYAML = validated.content
             dismiss()
         } catch {
             saveError = error.localizedDescription
