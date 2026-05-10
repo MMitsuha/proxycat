@@ -12,7 +12,7 @@ help:
 	@echo "  make libmihomo      build Frameworks/Libmihomo.xcframework via gomobile"
 	@echo "  make libmihomo-obf  same, but routed through garble (App Store submissions)"
 	@echo "                      (extra flags via GARBLE_FLAGS, e.g. GARBLE_FLAGS='-literals -tiny')"
-	@echo "  make project        run xcodegen (auto-fills version from VERSION + git)"
+	@echo "  make project        run xcodegen (auto-fills version + XCODE_DEVELOPMENT_TEAM)"
 	@echo "  make version        print the marketing version + build number"
 	@echo "  make all            libmihomo + project (run after first checkout)"
 	@echo "  make build          full xcodebuild for the iOS app (needs codesigning)"

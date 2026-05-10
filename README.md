@@ -113,19 +113,20 @@ git add mihomo && git commit -m "Pin mihomo to <sha> (<ref>)"
 
 ```bash
 cd proxycat
+export XCODE_DEVELOPMENT_TEAM=ABCDE12345  # your Apple Team ID
 make assets       # 下载 GeoIP / GeoSite / mmdb 与 metacubexd（仓库只跟踪 .gitkeep）
 make all          # 构建 xcframework + 生成 xcodeproj
 open ProxyCat.xcodeproj
 ```
 
-在 Xcode 中给 `Pcat` 与 `PcatExtension` 两个 target 填入 `DEVELOPMENT_TEAM`，然后 Run。
+`make project` / `make all` 会从 `XCODE_DEVELOPMENT_TEAM` 自动填入 `DEVELOPMENT_TEAM`。未设置时生成的项目不会写入开发者团队；真机构建或 Archive 前需要设置该环境变量，或临时在 Xcode 中选择 Team。
 
 常用 Make target：
 
 | target            | 说明                                                   |
 |-------------------|--------------------------------------------------------|
 | `make libmihomo`      | 仅重建 `Frameworks/Libmihomo.xcframework`              |
-| `make project`        | 运行 `xcodegen` 并自动注入版本号（见下）               |
+| `make project`        | 运行 `xcodegen` 并自动注入版本号与 `XCODE_DEVELOPMENT_TEAM`（见下） |
 | `make version`        | 打印下一次 `make project` 会写入的版本/编号            |
 | `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
 | `make mihomo-init`    | 初始化或刷新 `mihomo/` submodule                       |
@@ -148,12 +149,12 @@ open ProxyCat.xcodeproj
 | Display Name          | `INFOPLIST_KEY_CFBundleDisplayName`（`project.yml`）       | Display Name                 |
 | App Category          | `INFOPLIST_KEY_LSApplicationCategoryType`                  | Category                     |
 
-调用链：`make project` → `scripts/generate-project.sh` 读取 `VERSION` 与 git，导出 `PROXYCAT_MARKETING_VERSION` / `PROXYCAT_BUILD_NUMBER`，由 `project.yml` 的 `${...}` 占位符插入。
+调用链：`make project` → `scripts/generate-project.sh` 读取 `VERSION` 与 git，导出 `PROXYCAT_MARKETING_VERSION` / `PROXYCAT_BUILD_NUMBER`，并透传 `XCODE_DEVELOPMENT_TEAM`，由 `project.yml` 的 `${...}` 占位符插入。
 
 要发布新版只需 `echo 1.0.0 > VERSION && make project`；build number 会随 commit 自动递增，无需手动维护。需要临时覆盖时（例如手工 archive 至 TestFlight）可：
 
 ```bash
-PROXYCAT_BUILD_NUMBER=4242 make project
+XCODE_DEVELOPMENT_TEAM=ABCDE12345 PROXYCAT_BUILD_NUMBER=4242 make project
 ```
 
 `Pcat/Info.plist` 与 `PcatExtension/Info.plist` 现在只保留 `INFOPLIST_KEY_*` 不能表达的条目（YAML profile 的 UTI、Network Extension 的 `NSExtension` 字典）。其他都从 `project.yml` 的 build settings 流入，避免一处版本三处改。

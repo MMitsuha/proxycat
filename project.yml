@@ -3,8 +3,9 @@
 #
 # Versioning is automatic: scripts/generate-project.sh exports
 # PROXYCAT_MARKETING_VERSION (from ./VERSION) and PROXYCAT_BUILD_NUMBER
-# (from `git rev-list --count HEAD`). Run `make version` to preview the
-# values that the next `make project` will bake into the project.
+# (from `git rev-list --count HEAD`). It also passes through
+# XCODE_DEVELOPMENT_TEAM for signing. Run `make version` to preview the
+# version values that the next `make project` will bake into the project.
 
 name: ProxyCat
 options:
@@ -19,7 +20,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    DEVELOPMENT_TEAM: "JV3QRB73G3" # fill with your Apple Team ID
+    DEVELOPMENT_TEAM: ${XCODE_DEVELOPMENT_TEAM}
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     SUPPORTS_MACCATALYST: NO
