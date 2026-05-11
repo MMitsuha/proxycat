@@ -35,6 +35,12 @@ public struct ProfileListView: View {
                         }
                         .tint(.blue)
                         Button {
+                            presentedSheet = .mitm(profile)
+                        } label: {
+                            Label("MITM", systemImage: "shield.lefthalf.filled")
+                        }
+                        .tint(.indigo)
+                        Button {
                             share(profile)
                         } label: {
                             Label("Share", systemImage: "square.and.arrow.up")
@@ -113,6 +119,8 @@ public struct ProfileListView: View {
                     ProfileEditorView(mode: .create)
                 case let .editing(profile):
                     ProfileEditorView(mode: .edit(profile))
+                case let .mitm(profile):
+                    MitmProfileConfigView(profile: profile)
                 case .downloading:
                     ProfileDownloadView()
                 }
@@ -198,12 +206,14 @@ public struct ProfileListView: View {
         case creating
         case downloading
         case editing(Profile)
+        case mitm(Profile)
 
         var id: String {
             switch self {
             case .creating: return "creating"
             case .downloading: return "downloading"
             case let .editing(profile): return "editing-\(profile.id.uuidString)"
+            case let .mitm(profile): return "mitm-\(profile.id.uuidString)"
             }
         }
     }
