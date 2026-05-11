@@ -127,7 +127,7 @@ public struct ProfileEditorView: View {
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 9)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 8)
                     .allowsHitTesting(false)
                     .opacity(!isLoading && yaml.isEmpty ? 1 : 0)
 
@@ -388,8 +388,10 @@ private struct YAMLCodeEditor: UIViewRepresentable {
         if textView.text != text {
             let selection = textView.selectedRange
             textView.text = text
-            let safeLocation = min(selection.location, textView.text.utf16.count)
-            textView.selectedRange = NSRange(location: safeLocation, length: 0)
+            let length = textView.text.utf16.count
+            let safeLocation = min(selection.location, length)
+            let safeLength = min(selection.location + selection.length, length) - safeLocation
+            textView.selectedRange = NSRange(location: safeLocation, length: safeLength)
         }
         if textView.isEditable != isEditable {
             textView.isEditable = isEditable
