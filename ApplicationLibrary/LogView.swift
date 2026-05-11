@@ -270,11 +270,11 @@ final class LogViewModel {
         searchText = environment.logSearchText
 
         guard let client = commandClient else { return }
-        // The host-side buffer is started on first visit and intentionally
-        // never stopped while the model is alive: the user expects logs
-        // to persist across navigation, the buffer is bounded by
-        // `CommandClient.maxLogBuffer`, and memory-pressure events still
-        // drop everything via `ExtensionEnvironment.handleMemoryPressure`.
+        // Keep the live log stream tied to the visible Logs tab. iOS can
+        // suspend the host app in the background; leaving a log gRPC stream
+        // open against a suspended reader risks backpressuring the extension.
+        // CommandClient keeps already-buffered logs until Clear or memory
+        // pressure, so short navigation away does not blank the view.
         client.enableLogBuffering()
 
         // Single observation pipeline for recompute. Touching the four
@@ -342,10 +342,15 @@ final class LogViewModel {
         environment?.logSearchText = searchText
         for task in pipelineTasks { task.cancel() }
         pipelineTasks.removeAll()
+        commandClient?.disableLogBuffering()
     }
 
     deinit {
         for task in pipelineTasks { task.cancel() }
+        let client = commandClient
+        Task { @MainActor in
+            client?.disableLogBuffering()
+        }
     }
 
     func clear() {

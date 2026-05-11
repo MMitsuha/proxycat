@@ -38,6 +38,7 @@ const (
 	commandStopGrace  = 750 * time.Millisecond
 
 	controllerMaxMessageBytes = 32 * 1024 * 1024
+	logStreamBuffer           = 128
 )
 
 type commandServer struct {
@@ -163,18 +164,24 @@ func (s *commandServiceImpl) SubscribeStatus(req *pb.StatusRequest, stream pb.Co
 	}
 }
 
-// SubscribeLogs forwards every log event from mihomo's observable to the
-// stream. Each subscription opens its own observable subscription so
-// subscribers can come and go without affecting each other.
+// SubscribeLogs forwards log events from mihomo's observable to the stream.
+// The observable subscription is drained by a separate goroutine into a
+// bounded latest-events queue. This is important on iOS: the host app can be
+// suspended in the background while its Unix-socket gRPC stream stays open.
+// If stream.Send blocked while also owning the observable subscription, a
+// full subscriber buffer would eventually block mihomo's global logger.
 func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_SubscribeLogsServer) error {
 	sub := log.Subscribe()
 	defer log.UnSubscribe(sub)
+
+	events := make(chan log.Event, logStreamBuffer)
+	go drainLogSubscription(stream.Context(), sub, events)
 
 	for {
 		select {
 		case <-stream.Context().Done():
 			return nil
-		case event, ok := <-sub:
+		case event, ok := <-events:
 			if !ok {
 				return nil
 			}
@@ -186,6 +193,45 @@ func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_S
 				return err
 			}
 		}
+	}
+}
+
+func drainLogSubscription(ctx context.Context, sub <-chan log.Event, out chan log.Event) {
+	defer close(out)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case event, ok := <-sub:
+			if !ok {
+				return
+			}
+			enqueueLatestLogEvent(ctx, out, event)
+		}
+	}
+}
+
+func enqueueLatestLogEvent(ctx context.Context, out chan log.Event, event log.Event) {
+	select {
+	case out <- event:
+		return
+	default:
+	}
+
+	// Keep the newest events when a suspended host app is not draining its
+	// gRPC stream. Dropping here is preferable to letting logging stall the
+	// proxy core.
+	select {
+	case <-ctx.Done():
+		return
+	case <-out:
+	default:
+	}
+
+	select {
+	case <-ctx.Done():
+	case out <- event:
+	default:
 	}
 }
 

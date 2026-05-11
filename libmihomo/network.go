@@ -7,13 +7,13 @@ import (
 )
 
 // NotifyDefaultInterfaceChanged tells mihomo that the OS-supplied default
-// network interface (Wi-Fi → cellular, post-sleep reconnect, etc.) has
-// changed. It mirrors what mihomo's own DefaultInterfaceMonitor callback
-// does on Linux/macOS — but on iOS that monitor can't run inside the
-// Network Extension sandbox, so the host has to drive these refreshes
-// from a Swift NWPathMonitor.
+// network interface (Wi-Fi → cellular, post-sleep reconnect, etc.) may have
+// changed. It mirrors the non-destructive part of mihomo's own
+// DefaultInterfaceMonitor callback on Linux/macOS — but on iOS that monitor
+// can't run inside the Network Extension sandbox, so the host has to drive
+// these refreshes from a Swift NWPathMonitor.
 //
-// Three effects:
+// Two effects:
 //
 //  1. iface.FlushCache() drops the cached interface table so the next
 //     dialer that asks for "the default interface" re-reads the live one.
@@ -21,14 +21,12 @@ import (
 //     (DoH/DoT/DoQ) to re-establish its underlying TCP/QUIC connection,
 //     which would otherwise stay bound to a now-dead route and silently
 //     hang.
-//  3. statistic.DefaultManager close-all force-terminates every tracked
-//     tunneled connection. iOS-only — Linux/macOS leaves them, relying on
-//     the kernel to surface socket errors quickly. iOS instead tends to
-//     keep the dead socket "alive but unwritable" until the multi-minute
-//     TCP retransmit timeout, so apps with persistent connections
-//     (iMessage, push, streaming) hang. Closing the trackers propagates
-//     EOF to the inbound side so the apps re-dial through the fresh
-//     route immediately.
+//
+// Closing active tunneled connections is intentionally separate. iOS can emit
+// repeated NWPathMonitor callbacks for the same still-satisfied path while the
+// host app backgrounds. Treating every callback as destructive causes apparent
+// disconnects. The Swift extension now closes trackers only for real path
+// transitions, with throttling.
 //
 // No-op when the core isn't started so spurious early NWPathMonitor
 // callbacks before Start() don't reach uninitialized resolver state.
@@ -39,6 +37,5 @@ func NotifyDefaultInterfaceChanged() {
 	}
 	iface.FlushCache()
 	resolver.ResetConnection()
-	closed := CloseAllConnections()
-	log.Infoln("[network] default interface changed: flushed interface cache, reset DNS upstreams, closed %d connections", closed)
+	log.Infoln("[network] default interface changed: flushed interface cache, reset DNS upstreams")
 }

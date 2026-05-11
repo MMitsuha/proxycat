@@ -52,11 +52,17 @@ public final class CommandClient: ControllerTransport {
     @ObservationIgnored private var bridge: ClientBridge?
     @ObservationIgnored private var bridgeID: UUID?
 
+    @ObservationIgnored private var logGoClient: LibmihomoCommandClient?
+    @ObservationIgnored private var logBridge: ClientBridge?
+    @ObservationIgnored private var logBridgeID: UUID?
+    @ObservationIgnored private var logReconnectTask: Task<Void, Never>?
+
     // Reconnect bookkeeping. The extension may not be up the moment the
     // host app first calls connect(); a simple capped backoff handles
     // the racing-startup case as well as transient drops.
     @ObservationIgnored private var reconnectTask: Task<Void, Never>?
     @ObservationIgnored private var shouldRun: Bool = false
+    @ObservationIgnored private var appIsActive: Bool = true
 
     public init() {}
 
@@ -70,12 +76,14 @@ public final class CommandClient: ControllerTransport {
         connectionState = .connecting
         lastDisconnectMessage = nil
         startReconnectLoop()
+        reconcileLogStreaming()
     }
 
     public func disconnect() {
         shouldRun = false
         reconnectTask?.cancel()
         reconnectTask = nil
+        stopLogStreaming()
         let oldClient = goClient
         goClient = nil
         bridge = nil
@@ -160,18 +168,31 @@ public final class CommandClient: ControllerTransport {
     }
 
     /// Turn on log buffering. Subsequent log frames from the extension
-    /// are appended to `logs` (capped by `maxLogBuffer`). Idempotent.
+    /// are appended to `logs` (capped by `maxLogBuffer`). The underlying
+    /// gRPC log stream only runs while the app is active, so a suspended
+    /// host app cannot backpressure the extension. Idempotent.
     public func enableLogBuffering() {
         logBufferingEnabled = true
+        reconcileLogStreaming()
     }
 
-    /// Stop buffering and drop anything already accumulated. Safe to
-    /// call when buffering is already off.
+    /// Stop live log buffering. Existing in-memory logs are kept so brief
+    /// navigation away from the Logs tab does not blank the view; memory
+    /// pressure and explicit Clear still drop them through `clearLogs()`.
+    /// Safe to call when buffering is already off.
     public func disableLogBuffering() {
         logBufferingEnabled = false
-        if !logs.isEmpty {
-            logs.removeAll(keepingCapacity: false)
-        }
+        stopLogStreaming()
+    }
+
+    /// Lets the app lifecycle suspend live log streaming before iOS freezes
+    /// the host process. Status/unary IPC stays connected for foreground UI
+    /// state; logs are the high-volume stream that must not be left open
+    /// against a suspended reader.
+    public func setAppActive(_ active: Bool) {
+        guard appIsActive != active else { return }
+        appIsActive = active
+        reconcileLogStreaming()
     }
 
     // MARK: - Reconnect loop
@@ -218,7 +239,7 @@ public final class CommandClient: ControllerTransport {
 
         let config = LibmihomoCommandClientConfig()
         config.subscribeStatus = true
-        config.subscribeLogs = true
+        config.subscribeLogs = false
         config.statusIntervalMs = 1_000
 
         let bridge = ClientBridge(owner: self)
@@ -246,6 +267,84 @@ public final class CommandClient: ControllerTransport {
     private func waitForDisconnect() async {
         guard let bridge else { return }
         await bridge.waitForDisconnect()
+    }
+
+    // MARK: - Live logs
+
+    private func reconcileLogStreaming() {
+        if logBufferingEnabled, appIsActive, shouldRun {
+            startLogReconnectLoop()
+        } else {
+            stopLogStreaming()
+        }
+    }
+
+    private func startLogReconnectLoop() {
+        guard logReconnectTask == nil else { return }
+        logReconnectTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            var backoff = ExponentialBackoff()
+            while !Task.isCancelled, self.logBufferingEnabled, self.appIsActive, self.shouldRun {
+                let connected = await self.attemptLogConnect()
+                if connected {
+                    backoff.reset()
+                    await self.waitForLogDisconnect()
+                    if !self.logBufferingEnabled || !self.appIsActive || !self.shouldRun {
+                        return
+                    }
+                }
+                await backoff.sleep()
+            }
+        }
+    }
+
+    private func stopLogStreaming() {
+        logReconnectTask?.cancel()
+        logReconnectTask = nil
+        let oldClient = logGoClient
+        logGoClient = nil
+        logBridge = nil
+        logBridgeID = nil
+        if let oldClient {
+            Task.detached { oldClient.close() }
+        }
+    }
+
+    private func attemptLogConnect() async -> Bool {
+        if let old = logGoClient {
+            logGoClient = nil
+            logBridge = nil
+            logBridgeID = nil
+            Task.detached { old.close() }
+        }
+
+        let config = LibmihomoCommandClientConfig()
+        config.subscribeStatus = false
+        config.subscribeLogs = true
+        config.statusIntervalMs = 0
+
+        let bridge = ClientBridge(owner: self)
+        guard let client = LibmihomoNewCommandClient(bridge, config) else {
+            return false
+        }
+        self.logBridge = bridge
+        self.logBridgeID = bridge.id
+        self.logGoClient = client
+        do {
+            try client.connect(FilePath.commandSocketPath)
+            return true
+        } catch {
+            client.close()
+            self.logGoClient = nil
+            self.logBridge = nil
+            self.logBridgeID = nil
+            return false
+        }
+    }
+
+    private func waitForLogDisconnect() async {
+        guard let logBridge else { return }
+        await logBridge.waitForDisconnect()
     }
 
     // MARK: - Bridge callbacks (called from Go via gomobile)
@@ -279,7 +378,7 @@ public final class CommandClient: ControllerTransport {
     }
 
     fileprivate func didReceive(log entry: LogEntry, from bridgeID: UUID) {
-        guard self.bridgeID == bridgeID else { return }
+        guard self.logBridgeID == bridgeID || self.bridgeID == bridgeID else { return }
         guard logBufferingEnabled else { return }
         logs.append(entry)
         if logs.count > Self.trimThreshold {

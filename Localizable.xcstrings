@@ -638,7 +638,21 @@
       }
     },
     "Caps how many tunnel sessions are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
-
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存済みログに保持するトンネルセッション数の上限です。現在のセッションは常に保持されます。古いセッションは、この設定の変更時、アプリが前面に戻った時、保存済みログの一覧を開いた時に削除されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "限制「已保存日志」中保留的隧道会话数量。当前会话始终保留。修改此设置、App 进入前台或打开「已保存日志」列表时，会清理较旧的会话。"
+          }
+        }
+      }
     },
     "Cellular" : {
       "extractionState" : "manual",

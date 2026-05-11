@@ -48,6 +48,7 @@ public struct MainView: View {
         .environment(DailyUsageStore.shared)
         .environment(ICloudBackupStore.shared)
         .task {
+            environment.commandClient.setAppActive(scenePhase == .active)
             await environment.bootstrap()
             ICloudBackupStore.shared.startAutoSync()
         }
@@ -58,6 +59,7 @@ public struct MainView: View {
             // Persist any buffered daily-usage deltas before the system
             // freezes or kills us. Other stores write synchronously on
             // mutation, so they don't need a flush hook.
+            environment.commandClient.setAppActive(phase == .active)
             if phase == .active {
                 ICloudBackupStore.shared.startAutoSync()
             } else {

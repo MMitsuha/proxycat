@@ -24,7 +24,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private let pathMonitorQueue = DispatchQueue(label: "io.proxycat.pcat.path", qos: .utility)
     private var pathMonitorGeneration = 0
     private var pathBaseline: PathBaselineState = .awaiting
+    private var currentPathSignature: PathSignature?
     private var pendingPathChangeWorkItem: DispatchWorkItem?
+    private var pendingPathRefreshClosesConnections = false
+    private var pendingPathRefreshReason: String?
+    private var lastWakeConnectionCloseAt: Date?
 
     /// Whether NWPathMonitor has delivered a usable path yet. Suppresses
     /// the very first satisfied callback because mihomo just started —
@@ -54,6 +58,38 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     /// → "Wi-Fi satisfied" all within a second); collapse them so mihomo
     /// only refreshes once per real-world transition.
     private static let pathChangeDebounce: DispatchTimeInterval = .milliseconds(500)
+    private static let wakeConnectionCloseMinimumInterval: TimeInterval = 30
+
+    /// Coarse normalized path identity. We intentionally ignore object
+    /// identity and available-interface ordering so repeated callbacks for
+    /// the same still-satisfied cellular path do not look like route changes.
+    private struct PathSignature: Equatable {
+        let status: String
+        let expensive: Bool
+        let constrained: Bool
+        let supportsDNS: Bool
+        let usesWiFi: Bool
+        let usesCellular: Bool
+        let usesWired: Bool
+        let usesLoopback: Bool
+        let usesOther: Bool
+        let interfaces: [String]
+
+        init(_ path: Network.NWPath) {
+            status = PacketTunnelProvider.describe(path.status)
+            expensive = path.isExpensive
+            constrained = path.isConstrained
+            supportsDNS = path.supportsDNS
+            usesWiFi = path.usesInterfaceType(.wifi)
+            usesCellular = path.usesInterfaceType(.cellular)
+            usesWired = path.usesInterfaceType(.wiredEthernet)
+            usesLoopback = path.usesInterfaceType(.loopback)
+            usesOther = path.usesInterfaceType(.other)
+            interfaces = Array(Set(path.availableInterfaces.map {
+                "\($0.name):\(PacketTunnelProvider.describe($0.type))"
+            })).sorted()
+        }
+    }
 
     // MARK: - Lifecycle
 
@@ -175,11 +211,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // Belt-and-suspenders for the case where iOS quietly swapped the
         // default route during deep sleep without letting our
         // NWPathMonitor witness the transition. Treat every wake as a
-        // potential interface change — the notify is idempotent (cache
-        // flush + DNS upstream reset + tunneled-connection close) and a
-        // no-op if mihomo already saw the same path.
-        LibmihomoBridge.notifyDefaultInterfaceChanged()
-        Self.logger.info("wake -> notified mihomo of possible interface change")
+        // potential interface change, but throttle the destructive
+        // close-all side so repeated wake callbacks do not look like a
+        // tunnel outage.
+        pathMonitorQueue.async { [weak self] in
+            guard let self else { return }
+            let closeConnections = self.shouldCloseConnectionsForWake()
+            self.performPathRefresh(closeConnections: closeConnections, reason: "wake")
+        }
+        Self.logger.info("wake -> scheduled mihomo path refresh")
     }
 
     // MARK: - Setup
@@ -371,44 +411,90 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         pathMonitorGeneration += 1
         pendingPathChangeWorkItem?.cancel()
         pendingPathChangeWorkItem = nil
+        pendingPathRefreshClosesConnections = false
+        pendingPathRefreshReason = nil
         pathBaseline = .awaiting
+        currentPathSignature = nil
     }
 
-    /// Routes each NWPathMonitor callback to either a debounced notify
-    /// or a baseline transition. We deliberately don't fingerprint the
-    /// path to detect "real" changes — same-name reconnects (Wi-Fi DHCP
-    /// renewal, cellular APN refresh, post-sleep gateway swap) keep the
-    /// same `(name, index)` while invalidating the underlying socket
-    /// bindings, and missing those is the whole class of bug this fix
-    /// exists to address. NWPathMonitor's own event coalescing plus the
-    /// 500ms debounce keep the call rate reasonable.
+    /// Routes each NWPathMonitor callback to either a debounced refresh
+    /// or a baseline transition. iOS can emit repeated callbacks for the
+    /// same still-satisfied path while the host app backgrounds; those
+    /// must not close all tunneled connections. Real transitions still
+    /// refresh mihomo and force active apps to reconnect through the
+    /// fresh route.
     private func handlePathUpdate(_ path: Network.NWPath, generation: Int) {
         guard generation == pathMonitorGeneration else { return }
+        let signature = PathSignature(path)
         Self.logger.info("NWPathMonitor update generation=\(generation) baseline=\(pathBaseline.logDescription) \(Self.describe(path))")
-        pendingPathChangeWorkItem?.cancel()
 
         switch pathBaseline {
         case .established:
-            schedulePathChangeNotification()
+            guard path.status == .satisfied else {
+                pathBaseline = .sawUnsatisfied
+                currentPathSignature = signature
+                Self.logger.info("NWPathMonitor baseline -> \(pathBaseline.logDescription)")
+                return
+            }
+            guard let previous = currentPathSignature else {
+                currentPathSignature = signature
+                return
+            }
+            guard previous != signature else {
+                schedulePathRefresh(closeConnections: false, reason: "path update")
+                return
+            }
+            currentPathSignature = signature
+            schedulePathRefresh(closeConnections: true, reason: "path changed")
         case .awaiting:
+            currentPathSignature = signature
             pathBaseline = path.status == .satisfied ? .established : .sawUnsatisfied
             Self.logger.info("NWPathMonitor baseline -> \(pathBaseline.logDescription)")
         case .sawUnsatisfied:
             guard path.status == .satisfied else { return }
+            currentPathSignature = signature
             pathBaseline = .established
-            schedulePathChangeNotification()
+            schedulePathRefresh(closeConnections: true, reason: "path recovered")
         }
     }
 
-    private func schedulePathChangeNotification() {
+    private func schedulePathRefresh(closeConnections: Bool, reason: String) {
         let captured = pathMonitorGeneration
+        pendingPathRefreshClosesConnections = pendingPathRefreshClosesConnections || closeConnections
+        if closeConnections || pendingPathRefreshReason == nil {
+            pendingPathRefreshReason = reason
+        }
+        pendingPathChangeWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self, captured == self.pathMonitorGeneration else { return }
-            LibmihomoBridge.notifyDefaultInterfaceChanged()
-            Self.logger.info("notified mihomo of default interface change")
+            let closeConnections = self.pendingPathRefreshClosesConnections
+            let reason = self.pendingPathRefreshReason ?? reason
+            self.pendingPathChangeWorkItem = nil
+            self.pendingPathRefreshClosesConnections = false
+            self.pendingPathRefreshReason = nil
+            self.performPathRefresh(closeConnections: closeConnections, reason: reason)
         }
         pendingPathChangeWorkItem = work
         pathMonitorQueue.asyncAfter(deadline: .now() + Self.pathChangeDebounce, execute: work)
+    }
+
+    private func performPathRefresh(closeConnections: Bool, reason: String) {
+        LibmihomoBridge.notifyDefaultInterfaceChanged()
+        if closeConnections {
+            let closed = LibmihomoBridge.closeAllConnections()
+            Self.logger.info("refreshed mihomo path reason=\(reason), closed \(closed) connections")
+        } else {
+            Self.logger.info("refreshed mihomo path reason=\(reason)")
+        }
+    }
+
+    private func shouldCloseConnectionsForWake(now: Date = Date()) -> Bool {
+        if let lastWakeConnectionCloseAt,
+           now.timeIntervalSince(lastWakeConnectionCloseAt) < Self.wakeConnectionCloseMinimumInterval {
+            return false
+        }
+        lastWakeConnectionCloseAt = now
+        return true
     }
 
     private static func describe(_ path: Network.NWPath) -> String {
