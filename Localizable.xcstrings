@@ -1,16 +1,34 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "[truncated — showing last %lld of %lld bytes]\n\n" : {
+      "comment" : "Banner prepended to a saved log file's body when only the tail is shown. %1$lld is the number of bytes shown; %2$lld is the file's full size.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "［省略済み - 最後の %lld / %lld バイトを表示］\n\n"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[已截断：仅显示末尾 %1$lld / %2$lld 字节]\n\n"
+          }
+        }
+      }
+    },
     "%@" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@"
@@ -21,16 +39,16 @@
     "%@ active connections" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 个活动连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 件のアクティブ接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 个活动连接"
           }
         }
       }
@@ -39,13 +57,13 @@
       "comment" : "Saved log viewer line count summary.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 行"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 行"
@@ -56,16 +74,16 @@
     "%@ lines copied to clipboard." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已将 %@ 行复制到剪贴板。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 行をクリップボードにコピーしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 %@ 行复制到剪贴板。"
           }
         }
       }
@@ -74,52 +92,16 @@
       "comment" : "Summary line above the live connections list.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 个活动连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 件のアクティブ接続"
           }
-        }
-      }
-    },
-    "14 days" : {
-      "comment" : "Statistics range picker: 14-day window.",
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "14 天"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "14 日"
-          }
-        }
-      }
-    },
-    "30 days" : {
-      "comment" : "Statistics range picker: 30-day window.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 天"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "30 日"
+            "value" : "%lld 个活动连接"
           }
         }
       }
@@ -128,16 +110,52 @@
       "comment" : "Statistics range picker: 7-day window.",
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 日"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "7 天"
           }
-        },
+        }
+      }
+    },
+    "14 days" : {
+      "comment" : "Statistics range picker: 14-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "7 日"
+            "value" : "14 日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 天"
+          }
+        }
+      }
+    },
+    "30 days" : {
+      "comment" : "Statistics range picker: 30-day window.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 天"
           }
         }
       }
@@ -145,16 +163,16 @@
     "A new file is created each time the tunnel connects." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每次隧道连接时都会创建一个新文件。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "トンネルが接続するたびに新しいファイルが作成されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次隧道连接时都会创建一个新文件。"
           }
         }
       }
@@ -162,16 +180,16 @@
     "About" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关于"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "情報"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
           }
         }
       }
@@ -179,16 +197,16 @@
     "Action" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "アクション"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
           }
         }
       }
@@ -196,16 +214,16 @@
     "Action failed" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作失败"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "アクションに失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作失败"
           }
         }
       }
@@ -213,16 +231,34 @@
     "Actions" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクション"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "操作"
           }
-        },
+        }
+      }
+    },
+    "active" : {
+      "comment" : "Caption shown under the live connections counter on the Dashboard.",
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アクション"
+            "value" : "アクティブ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动"
           }
         }
       }
@@ -230,16 +266,16 @@
     "Add" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加"
           }
         }
       }
@@ -247,16 +283,16 @@
     "Add SSID" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加 SSID"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "SSID を追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 SSID"
           }
         }
       }
@@ -264,16 +300,16 @@
     "Address" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "地址"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "アドレス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址"
           }
         }
       }
@@ -281,16 +317,16 @@
     "Advanced" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "高级"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "詳細"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高级"
           }
         }
       }
@@ -298,16 +334,16 @@
     "After opening the certificate, install the downloaded profile in iOS Settings > General > VPN & Device Management, then enable full trust in Settings > General > About > Certificate Trust Settings." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开证书后，请在 iOS 设置 > 通用 > VPN 与设备管理中安装下载的描述文件，再到设置 > 通用 > 关于本机 > 证书信任设置中开启完全信任。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書を開いた後、iOS 設定 > 一般 > VPN とデバイス管理でダウンロード済みプロファイルをインストールし、設定 > 一般 > 情報 > 証明書信頼設定で完全信頼を有効にしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开证书后，请在 iOS 设置 > 通用 > VPN 与设备管理中安装下载的描述文件，再到设置 > 通用 > 关于本机 > 证书信任设置中开启完全信任。"
           }
         }
       }
@@ -315,16 +351,16 @@
     "Already in the list." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已在列表中。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "すでにリストにあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在列表中。"
           }
         }
       }
@@ -332,13 +368,13 @@
     "App Group" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "App Group"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "App Group"
@@ -349,16 +385,16 @@
     "App Version" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用版本"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "アプリバージョン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用版本"
           }
         }
       }
@@ -366,16 +402,16 @@
     "Auto Connect" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "自動接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动连接"
           }
         }
       }
@@ -383,16 +419,16 @@
     "Back Up Now" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立即备份"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "今すぐバックアップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即备份"
           }
         }
       }
@@ -400,16 +436,16 @@
     "Backs up profiles, the active profile, runtime preferences, Auto Connect, and log-retention settings to iCloud Drive. Logs, cache files, usage history, and MITM keys are not included." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将配置、当前配置、运行时偏好、自动连接和日志保留设置备份到 iCloud Drive。不包含日志、缓存文件、用量历史和 MITM 密钥。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル、アクティブなプロファイル、ランタイム設定、自動接続、ログ保持設定を iCloud Drive にバックアップします。ログ、キャッシュファイル、使用履歴、MITM キーは含まれません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将配置、当前配置、运行时偏好、自动连接和日志保留设置备份到 iCloud Drive。不包含日志、缓存文件、用量历史和 MITM 密钥。"
           }
         }
       }
@@ -417,16 +453,16 @@
     "Backup contains duplicate profile file %@." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "备份包含重复的配置文件 %@。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "バックアップに重複したプロファイルファイル %@ が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份包含重复的配置文件 %@。"
           }
         }
       }
@@ -434,16 +470,16 @@
     "Backup contains duplicate profile id %@." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "备份包含重复的配置 ID %@。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "バックアップに重複したプロファイル ID %@ が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份包含重复的配置 ID %@。"
           }
         }
       }
@@ -451,16 +487,16 @@
     "Backup contains invalid profile file %@." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "备份包含无效的配置文件 %@。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "バックアップに無効なプロファイルファイル %@ が含まれています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份包含无效的配置文件 %@。"
           }
         }
       }
@@ -468,16 +504,16 @@
     "Backup is missing YAML for %@." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "备份缺少 %@ 的 YAML。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "バックアップに %@ の YAML がありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备份缺少 %@ 的 YAML。"
           }
         }
       }
@@ -485,16 +521,16 @@
     "Both local data and the iCloud backup changed. Choose Back Up Now or Restore from iCloud." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "本机数据和 iCloud 备份都已更改。请选择立即备份或从 iCloud 恢复。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ローカルデータと iCloud バックアップの両方が変更されています。今すぐバックアップするか、iCloud から復元してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本机数据和 iCloud 备份都已更改。请选择立即备份或从 iCloud 恢复。"
           }
         }
       }
@@ -502,16 +538,16 @@
     "Built" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "构建时间"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ビルド日時"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "构建时间"
           }
         }
       }
@@ -519,16 +555,16 @@
     "Bundled Assets" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内置资源"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "バンドル済みアセット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内置资源"
           }
         }
       }
@@ -536,16 +572,16 @@
     "Cache size" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "缓存大小"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャッシュサイズ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存大小"
           }
         }
       }
@@ -553,16 +589,16 @@
     "Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャンセル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
           }
         }
       }
@@ -570,16 +606,16 @@
     "Cannot connect" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接"
           }
         }
       }
@@ -587,33 +623,36 @@
     "Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "限制「已保存日志」中保留的单次会话日志数量。当前会话始终保留。修改此设置、App 进入前台或打开「已保存日志」列表时，会清理较旧的文件。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログに保持するセッション別ログファイル数の上限です。現在のセッションは常に保持されます。古いファイルは、この設定の変更時、アプリが前面に戻った時、保存済みログの一覧を開いた時に削除されます。"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "限制「已保存日志」中保留的单次会话日志数量。当前会话始终保留。修改此设置、App 进入前台或打开「已保存日志」列表时，会清理较旧的文件。"
+          }
         }
       }
+    },
+    "Caps how many tunnel sessions are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened." : {
+
     },
     "Cellular" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蜂窝网络"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "モバイル通信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "蜂窝网络"
           }
         }
       }
@@ -621,16 +660,16 @@
     "Certificate install failed" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "证书安装失败"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書のインストールに失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "证书安装失败"
           }
         }
       }
@@ -638,16 +677,33 @@
     "Chain" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チェーン"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "链路"
           }
-        },
+        }
+      }
+    },
+    "chars" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "チェーン"
+            "value" : "文字"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字符"
           }
         }
       }
@@ -655,16 +711,16 @@
     "Clear" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "消去"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
           }
         }
       }
@@ -672,16 +728,16 @@
     "Clear cache" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除缓存"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャッシュを消去"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除缓存"
           }
         }
       }
@@ -689,16 +745,16 @@
     "Clear cache?" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除缓存？"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャッシュを消去しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除缓存？"
           }
         }
       }
@@ -706,16 +762,16 @@
     "Clear failed" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除失败"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "消去に失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除失败"
           }
         }
       }
@@ -723,16 +779,16 @@
     "Close" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关闭"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "閉じる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
           }
         }
       }
@@ -740,16 +796,16 @@
     "Close all" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全部关闭"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべて閉じる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部关闭"
           }
         }
       }
@@ -757,16 +813,16 @@
     "Close all connections?" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关闭所有连接？"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべての接続を閉じますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭所有连接？"
           }
         }
       }
@@ -774,16 +830,16 @@
     "Collapse" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "折叠"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "折りたたむ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "折叠"
           }
         }
       }
@@ -791,16 +847,16 @@
     "Commit" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提交"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "コミット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提交"
           }
         }
       }
@@ -808,16 +864,33 @@
     "Configuration looks valid." : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定は有効です。"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "配置可用。"
           }
-        },
+        }
+      }
+    },
+    "Conflict" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "設定は有効です。"
+            "value" : "競合"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "冲突"
           }
         }
       }
@@ -825,16 +898,16 @@
     "Connect" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接"
           }
         }
       }
@@ -842,16 +915,16 @@
     "Connect first to manage proxies" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接后才能管理代理"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロキシを管理するには先に接続してください"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接后才能管理代理"
           }
         }
       }
@@ -859,16 +932,16 @@
     "Connect first to view connections" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接后才能查看连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続を表示するには先に接続してください"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接后才能查看连接"
           }
         }
       }
@@ -877,33 +950,16 @@
       "comment" : "Statistics empty state subtitle.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接隧道后开始统计每日流量。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "日別使用量の収集を開始するにはトンネルに接続してください。"
           }
-        }
-      }
-    },
-    "Conflict" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "冲突"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "競合"
+            "value" : "连接隧道后开始统计每日流量。"
           }
         }
       }
@@ -911,16 +967,16 @@
     "Connected" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接"
           }
         }
       }
@@ -928,16 +984,16 @@
     "Connecting" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接中"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接中"
           }
         }
       }
@@ -945,16 +1001,16 @@
     "Connection" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接详情"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接详情"
           }
         }
       }
@@ -962,16 +1018,16 @@
     "Connections" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接"
           }
         }
       }
@@ -979,16 +1035,16 @@
     "Copied" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已复制"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "コピーしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制"
           }
         }
       }
@@ -997,16 +1053,16 @@
       "comment" : "Confirmation alert after Copy All in the log viewer. Chinese has no plural form so the same string covers count==1.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已将 %lld 行复制到剪贴板。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 行をクリップボードにコピーしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 %lld 行复制到剪贴板。"
           }
         }
       }
@@ -1014,16 +1070,16 @@
     "Copy" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "コピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制"
           }
         }
       }
@@ -1031,16 +1087,16 @@
     "Copy All" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全部复制"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべてコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部复制"
           }
         }
       }
@@ -1049,16 +1105,16 @@
       "comment" : "Banner shown when DELETE /connections/<id> returns a non-2xx status.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法关闭（HTTP %lld）"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "閉じられませんでした（HTTP %lld）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法关闭（HTTP %lld）"
           }
         }
       }
@@ -1067,16 +1123,16 @@
       "comment" : "Banner shown when DELETE /connections returns a non-2xx status.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法全部关闭（HTTP %lld）"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべて閉じられませんでした（HTTP %lld）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法全部关闭（HTTP %lld）"
           }
         }
       }
@@ -1085,16 +1141,16 @@
       "comment" : "Empty-state title when a list cannot be loaded — saved log detail, proxies, connections.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法加载"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "読み込めませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载"
           }
         }
       }
@@ -1102,16 +1158,16 @@
     "Could not open log" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法打开日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログを開けませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开日志"
           }
         }
       }
@@ -1119,16 +1175,16 @@
     "Could not save" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法保存"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存できませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存"
           }
         }
       }
@@ -1136,33 +1192,16 @@
     "Create and install the local root CA before using MITM HTTPS rewriting." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用 MITM HTTPS 重写前，请先创建并安装本地根 CA。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "MITM HTTPS 書き換えを使用する前に、ローカルルート CA を作成してインストールしてください。"
           }
-        }
-      }
-    },
-    "Daily Traffic" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每日流量"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日別通信量"
+            "value" : "使用 MITM HTTPS 重写前，请先创建并安装本地根 CA。"
           }
         }
       }
@@ -1171,16 +1210,33 @@
       "comment" : "Statistics chart card title.",
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日別通信量"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "每日流量"
           }
-        },
+        }
+      }
+    },
+    "Daily Traffic" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "日別通信量"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日流量"
           }
         }
       }
@@ -1188,16 +1244,16 @@
     "Dashboard" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仪表盘"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ダッシュボード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仪表盘"
           }
         }
       }
@@ -1205,16 +1261,16 @@
     "Debug" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "调试"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "デバッグ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调试"
           }
         }
       }
@@ -1222,16 +1278,16 @@
     "Default" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "默认"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "デフォルト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认"
           }
         }
       }
@@ -1239,16 +1295,16 @@
     "Delete" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除"
           }
         }
       }
@@ -1256,16 +1312,16 @@
     "Delete All" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全部删除"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべて削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部删除"
           }
         }
       }
@@ -1273,16 +1329,16 @@
     "Delete all saved logs?" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除所有已保存日志？"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログをすべて削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除所有已保存日志？"
           }
         }
       }
@@ -1290,16 +1346,16 @@
     "Destination" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目的地"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "宛先"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目的地"
           }
         }
       }
@@ -1307,16 +1363,16 @@
     "Diagnostics" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "诊断"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "診断"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断"
           }
         }
       }
@@ -1324,16 +1380,16 @@
     "Disable Web Controller" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停用 Web 控制器"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Web コントローラーを無効化"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停用 Web 控制器"
           }
         }
       }
@@ -1341,16 +1397,16 @@
     "Disconnect" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "断开"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "切断"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "断开"
           }
         }
       }
@@ -1358,16 +1414,16 @@
     "Disconnected" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已断开"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "切断済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已断开"
           }
         }
       }
@@ -1375,16 +1431,16 @@
     "Disconnecting" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "断开中"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "切断中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "断开中"
           }
         }
       }
@@ -1392,16 +1448,16 @@
     "Done" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
           }
         }
       }
@@ -1409,33 +1465,16 @@
     "Download" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下载"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ダウンロード"
           }
-        }
-      }
-    },
-    "Download Profile" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下载配置"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロファイルをダウンロード"
+            "value" : "下载"
           }
         }
       }
@@ -1443,16 +1482,33 @@
     "Download from URL" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL からダウンロード"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "从 URL 下载"
           }
-        },
+        }
+      }
+    },
+    "Download Profile" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "URL からダウンロード"
+            "value" : "プロファイルをダウンロード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载配置"
           }
         }
       }
@@ -1460,16 +1516,16 @@
     "Drop GeoIP / GeoSite / MMDB files into BundledAssets/geo/ and an external-ui directory at BundledAssets/ui/, then re-run xcodegen and rebuild to embed them at compile time." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将 GeoIP / GeoSite / MMDB 文件放入 BundledAssets/geo/，将 external-ui 目录放入 BundledAssets/ui/，然后重新运行 xcodegen 并重建，即可在编译时嵌入。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "GeoIP / GeoSite / MMDB ファイルを BundledAssets/geo/ に、external-ui ディレクトリを BundledAssets/ui/ に配置し、xcodegen を再実行して再ビルドすると、コンパイル時に埋め込まれます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 GeoIP / GeoSite / MMDB 文件放入 BundledAssets/geo/，将 external-ui 目录放入 BundledAssets/ui/，然后重新运行 xcodegen 并重建，即可在编译时嵌入。"
           }
         }
       }
@@ -1478,16 +1534,16 @@
       "comment" : "Confirmation message before resetting the Statistics page.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除本地保存的每日流量统计。仪表盘上的实时流量计数不受影响。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ローカルに保存された日別合計を削除します。ダッシュボードのライブ通信量カウンターには影響しません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除本地保存的每日流量统计。仪表盘上的实时流量计数不受影响。"
           }
         }
       }
@@ -1495,16 +1551,16 @@
     "Edit" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑"
           }
         }
       }
@@ -1512,16 +1568,16 @@
     "Edit Profile" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルを編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑配置"
           }
         }
       }
@@ -1529,16 +1585,16 @@
     "Edited" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已编辑"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "編集済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已编辑"
           }
         }
       }
@@ -1547,16 +1603,16 @@
       "comment" : "Profile list secondary text. %@ is a relative date like '2 hours ago'.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑于 %@"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ を編集しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑于 %@"
           }
         }
       }
@@ -1564,16 +1620,16 @@
     "Embedded in the app at compile time and copied to the working directory on first run. They survive Clear Cache and are not re-downloaded by mihomo." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在编译时嵌入 App，并在首次运行时复制到工作目录。它们不会被「清除缓存」移除，mihomo 也不会重新下载。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "コンパイル時にアプリへ埋め込まれ、初回起動時に作業ディレクトリへコピーされます。キャッシュ消去後も保持され、mihomo によって再ダウンロードされません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在编译时嵌入 App，并在首次运行时复制到工作目录。它们不会被「清除缓存」移除，mihomo 也不会重新下载。"
           }
         }
       }
@@ -1581,16 +1637,16 @@
     "Enter the exact Wi-Fi name. iOS matches case-sensitively." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入精确的 Wi-Fi 名称。iOS 区分大小写匹配。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "正確な Wi-Fi 名を入力してください。iOS は大文字と小文字を区別して照合します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入精确的 Wi-Fi 名称。iOS 区分大小写匹配。"
           }
         }
       }
@@ -1598,16 +1654,16 @@
     "Error" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "错误"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "エラー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "错误"
           }
         }
       }
@@ -1615,16 +1671,16 @@
     "Expand" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "展开"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "展開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展开"
           }
         }
       }
@@ -1632,16 +1688,16 @@
     "Extension Bundle" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "扩展 Bundle"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "拡張機能バンドル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扩展 Bundle"
           }
         }
       }
@@ -1649,16 +1705,16 @@
     "External UI" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外部 Web UI"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "外部 UI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部 Web UI"
           }
         }
       }
@@ -1666,16 +1722,16 @@
     "Filter Level" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "筛选级别"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "フィルターレベル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "筛选级别"
           }
         }
       }
@@ -1684,16 +1740,16 @@
       "comment" : "Saved-log retention picker option that keeps every session log file.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "永久保留"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "無期限"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永久保留"
           }
         }
       }
@@ -1702,13 +1758,13 @@
       "comment" : "Row label in Advanced Settings → Runtime, paired with the Go toolchain version used to build mihomo.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go"
@@ -1719,16 +1775,67 @@
     "Host" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホスト"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "主机"
           }
-        },
+        }
+      }
+    },
+    "iCloud Backup" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ホスト"
+            "value" : "iCloud バックアップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 备份"
+          }
+        }
+      }
+    },
+    "iCloud Drive is unavailable. Sign in to iCloud and enable iCloud Drive for ProxyCat." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Drive を利用できません。iCloud にサインインし、ProxyCat の iCloud Drive を有効にしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Drive 不可用。请登录 iCloud，并为 ProxyCat 启用 iCloud Drive。"
+          }
+        }
+      }
+    },
+    "iCloud Sync" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同期"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud 同步"
           }
         }
       }
@@ -1736,13 +1843,13 @@
     "ID" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ID"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ID"
@@ -1753,33 +1860,16 @@
     "Ignore" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "忽略"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "無視"
           }
-        }
-      }
-    },
-    "Import YAML" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入 YAML"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "YAML をインポート"
+            "value" : "忽略"
           }
         }
       }
@@ -1787,16 +1877,16 @@
     "Import a YAML config or paste one in." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入或粘贴一份 YAML 配置。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "YAML 設定をインポートするか、貼り付けてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入或粘贴一份 YAML 配置。"
           }
         }
       }
@@ -1804,16 +1894,33 @@
     "Import failed" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポートに失敗しました"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "导入失败"
           }
-        },
+        }
+      }
+    },
+    "Import YAML" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インポートに失敗しました"
+            "value" : "YAML をインポート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入 YAML"
           }
         }
       }
@@ -1821,16 +1928,16 @@
     "Info" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "信息"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "情報"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "信息"
           }
         }
       }
@@ -1838,16 +1945,16 @@
     "Install Certificate" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安装证书"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書をインストール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装证书"
           }
         }
       }
@@ -1855,16 +1962,50 @@
     "Invalid" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無効"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无效"
           }
-        },
+        }
+      }
+    },
+    "iOS evaluates SSIDs case-sensitively. The first matching rule wins; networks not listed fall through to the Default action below." : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無効"
+            "value" : "iOS は SSID の大文字と小文字を区別します。最初に一致したルールが優先され、一覧にないネットワークは下のデフォルトアクションに従います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 会区分大小写匹配 SSID。首个匹配规则生效；未列出的网络会使用下方的「默认」操作。"
+          }
+        }
+      }
+    },
+    "iOS only auto-connects after you have tapped Connect on the Dashboard at least once on this device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスで一度ダッシュボードの接続をタップした後にのみ、iOS の自動接続が動作します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在本设备上至少从仪表盘点过一次「连接」后，iOS 才会启用自动连接。"
           }
         }
       }
@@ -1873,34 +2014,16 @@
       "comment" : "Saved-log retention picker option.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留最近 10 次会话"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "直近 10 セッションを保持"
           }
-        }
-      }
-    },
-    "Keep last 100 sessions" : {
-      "comment" : "Saved-log retention picker option.",
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保留最近 100 次会话"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "直近 100 セッションを保持"
+            "value" : "保留最近 10 次会话"
           }
         }
       }
@@ -1909,16 +2032,34 @@
       "comment" : "Saved-log retention picker option.",
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直近 50 セッションを保持"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保留最近 50 次会话"
           }
-        },
+        }
+      }
+    },
+    "Keep last 100 sessions" : {
+      "comment" : "Saved-log retention picker option.",
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "直近 50 セッションを保持"
+            "value" : "直近 100 セッションを保持"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留最近 100 次会话"
           }
         }
       }
@@ -1926,16 +2067,16 @@
     "Last Backup" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上次备份"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "前回のバックアップ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次备份"
           }
         }
       }
@@ -1943,16 +2084,33 @@
     "Last Sync" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の同期"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "上次同步"
           }
-        },
+        }
+      }
+    },
+    "lines" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "前回の同期"
+            "value" : "行"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行"
           }
         }
       }
@@ -1961,16 +2119,16 @@
       "comment" : "Badge on the saved-logs row marking the currently-active session file.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "实时"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "LIVE"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实时"
           }
         }
       }
@@ -1978,16 +2136,16 @@
     "Log Level" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日志级别"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログレベル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志级别"
           }
         }
       }
@@ -1995,33 +2153,16 @@
     "Logs" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログ"
           }
-        }
-      }
-    },
-    "MITM Certificate" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "MITM 证书"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "MITM 証明書"
+            "value" : "日志"
           }
         }
       }
@@ -2029,16 +2170,16 @@
     "Memory" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内存"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "メモリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内存"
           }
         }
       }
@@ -2047,16 +2188,67 @@
       "comment" : "Row label in Advanced Settings → mihomo Core, paired with a checkmark when this build is the Meta variant.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meta"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meta"
+          }
+        }
+      }
+    },
+    "mihomo Core" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mihomo Core"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mihomo 内核"
+          }
+        }
+      }
+    },
+    "mihomo on GitHub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub の mihomo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 查看 mihomo"
+          }
+        }
+      }
+    },
+    "MITM Certificate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MITM 証明書"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MITM 证书"
           }
         }
       }
@@ -2064,16 +2256,16 @@
     "Name" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "名称"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "名前"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名称"
           }
         }
       }
@@ -2081,16 +2273,16 @@
     "Network" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网络"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ネットワーク"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络"
           }
         }
       }
@@ -2098,16 +2290,16 @@
     "Network name" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网络名称"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ネットワーク名"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络名称"
           }
         }
       }
@@ -2115,16 +2307,16 @@
     "Network name cannot be empty." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网络名称不能为空。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ネットワーク名は空にできません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络名称不能为空。"
           }
         }
       }
@@ -2132,16 +2324,16 @@
     "New / Paste YAML" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新建或粘贴 YAML"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "新規 / YAML を貼り付け"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建或粘贴 YAML"
           }
         }
       }
@@ -2149,16 +2341,16 @@
     "New Profile" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新建配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "新規プロファイル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新建配置"
           }
         }
       }
@@ -2166,16 +2358,16 @@
     "No active connections" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无活动连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "アクティブな接続はありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无活动连接"
           }
         }
       }
@@ -2183,33 +2375,16 @@
     "No assets bundled with this build." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此构建未内置任何资源。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "このビルドにはアセットがバンドルされていません。"
           }
-        }
-      }
-    },
-    "No iCloud backup was found." : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未找到 iCloud 备份。"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud バックアップが見つかりません。"
+            "value" : "此构建未内置任何资源。"
           }
         }
       }
@@ -2218,16 +2393,33 @@
       "comment" : "Statistics: empty list when no daily entries have been recorded.",
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日別合計はまだありません。"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无每日流量记录。"
           }
-        },
+        }
+      }
+    },
+    "No iCloud backup was found." : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "日別合計はまだありません。"
+            "value" : "iCloud バックアップが見つかりません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到 iCloud 备份。"
           }
         }
       }
@@ -2236,16 +2428,16 @@
       "comment" : "Empty-state title in the live log viewer before any log entries arrive.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログはまだありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无日志"
           }
         }
       }
@@ -2254,16 +2446,16 @@
       "comment" : "Search empty-state title in the live connections list.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无匹配连接"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "一致する接続はありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无匹配连接"
           }
         }
       }
@@ -2271,16 +2463,16 @@
     "No matching logs" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无匹配日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "一致するログはありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无匹配日志"
           }
         }
       }
@@ -2288,16 +2480,16 @@
     "No profile" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未选择配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルなし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未选择配置"
           }
         }
       }
@@ -2305,16 +2497,16 @@
     "No profile selected" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未选择配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルが選択されていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未选择配置"
           }
         }
       }
@@ -2322,16 +2514,16 @@
     "No profiles" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルがありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无配置"
           }
         }
       }
@@ -2339,16 +2531,16 @@
     "No saved logs yet" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无已保存日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログはまだありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无已保存日志"
           }
         }
       }
@@ -2357,50 +2549,16 @@
       "comment" : "Statistics: empty chart state.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无流量记录。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "記録された通信量はまだありません。"
           }
-        }
-      }
-    },
-    "Not Created" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未创建"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未作成"
-          }
-        }
-      }
-    },
-    "Not Trusted" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未信任"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未信頼"
+            "value" : "暂无流量记录。"
           }
         }
       }
@@ -2408,33 +2566,50 @@
     "Not configured" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "未設定"
           }
-        }
-      }
-    },
-    "OK" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "好"
+            "value" : "未配置"
           }
-        },
+        }
+      }
+    },
+    "Not Created" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "OK"
+            "value" : "未作成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未创建"
+          }
+        }
+      }
+    },
+    "Not Trusted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未信頼"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未信任"
           }
         }
       }
@@ -2442,16 +2617,33 @@
     "Off" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭"
           }
-        },
+        }
+      }
+    },
+    "OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オフ"
+            "value" : "OK"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好"
           }
         }
       }
@@ -2459,16 +2651,16 @@
     "Open Web UI" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开 Web UI"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Web UI を開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 Web UI"
           }
         }
       }
@@ -2476,16 +2668,16 @@
     "Paste or type YAML here…" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在这里粘贴或输入 YAML…"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ここに YAML を貼り付けるか入力…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在这里粘贴或输入 YAML…"
           }
         }
       }
@@ -2493,16 +2685,16 @@
     "Pause" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂停"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "一時停止"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂停"
           }
         }
       }
@@ -2510,16 +2702,16 @@
     "Payload" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "载荷"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ペイロード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "载荷"
           }
         }
       }
@@ -2527,16 +2719,16 @@
     "Pick a profile first." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先选择配置。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "先にプロファイルを選択してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先选择配置。"
           }
         }
       }
@@ -2544,16 +2736,16 @@
     "Platform" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "平台"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プラットフォーム"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平台"
           }
         }
       }
@@ -2561,16 +2753,16 @@
     "Privacy" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "隐私"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プライバシー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐私"
           }
         }
       }
@@ -2578,16 +2770,16 @@
     "Process" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "进程"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロセス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "进程"
           }
         }
       }
@@ -2595,16 +2787,16 @@
     "Process Path" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "进程路径"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロセスパス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "进程路径"
           }
         }
       }
@@ -2612,16 +2804,16 @@
     "Profile" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
           }
         }
       }
@@ -2629,16 +2821,16 @@
     "Profile file is missing." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置文件不存在。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルファイルが見つかりません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置文件不存在。"
           }
         }
       }
@@ -2646,16 +2838,16 @@
     "Profile has no remote URL" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置没有远程 URL"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルにリモート URL がありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置没有远程 URL"
           }
         }
       }
@@ -2663,16 +2855,16 @@
     "Profile name" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置名称"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル名"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置名称"
           }
         }
       }
@@ -2680,16 +2872,16 @@
     "Profiles" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
           }
         }
       }
@@ -2697,16 +2889,16 @@
     "Profiles are kept. If the tunnel is running, the freed space won't be visible until the next reconnect." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置会保留。若隧道正在运行，释放的空间要到下次重连后才会显示。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルは保持されます。トンネルが実行中の場合、解放された容量は次回の再接続まで反映されません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置会保留。若隧道正在运行，释放的空间要到下次重连后才会显示。"
           }
         }
       }
@@ -2714,16 +2906,16 @@
     "Proxies" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "代理"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロキシ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "代理"
           }
         }
       }
@@ -2731,16 +2923,16 @@
     "ProxyCat on GitHub" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 GitHub 查看 ProxyCat"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "GitHub の ProxyCat"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 查看 ProxyCat"
           }
         }
       }
@@ -2749,16 +2941,16 @@
       "comment" : "Statistics range picker accessibility label.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "范围"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "範囲"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "范围"
           }
         }
       }
@@ -2766,16 +2958,16 @@
     "Ready" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "就绪"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "準備完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "就绪"
           }
         }
       }
@@ -2783,33 +2975,16 @@
     "Reasserting" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新连接中"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "再確立中"
           }
-        }
-      }
-    },
-    "Recent Days" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最近日期"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近の日付"
+            "value" : "重新连接中"
           }
         }
       }
@@ -2818,16 +2993,33 @@
       "comment" : "Statistics list section title.",
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の日付"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近日期"
           }
-        },
+        }
+      }
+    },
+    "Recent Days" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近の日付"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近日期"
           }
         }
       }
@@ -2835,16 +3027,16 @@
     "Refresh" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "刷新"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新"
           }
         }
       }
@@ -2852,16 +3044,16 @@
     "Refresh Status" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "刷新状态"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "状態を更新"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新状态"
           }
         }
       }
@@ -2870,16 +3062,16 @@
       "comment" : "Title of the error alert surfaced from ExtensionEnvironment.reloadError.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新加载失败"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "再読み込みに失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新加载失败"
           }
         }
       }
@@ -2887,16 +3079,16 @@
     "Removes the rule-provider cache, downloaded GeoIP / GeoSite databases, and the downloaded external UI. mihomo re-fetches them on next start. Bundled assets are preserved." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移除 rule-provider 缓存、已下载的 GeoIP / GeoSite 数据库和外部 Web UI。mihomo 会在下次启动时重新获取。内置资源会保留。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "rule-provider キャッシュ、ダウンロード済みの GeoIP / GeoSite データベース、ダウンロード済みの外部 UI を削除します。次回起動時に mihomo が再取得します。バンドル済みアセットは保持されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除 rule-provider 缓存、已下载的 GeoIP / GeoSite 数据库和外部 Web UI。mihomo 会在下次启动时重新获取。内置资源会保留。"
           }
         }
       }
@@ -2905,32 +3097,16 @@
       "comment" : "Confirmation button on the Reset Statistics dialog.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "リセット"
           }
-        }
-      }
-    },
-    "Reset Statistics" : {
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重置统计"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "統計をリセット"
+            "value" : "重置"
           }
         }
       }
@@ -2939,16 +3115,32 @@
       "comment" : "Statistics: button that clears the on-device daily totals.",
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統計をリセット"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置统计"
           }
-        },
+        }
+      }
+    },
+    "Reset Statistics" : {
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "統計をリセット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置统计"
           }
         }
       }
@@ -2957,33 +3149,16 @@
       "comment" : "Confirmation dialog title for the Reset Statistics action.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置统计？"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "統計をリセットしますか？"
           }
-        }
-      }
-    },
-    "Resume" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "继续"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再開"
+            "value" : "重置统计？"
           }
         }
       }
@@ -2991,16 +3166,16 @@
     "Restore" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "恢复"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "復元"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复"
           }
         }
       }
@@ -3008,16 +3183,16 @@
     "Restore from iCloud" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从 iCloud 恢复"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud から復元"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 iCloud 恢复"
           }
         }
       }
@@ -3025,16 +3200,33 @@
     "Restore from iCloud?" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud から復元しますか？"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "从 iCloud 恢复？"
           }
-        },
+        }
+      }
+    },
+    "Resume" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iCloud から復元しますか？"
+            "value" : "再開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
           }
         }
       }
@@ -3043,16 +3235,16 @@
       "comment" : "Saved-log retention picker label in Settings.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留策略"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保持"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留策略"
           }
         }
       }
@@ -3060,16 +3252,16 @@
     "Retry" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重试"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "再試行"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
           }
         }
       }
@@ -3077,16 +3269,16 @@
     "Routing" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "路由"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ルーティング"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路由"
           }
         }
       }
@@ -3094,16 +3286,16 @@
     "Rule" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "规则"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ルール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "规则"
           }
         }
       }
@@ -3111,33 +3303,16 @@
     "Runtime" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "运行时"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ランタイム"
           }
-        }
-      }
-    },
-    "SNI" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SNI"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SNI"
+            "value" : "运行时"
           }
         }
       }
@@ -3145,13 +3320,13 @@
     "Save" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存"
@@ -3161,16 +3336,16 @@
     },
     "Save downloads the profile, validates it with mihomo, then adds it. Nothing is written if validation fails." : {
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存时会下载配置，并用 mihomo 校验后再添加。校验失败时不会写入。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存時にプロファイルをダウンロードし、mihomo で検証してから追加します。検証に失敗した場合は書き込みません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存时会下载配置，并用 mihomo 校验后再添加。校验失败时不会写入。"
           }
         }
       }
@@ -3178,16 +3353,16 @@
     "Save failed" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存失败"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存に失敗しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存失败"
           }
         }
       }
@@ -3195,16 +3370,16 @@
     "Save validates with mihomo before writing." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存时会先用 mihomo 校验，通过后再写入。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存前に mihomo で検証し、成功した場合のみ書き込みます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存时会先用 mihomo 校验，通过后再写入。"
           }
         }
       }
@@ -3212,16 +3387,16 @@
     "Saved" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已保存"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存"
           }
         }
       }
@@ -3229,16 +3404,16 @@
     "Saved Logs" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已保存日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存日志"
           }
         }
       }
@@ -3246,33 +3421,16 @@
     "Search logs" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索日志"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログを検索"
           }
-        }
-      }
-    },
-    "Server returned HTTP %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服务器返回 HTTP %lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サーバーが HTTP %lld を返しました"
+            "value" : "搜索日志"
           }
         }
       }
@@ -3280,16 +3438,33 @@
     "Server returned an empty body" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーが空の本文を返しました"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器返回空内容"
           }
-        },
+        }
+      }
+    },
+    "Server returned HTTP %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サーバーが空の本文を返しました"
+            "value" : "サーバーが HTTP %lld を返しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器返回 HTTP %lld"
           }
         }
       }
@@ -3297,16 +3472,16 @@
     "Service not started" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务未启动"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "サービスが開始されていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务未启动"
           }
         }
       }
@@ -3314,16 +3489,16 @@
     "Settings" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
           }
         }
       }
@@ -3331,16 +3506,16 @@
     "Share" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "共有"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享"
           }
         }
       }
@@ -3348,16 +3523,16 @@
     "Share File" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享文件"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ファイルを共有"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享文件"
           }
         }
       }
@@ -3365,16 +3540,33 @@
     "Silent" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サイレント"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "静默"
           }
-        },
+        }
+      }
+    },
+    "SNI" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サイレント"
+            "value" : "SNI"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SNI"
           }
         }
       }
@@ -3383,16 +3575,16 @@
       "comment" : "Warning shown when a saved log file contains invalid UTF-8 bytes and the viewer replaces them.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已替换部分无效的 UTF-8 字节。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "一部の無効な UTF-8 バイトを置換しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已替换部分无效的 UTF-8 字节。"
           }
         }
       }
@@ -3400,16 +3592,16 @@
     "Source" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "来源"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ソース"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来源"
           }
         }
       }
@@ -3417,16 +3609,16 @@
     "Started" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始时间"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "開始済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始时间"
           }
         }
       }
@@ -3435,16 +3627,16 @@
       "comment" : "Settings → Statistics navigation link.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "统计"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "統計"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "统计"
           }
         }
       }
@@ -3452,16 +3644,16 @@
     "Status" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状态"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "状態"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态"
           }
         }
       }
@@ -3469,16 +3661,16 @@
     "Stops mihomo's HTTP controller and bundled Web UI from binding. The host app continues to work via its private connection. Applies immediately while connected." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "阻止 mihomo 的 HTTP 控制器和内置 Web UI 绑定监听。宿主 App 会继续通过私有连接工作。已连接时立即生效。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "mihomo の HTTP コントローラーとバンドル済み Web UI のバインドを停止します。ホストアプリはプライベート接続経由で引き続き動作します。接続中でもすぐに適用されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "阻止 mihomo 的 HTTP 控制器和内置 Web UI 绑定监听。宿主 App 会继续通过私有连接工作。已连接时立即生效。"
           }
         }
       }
@@ -3486,16 +3678,16 @@
     "Storage" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "存储"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ストレージ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存储"
           }
         }
       }
@@ -3503,16 +3695,16 @@
     "Sync Now" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立即同步"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "今すぐ同期"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步"
           }
         }
       }
@@ -3520,16 +3712,16 @@
     "Syncing" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在同步"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "同期中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步"
           }
         }
       }
@@ -3537,16 +3729,16 @@
     "Tags" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "标签"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "タグ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标签"
           }
         }
       }
@@ -3554,16 +3746,16 @@
     "Tap **Validate** before saving." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存前请点击「校验」。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存前に **検証** をタップしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存前请点击「校验」。"
           }
         }
       }
@@ -3571,16 +3763,16 @@
     "Tap **Validate** to download and parse with mihomo before saving." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存前请点击「校验」，用 mihomo 下载并解析。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存前に **検証** をタップして、mihomo でダウンロードと解析を行ってください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存前请点击「校验」，用 mihomo 下载并解析。"
           }
         }
       }
@@ -3588,16 +3780,16 @@
     "Target" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目标"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ターゲット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标"
           }
         }
       }
@@ -3605,16 +3797,16 @@
     "Test latency" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "测试延迟"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "遅延をテスト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试延迟"
           }
         }
       }
@@ -3622,16 +3814,16 @@
     "The certificate file is invalid. Install again to create a fresh certificate." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "证书文件无效。请重新安装以创建新的证书。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書ファイルが無効です。もう一度インストールして新しい証明書を作成してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "证书文件无效。请重新安装以创建新的证书。"
           }
         }
       }
@@ -3639,32 +3831,32 @@
     "The local MITM root CA is trusted by iOS. HTTPS rewriting can work for profiles that enable MITM." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "本地 MITM 根 CA 已被 iOS 信任。启用 MITM 的配置可以使用 HTTPS 重写。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ローカル MITM ルート CA は iOS で信頼されています。MITM を有効にしたプロファイルで HTTPS 書き換えを使用できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本地 MITM 根 CA 已被 iOS 信任。启用 MITM 的配置可以使用 HTTPS 重写。"
           }
         }
       }
     },
     "This deletes %@ saved log files. The active session is preserved." : {
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将删除 %@ 个已保存日志文件。当前会话会保留。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 件の保存済みログファイルを削除します。アクティブなセッションは保持されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将删除 %@ 个已保存日志文件。当前会话会保留。"
           }
         }
       }
@@ -3673,16 +3865,16 @@
       "comment" : "Confirmation message for the Saved Logs → Delete All action.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将删除 %lld 个已保存日志文件。当前会话会保留。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 件の保存済みログファイルを削除します。アクティブなセッションは保持されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将删除 %lld 个已保存日志文件。当前会话会保留。"
           }
         }
       }
@@ -3690,16 +3882,16 @@
     "This iCloud backup uses unsupported schema version %lld." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 iCloud 备份使用不支持的架构版本 %lld。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "この iCloud バックアップは未対応のスキーマバージョン %lld を使用しています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 iCloud 备份使用不支持的架构版本 %lld。"
           }
         }
       }
@@ -3707,16 +3899,16 @@
     "This replaces local profiles and settings with the latest iCloud backup." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这会用最新的 iCloud 备份替换本机配置和设置。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ローカルのプロファイルと設定を最新の iCloud バックアップで置き換えます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会用最新的 iCloud 备份替换本机配置和设置。"
           }
         }
       }
@@ -3725,16 +3917,16 @@
       "comment" : "Statistics row label for the current day.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今天"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "今日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
           }
         }
       }
@@ -3743,16 +3935,16 @@
       "comment" : "Statistics summary column for combined upload + download bytes.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "总计"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "合計"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "总计"
           }
         }
       }
@@ -3760,16 +3952,33 @@
     "Traffic" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通信量"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "流量"
           }
-        },
+        }
+      }
+    },
+    "Trusted" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "通信量"
+            "value" : "信頼済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已信任"
           }
         }
       }
@@ -3778,33 +3987,16 @@
       "comment" : "Search empty-state description for lists.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请尝试其他搜索词。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "別の検索語を試してください。"
           }
-        }
-      }
-    },
-    "Trusted" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已信任"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "信頼済み"
+            "value" : "请尝试其他搜索词。"
           }
         }
       }
@@ -3812,16 +4004,67 @@
     "Type" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "種類"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "类型"
           }
-        },
+        }
+      }
+    },
+    "Unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "種類"
+            "value" : "利用不可"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不可用"
+          }
+        }
+      }
+    },
+    "Unknown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不明"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未知"
+          }
+        }
+      }
+    },
+    "Upload" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传"
           }
         }
       }
@@ -3829,13 +4072,13 @@
     "URL" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "URL"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "URL"
@@ -3846,67 +4089,16 @@
     "URL is not valid" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "URL 无效"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "URL が無効です"
           }
-        }
-      }
-    },
-    "Unknown" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未知"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不明"
-          }
-        }
-      }
-    },
-    "Unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不可用"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "利用不可"
-          }
-        }
-      }
-    },
-    "Upload" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上传"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップロード"
+            "value" : "URL 无效"
           }
         }
       }
@@ -3914,16 +4106,16 @@
     "Usage" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用量"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用量"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用量"
           }
         }
       }
@@ -3931,33 +4123,16 @@
     "Used for any network not matched above." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用于所有未被上方规则匹配的网络。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "上のルールに一致しないネットワークに使用されます。"
           }
-        }
-      }
-    },
-    "VPN configuration not loaded" : {
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "VPN 配置尚未加载"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPN 設定が読み込まれていません"
+            "value" : "用于所有未被上方规则匹配的网络。"
           }
         }
       }
@@ -3965,16 +4140,16 @@
     "Validate" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "校验"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "検証"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "校验"
           }
         }
       }
@@ -3982,16 +4157,33 @@
     "Version" : {
       "extractionState" : "manual",
       "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "版本"
           }
-        },
+        }
+      }
+    },
+    "VPN configuration not loaded" : {
+      "extractionState" : "manual",
+      "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バージョン"
+            "value" : "VPN 設定が読み込まれていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 配置尚未加载"
           }
         }
       }
@@ -3999,13 +4191,13 @@
     "Warning" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "警告"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "警告"
@@ -4016,16 +4208,16 @@
     "When on, ProxyCat connects or disconnects automatically based on the rules below. When off, use the Dashboard to control the tunnel manually." : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开启后，ProxyCat 会按下方规则自动连接或断开。关闭后，请在仪表盘手动控制隧道。"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "オンにすると、ProxyCat は下のルールに基づいて自動的に接続または切断します。オフの場合は、ダッシュボードでトンネルを手動操作します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开启后，ProxyCat 会按下方规则自动连接或断开。关闭后，请在仪表盘手动控制隧道。"
           }
         }
       }
@@ -4033,13 +4225,13 @@
     "Wi-Fi SSIDs" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wi-Fi SSID"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wi-Fi SSID"
@@ -4050,16 +4242,16 @@
     "Wrapper built" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "封装层构建时间"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ラッパーのビルド日時"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "封装层构建时间"
           }
         }
       }
@@ -4067,16 +4259,16 @@
     "Wrapper commit" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "封装层提交"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ラッパーコミット"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "封装层提交"
           }
         }
       }
@@ -4084,13 +4276,13 @@
     "YAML" : {
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "YAML"
           }
         },
-        "ja" : {
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "YAML"
@@ -4102,205 +4294,16 @@
       "comment" : "Statistics row label for the previous day.",
       "extractionState" : "manual",
       "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "昨天"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "昨日"
           }
-        }
-      }
-    },
-    "[truncated — showing last %lld of %lld bytes]\n\n" : {
-      "comment" : "Banner prepended to a saved log file's body when only the tail is shown. %1$lld is the number of bytes shown; %2$lld is the file's full size.",
-      "extractionState" : "manual",
-      "localizations" : {
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "[已截断：仅显示末尾 %1$lld / %2$lld 字节]\n\n"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "［省略済み - 最後の %lld / %lld バイトを表示］\n\n"
-          }
-        }
-      }
-    },
-    "active" : {
-      "comment" : "Caption shown under the live connections counter on the Dashboard.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "活动"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アクティブ"
-          }
-        }
-      }
-    },
-    "chars" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字符"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "文字"
-          }
-        }
-      }
-    },
-    "iCloud Backup" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 备份"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud バックアップ"
-          }
-        }
-      }
-    },
-    "iCloud Drive is unavailable. Sign in to iCloud and enable iCloud Drive for ProxyCat." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud Drive 不可用。请登录 iCloud，并为 ProxyCat 启用 iCloud Drive。"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud Drive を利用できません。iCloud にサインインし、ProxyCat の iCloud Drive を有効にしてください。"
-          }
-        }
-      }
-    },
-    "iCloud Sync" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 同步"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 同期"
-          }
-        }
-      }
-    },
-    "iOS evaluates SSIDs case-sensitively. The first matching rule wins; networks not listed fall through to the Default action below." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS 会区分大小写匹配 SSID。首个匹配规则生效；未列出的网络会使用下方的「默认」操作。"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS は SSID の大文字と小文字を区別します。最初に一致したルールが優先され、一覧にないネットワークは下のデフォルトアクションに従います。"
-          }
-        }
-      }
-    },
-    "iOS only auto-connects after you have tapped Connect on the Dashboard at least once on this device." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在本设备上至少从仪表盘点过一次「连接」后，iOS 才会启用自动连接。"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このデバイスで一度ダッシュボードの接続をタップした後にのみ、iOS の自動接続が動作します。"
-          }
-        }
-      }
-    },
-    "lines" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "行"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "行"
-          }
-        }
-      }
-    },
-    "mihomo Core" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mihomo 内核"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mihomo Core"
-          }
-        }
-      }
-    },
-    "mihomo on GitHub" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 GitHub 查看 mihomo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub の mihomo"
+            "value" : "昨天"
           }
         }
       }

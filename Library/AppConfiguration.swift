@@ -57,6 +57,15 @@ public enum AppConfiguration {
     /// would query the host process' separate Go runtime.
     public static let activeLogMarkerFileName = ".active-log-path"
 
+    /// Prefix for Swift-side per-session logs written by the Network
+    /// Extension. Mihomo's Go-side log files keep using `mihomo-`.
+    public static let proxyCatLogFilePrefix = "proxycat-"
+
+    /// Hidden marker containing the active Swift-side session log path.
+    /// Kept separate from `.active-log-path` so the Go persistence layer
+    /// can keep its existing one-path marker format.
+    public static let activeProxyCatLogMarkerFileName = ".active-proxycat-log-path"
+
     /// Filename of the profile catalog index. Lives inside
     /// `Profiles/` alongside the per-profile YAMLs and maps each
     /// profile UUID to its display name and on-disk filename. Written

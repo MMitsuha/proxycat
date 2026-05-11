@@ -1,7 +1,6 @@
 import CryptoKit
 import Foundation
 import Observation
-import os
 
 public struct ICloudBackupProfile: Codable, Equatable, Sendable {
     public var profile: Profile
@@ -180,7 +179,7 @@ public final class ICloudBackupStore {
     @ObservationIgnored private var state: ICloudSyncState
     @ObservationIgnored private var observerTokens: [NSObjectProtocol] = []
     @ObservationIgnored private var scheduledSyncTask: Task<Void, Never>?
-    @ObservationIgnored private let logger = Logger(subsystem: "io.proxycat.Library", category: "ICloudBackupStore")
+    @ObservationIgnored private let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "ICloudBackupStore")
 
     private init() {
         let state = JSONFileStore.load(

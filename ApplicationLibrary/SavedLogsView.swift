@@ -4,9 +4,10 @@ import UIKit
 
 /// Browser for the per-session log files the Network Extension drops
 /// in the App Group container. The extension opens a fresh
-/// `mihomo-YYYYMMDD-HHMMSS.log` whenever it starts the tunnel; this
-/// view lists them newest-first with size + modified date and opens
-/// files through an in-app UTF-8 text viewer.
+/// `mihomo-YYYYMMDD-HHMMSS.log` for Go-side logs and
+/// `proxycat-YYYYMMDD-HHMMSS.log` for Swift-side logs whenever it starts
+/// the tunnel; this view lists them newest-first with size + modified
+/// date and opens files through an in-app UTF-8 text viewer.
 public struct SavedLogsView: View {
     @State private var model = SavedLogsViewModel()
 
@@ -254,12 +255,12 @@ final class SavedLogsViewModel {
 
     func reload() {
         let dir = FilePath.logsDirectory
-        let active = FilePath.activeLogFilePath()
+        let active = FilePath.activeLogFilePaths()
         // Apply user retention policy before listing so the user
         // sees a fresh state. No-op when policy is .keepAll.
         FilePath.pruneSavedLogs(
             policy: HostSettingsStore.shared.logRetention,
-            activePath: active
+            activePaths: active
         )
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: dir,
@@ -268,7 +269,7 @@ final class SavedLogsViewModel {
         )) ?? []
 
         let mapped: [SavedLogEntry] = urls.compactMap { url in
-            guard url.pathExtension == "log",
+            guard FilePath.isManagedSavedLogFile(url),
                   let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey]),
                   values.isRegularFile == true
             else { return nil }
@@ -276,7 +277,7 @@ final class SavedLogsViewModel {
                 url: url,
                 size: Int64(values.fileSize ?? 0),
                 modified: values.contentModificationDate ?? .distantPast,
-                isActive: url.path == active
+                isActive: active.contains(url.path)
             )
         }
         // Newest first.

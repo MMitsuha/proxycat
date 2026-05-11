@@ -3,6 +3,7 @@ package libmihomo
 import (
 	"github.com/metacubex/mihomo/component/iface"
 	"github.com/metacubex/mihomo/component/resolver"
+	"github.com/metacubex/mihomo/log"
 )
 
 // NotifyDefaultInterfaceChanged tells mihomo that the OS-supplied default
@@ -33,9 +34,11 @@ import (
 // callbacks before Start() don't reach uninitialized resolver state.
 func NotifyDefaultInterfaceChanged() {
 	if !started.Load() {
+		log.Infoln("[network] default interface change ignored: mihomo not started")
 		return
 	}
 	iface.FlushCache()
 	resolver.ResetConnection()
-	CloseAllConnections()
+	closed := CloseAllConnections()
+	log.Infoln("[network] default interface changed: flushed interface cache, reset DNS upstreams, closed %d connections", closed)
 }

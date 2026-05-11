@@ -7,7 +7,6 @@ import Library
 @preconcurrency import Libmihomo
 import Network
 @preconcurrency import NetworkExtension
-import os.log
 
 /// Network Extension entry point. Intentionally a thin shim — the Go
 /// core owns all runtime state (YAML, settings, log level, controller
@@ -17,7 +16,7 @@ import os.log
 /// `SetLogLevel` RPC handled inside the embedded command server. This
 /// type owns no business logic of its own.
 final class PacketTunnelProvider: NEPacketTunnelProvider {
-    private static let logger = Logger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
+    private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
     private var memoryObserverToken: UUID?
 
@@ -36,6 +35,17 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         case awaiting
         case sawUnsatisfied
         case established
+
+        var logDescription: String {
+            switch self {
+            case .awaiting:
+                return "awaiting"
+            case .sawUnsatisfied:
+                return "sawUnsatisfied"
+            case .established:
+                return "established"
+            }
+        }
     }
 
     /// How long to coalesce NWPathMonitor updates before nudging mihomo.
@@ -48,6 +58,18 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     // MARK: - Lifecycle
 
     override func startTunnel(options _: [String: NSObject]?) async throws {
+        startProxyCatLogFile()
+        do {
+            try await startTunnelImpl()
+        } catch {
+            Self.logger.error("startTunnel failed: \(error.localizedDescription)")
+            LibmihomoBridge.stopLogFile()
+            ProxyCatLogPersistence.shared.stop()
+            throw error
+        }
+    }
+
+    private func startTunnelImpl() async throws {
         Self.logger.info("startTunnel")
 
         // 1. Configure tunnel network settings *before* taking the fd. iOS
@@ -63,7 +85,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         guard fd > 0 else {
             throw PTPError("could not obtain TUN file descriptor — likely running on simulator (no real utun) or KVC path changed in this iOS version")
         }
-        Self.logger.info("packet flow fd = \(fd, privacy: .public)")
+        Self.logger.info("packet flow fd = \(fd)")
 
         // 3. Wire memory monitor *before* loading mihomo so we can already
         //    react if the bind itself spikes memory.
@@ -90,7 +112,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         let budget = Int64(memory.estimatedLimit)
         if budget > 0 {
             LibmihomoBridge.setMemoryLimit(budget)
-            Self.logger.info("OOM budget set to \(budget, privacy: .public) (resident=\(memory.resident, privacy: .public) available=\(memory.available, privacy: .public))")
+            Self.logger.info("OOM budget set to \(budget) (resident=\(memory.resident) available=\(memory.available))")
         }
 
         // 4c. Push the iOS fd into mihomo before starting so the parsed
@@ -104,9 +126,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //     are non-fatal: the live log stream still works.
         do {
             let logPath = try LibmihomoBridge.startLogFile()
-            Self.logger.info("session log → \(logPath, privacy: .public)")
+            Self.logger.info("mihomo session log = \(logPath)")
         } catch {
-            Self.logger.warning("could not open session log: \(error.localizedDescription, privacy: .public)")
+            Self.logger.warning("could not open mihomo session log: \(error.localizedDescription)")
         }
 
         // 5. Start mihomo. Go reads runtime_settings.json (active
@@ -128,7 +150,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
-        Self.logger.info("stopTunnel reason=\(reason.rawValue, privacy: .public)")
+        Self.logger.info("stopTunnel reason=\(reason.rawValue)")
         stopPathMonitor()
         // Flush before mihomo shuts down so the trailing "session ended"
         // marker reflects the real reason for stopping. (Stop() also
@@ -140,11 +162,13 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             memoryObserverToken = nil
         }
         MemoryMonitor.shared.stop()
+        ProxyCatLogPersistence.shared.stop()
     }
 
     override func sleep() async {
         // The OS asks us to quiet down. mihomo's command server keeps
         // serving so the host app can still see status if it foregrounds.
+        Self.logger.info("sleep -> keeping mihomo running")
     }
 
     override func wake() {
@@ -155,10 +179,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // flush + DNS upstream reset + tunneled-connection close) and a
         // no-op if mihomo already saw the same path.
         LibmihomoBridge.notifyDefaultInterfaceChanged()
-        Self.logger.info("wake → notified mihomo of possible interface change")
+        Self.logger.info("wake -> notified mihomo of possible interface change")
     }
 
     // MARK: - Setup
+
+    private func startProxyCatLogFile() {
+        do {
+            let logPath = try ProxyCatLogPersistence.shared.start(directory: FilePath.logsDirectory)
+            Self.logger.info("proxycat session log = \(logPath)")
+        } catch {
+            Self.logger.warning("could not open proxycat session log: \(error.localizedDescription)")
+        }
+    }
 
     /// Sets every path the Go core needs before Start. Idempotent — safe
     /// to call again on a future startTunnel after a reconnect.
@@ -236,18 +269,18 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             let raw = packetFlow.value(forKeyPath: keyPath)
             let fd = (raw as? NSNumber)?.int32Value ?? (raw as? Int32) ?? 0
             if fd > 0 {
-                Self.logger.info("found tun fd via KVC \(keyPath, privacy: .public) = \(fd, privacy: .public)")
+                Self.logger.info("found tun fd via KVC \(keyPath) = \(fd)")
                 return fd
             }
         }
 
         if let fd = findUtunFD() {
-            Self.logger.info("found tun fd by enumeration = \(fd, privacy: .public)")
+            Self.logger.info("found tun fd by enumeration = \(fd)")
             return fd
         }
 
         let className = String(describing: type(of: self.packetFlow))
-        Self.logger.error("KVC and FD enumeration both failed; packetFlow class=\(className, privacy: .public)")
+        Self.logger.error("KVC and FD enumeration both failed; packetFlow class=\(className)")
         return -1
     }
 
@@ -290,7 +323,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     private func handleMemoryPressure(_ snapshot: MemoryMonitor.Snapshot) {
-        Self.logger.warning("memory pressure=\(snapshot.pressure.description, privacy: .public) resident=\(snapshot.resident, privacy: .public) available=\(snapshot.available, privacy: .public)")
+        Self.logger.warning("memory pressure=\(snapshot.pressure.description) resident=\(snapshot.resident) available=\(snapshot.available)")
         switch snapshot.pressure {
         case .normal:
             return
@@ -318,9 +351,13 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         }
         monitor.start(queue: pathMonitorQueue)
         pathMonitor = monitor
+        Self.logger.info("started NWPathMonitor generation=\(generation)")
     }
 
     private func stopPathMonitor() {
+        if pathMonitor != nil {
+            Self.logger.info("stopping NWPathMonitor")
+        }
         pathMonitor?.cancel()
         pathMonitor = nil
         // Bump generation so any callback or work item still queued from
@@ -347,6 +384,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     /// 500ms debounce keep the call rate reasonable.
     private func handlePathUpdate(_ path: Network.NWPath, generation: Int) {
         guard generation == pathMonitorGeneration else { return }
+        Self.logger.info("NWPathMonitor update generation=\(generation) baseline=\(pathBaseline.logDescription) \(Self.describe(path))")
         pendingPathChangeWorkItem?.cancel()
 
         switch pathBaseline {
@@ -354,6 +392,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             schedulePathChangeNotification()
         case .awaiting:
             pathBaseline = path.status == .satisfied ? .established : .sawUnsatisfied
+            Self.logger.info("NWPathMonitor baseline -> \(pathBaseline.logDescription)")
         case .sawUnsatisfied:
             guard path.status == .satisfied else { return }
             pathBaseline = .established
@@ -370,6 +409,52 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         }
         pendingPathChangeWorkItem = work
         pathMonitorQueue.asyncAfter(deadline: .now() + Self.pathChangeDebounce, execute: work)
+    }
+
+    private static func describe(_ path: Network.NWPath) -> String {
+        let interfaces = path.availableInterfaces
+            .map { "\($0.name):\(describe($0.type))" }
+            .joined(separator: ",")
+        let uses = [
+            path.usesInterfaceType(.wifi) ? "wifi" : nil,
+            path.usesInterfaceType(.cellular) ? "cellular" : nil,
+            path.usesInterfaceType(.wiredEthernet) ? "wired" : nil,
+            path.usesInterfaceType(.loopback) ? "loopback" : nil,
+            path.usesInterfaceType(.other) ? "other" : nil,
+        ]
+        .compactMap { $0 }
+        .joined(separator: ",")
+        return "status=\(describe(path.status)) expensive=\(path.isExpensive) constrained=\(path.isConstrained) dns=\(path.supportsDNS) uses=[\(uses)] interfaces=[\(interfaces)]"
+    }
+
+    private static func describe(_ status: Network.NWPath.Status) -> String {
+        switch status {
+        case .satisfied:
+            return "satisfied"
+        case .unsatisfied:
+            return "unsatisfied"
+        case .requiresConnection:
+            return "requiresConnection"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    private static func describe(_ type: Network.NWInterface.InterfaceType) -> String {
+        switch type {
+        case .wifi:
+            return "wifi"
+        case .cellular:
+            return "cellular"
+        case .wiredEthernet:
+            return "wired"
+        case .loopback:
+            return "loopback"
+        case .other:
+            return "other"
+        @unknown default:
+            return "unknown"
+        }
     }
 }
 

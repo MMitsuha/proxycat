@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Atomic JSON load/save for the App Group preference files
 /// (`runtime_settings.json`, `host_settings.json`). Centralizes the
@@ -7,7 +6,7 @@ import os
 /// `RuntimeSettings` and `HostSettingsStore` both need so the two
 /// stores stop reimplementing the same I/O.
 public enum JSONFileStore {
-    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "JSONFileStore")
+    private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "JSONFileStore")
 
     /// Decodes `T` from `path` or returns `fallback` if the file is
     /// missing, unreadable, or fails to decode. Never throws — preference
@@ -43,7 +42,7 @@ public enum JSONFileStore {
             try save(value, to: path)
             return true
         } catch {
-            logger.error("[\(category, privacy: .public)] save failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("[\(category)] save failed: \(error.localizedDescription)")
             return false
         }
     }

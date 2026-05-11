@@ -47,7 +47,7 @@ public struct SettingsView: View {
             } header: {
                 Text("Logs")
             } footer: {
-                Text("Caps how many per-session log files are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened.")
+                Text("Caps how many tunnel sessions are kept under Saved Logs. The current session is always preserved. Older files are removed when this setting changes, when the app foregrounds, and when the Saved Logs list is opened.")
             }
 
             Section {

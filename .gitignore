@@ -35,3 +35,6 @@ coverage.txt
 # IDE
 .vscode/
 .idea/
+
+# Log files
+dbg*.txt

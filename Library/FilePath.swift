@@ -1,8 +1,7 @@
 import Foundation
-import os
 
 public enum FilePath {
-    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "FilePath")
+    private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "FilePath")
 
     /// Container shared between the host app and the Network Extension.
     /// On a properly-signed device this is the App-Group container. On
@@ -21,9 +20,7 @@ public enum FilePath {
         ) {
             return url
         }
-        logger.warning(
-            "App group container unavailable for \(AppConfiguration.appGroupID, privacy: .public); falling back to per-process Documents — IPC across host/extension will not work in this build"
-        )
+        logger.warning("App group container unavailable for \(AppConfiguration.appGroupID); falling back to per-process Documents - IPC across host/extension will not work in this build")
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         let url = docs.appendingPathComponent("FallbackAppGroup", isDirectory: true)
@@ -51,9 +48,10 @@ public enum FilePath {
         workingDirectory.appendingPathComponent("mitm_ca.key")
     }
 
-    /// Where the Network Extension drops one log file per tunnel session
-    /// (`mihomo-YYYYMMDD-HHMMSS.log`). The host app reads the same path
-    /// through the App Group container to populate the Saved Logs list.
+    /// Where the Network Extension drops per-session log files
+    /// (`mihomo-YYYYMMDD-HHMMSS.log` from Go and
+    /// `proxycat-YYYYMMDD-HHMMSS.log` from Swift). The host app reads the
+    /// same path through the App Group container to populate Saved Logs.
     public static var logsDirectory: URL {
         ensureSubdirectory("Logs")
     }
@@ -65,8 +63,21 @@ public enum FilePath {
         logsDirectory.appendingPathComponent(AppConfiguration.activeLogMarkerFileName)
     }
 
+    /// Marker for the Swift-side per-session log currently being written.
+    public static var activeProxyCatLogMarkerFile: URL {
+        logsDirectory.appendingPathComponent(AppConfiguration.activeProxyCatLogMarkerFileName)
+    }
+
     public static func activeLogFilePath() -> String? {
-        guard let data = try? Data(contentsOf: activeLogMarkerFile),
+        activeLogPath(from: activeLogMarkerFile)
+    }
+
+    public static func activeLogFilePaths() -> Set<String> {
+        Set([activeLogMarkerFile, activeProxyCatLogMarkerFile].compactMap { activeLogPath(from: $0) })
+    }
+
+    private static func activeLogPath(from marker: URL) -> String? {
+        guard let data = try? Data(contentsOf: marker),
               let raw = String(data: data, encoding: .utf8)
         else { return nil }
         let path = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -168,13 +179,14 @@ public enum FilePath {
     }
 
     /// Enforce the user's saved-log retention policy. Counts only
-    /// `mihomo-*.log` files in `logsDirectory`, sorts newest-first by
-    /// mtime, and deletes everything past the policy's keep count.
-    /// The file the extension is currently writing to is always
+    /// managed per-session log files in `logsDirectory`, grouping
+    /// mihomo and proxycat logs separately so "last 10" keeps both
+    /// sides of roughly the last 10 sessions.
+    /// Files the extension is currently writing to are always
     /// preserved — deleting an open inode silently keeps growing it.
     /// Idempotent and cheap; safe to call from app foreground, view
     /// reload, and settings-change sinks.
-    public static func pruneSavedLogs(policy: LogRetention, activePath: String? = activeLogFilePath()) {
+    public static func pruneSavedLogs(policy: LogRetention, activePaths: Set<String> = activeLogFilePaths()) {
         let keep = policy.rawValue
         guard keep > 0 else { return }
 
@@ -186,30 +198,50 @@ public enum FilePath {
             options: [.skipsHiddenFiles]
         ) else { return }
 
-        let candidates: [(url: URL, modified: Date)] = urls.compactMap { url in
-            // Match the writer's naming scheme (mihomo-YYYYMMDD-HHMMSS.log).
+        let candidates: [(url: URL, modified: Date, prefix: String)] = urls.compactMap { url in
+            // Match the writer naming schemes (mihomo-/proxycat- timestamped logs).
             // Anything else dropped in here — a future feature's file, a
             // test artifact — is left alone instead of being silently
             // counted against the retention budget.
-            guard url.pathExtension == "log",
-                  url.lastPathComponent.hasPrefix("mihomo-"),
-                  url.path != activePath,
+            guard let prefix = managedSavedLogPrefix(for: url),
+                  !activePaths.contains(url.path),
                   let values = try? url.resourceValues(forKeys: Set(keys)),
                   values.isRegularFile == true
             else { return nil }
-            return (url, values.contentModificationDate ?? .distantPast)
+            return (url, values.contentModificationDate ?? .distantPast, prefix)
         }
 
         // Active file doesn't count against the keep budget — it's
         // implicitly always kept, separate from the policy. So if
         // policy=last10 and there are 11 inactive + 1 active, we keep
-        // 10 inactive + 1 active = 11 files total on disk.
-        guard candidates.count > keep else { return }
-
-        let sorted = candidates.sorted { $0.modified > $1.modified }
-        for entry in sorted.dropFirst(keep) {
-            try? FileManager.default.removeItem(at: entry.url)
+        // 10 inactive + 1 active for that log family.
+        for entries in Dictionary(grouping: candidates, by: { $0.prefix }).values {
+            guard entries.count > keep else { continue }
+            let sorted = entries.sorted { $0.modified > $1.modified }
+            for entry in sorted.dropFirst(keep) {
+                try? FileManager.default.removeItem(at: entry.url)
+            }
         }
+    }
+
+    public static func pruneSavedLogs(policy: LogRetention, activePath: String?) {
+        pruneSavedLogs(policy: policy, activePaths: activePath.map { Set([$0]) } ?? [])
+    }
+
+    public static func isManagedSavedLogFile(_ url: URL) -> Bool {
+        managedSavedLogPrefix(for: url) != nil
+    }
+
+    private static func managedSavedLogPrefix(for url: URL) -> String? {
+        guard url.pathExtension == "log" else { return nil }
+        let name = url.lastPathComponent
+        if name.hasPrefix("mihomo-") {
+            return "mihomo-"
+        }
+        if name.hasPrefix(AppConfiguration.proxyCatLogFilePrefix) {
+            return AppConfiguration.proxyCatLogFilePrefix
+        }
+        return nil
     }
 
     /// Removes everything inside `workingDirectory` so mihomo will

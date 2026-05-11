@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import os
 
 /// Aggregates the extension's traffic stream into a per-day log that
 /// survives across host launches and extension restarts.
@@ -22,7 +21,7 @@ import os
 public final class DailyUsageStore {
     public static let shared = DailyUsageStore()
 
-    @ObservationIgnored private static let logger = Logger(subsystem: "io.proxycat.Library", category: "DailyUsageStore")
+    @ObservationIgnored private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "DailyUsageStore")
 
     /// Most-recent-last. Caps at `DailyUsage.maxRetainedDays` (30).
     public private(set) var entries: [DailyUsageEntry]

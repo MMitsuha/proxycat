@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// A geo database or external-UI bundle that ships embedded inside
 /// the Library framework and gets installed into the App Group
@@ -34,7 +33,7 @@ public struct BundledAsset: Sendable, Hashable, Identifiable {
 /// `discover()` and `BundledAsset.Kind` if a new asset family is
 /// added.
 public enum BundledAssets {
-    private static let logger = Logger(subsystem: "io.proxycat.Library", category: "BundledAssets")
+    private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "BundledAssets")
 
     private final class Marker {}
 
@@ -98,11 +97,11 @@ public enum BundledAssets {
                 }
                 installed.append(asset.id)
             } catch {
-                logger.error("install \(asset.id, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                logger.error("install \(asset.id) failed: \(error.localizedDescription)")
             }
         }
         if !installed.isEmpty {
-            logger.info("installed bundled assets: \(installed.joined(separator: ", "), privacy: .public)")
+            logger.info("installed bundled assets: \(installed.joined(separator: ", "))")
         }
         return installed
     }
