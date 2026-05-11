@@ -227,6 +227,17 @@ func drainLogSubscription(ctx context.Context, sub <-chan log.Event, out chan st
 	}
 }
 
+// enqueueLatestLogEvent appends `event` to the bounded out channel,
+// dropping the oldest queued event when full. Designed for the
+// single-producer (drainLogSubscription) / single-consumer
+// (SubscribeLogs Send loop) topology — that invariant is what makes
+// the final non-blocking send safe: after either step (a) succeeding
+// directly or (b) dropping one then re-sending, the channel has room.
+// The `default` arm on the final send is defence-in-depth: in the
+// unreachable case where a second producer races us, prefer dropping
+// the new event over blocking the drain goroutine, because a blocked
+// drain is exactly the failure mode (mihomo observable → drain →
+// stream.Send) we are paying for this bounded queue to avoid.
 func enqueueLatestLogEvent(ctx context.Context, out chan stampedLogEvent, event stampedLogEvent) {
 	select {
 	case out <- event:

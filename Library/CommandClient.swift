@@ -369,7 +369,14 @@ public final class CommandClient: ControllerTransport {
     }
 
     fileprivate func didReceive(log entry: LogEntry, from bridgeID: UUID) {
-        guard self.logBridgeID == bridgeID || self.bridgeID == bridgeID else { return }
+        // Match only the log-stream bridge. The status bridge configures
+        // subscribeLogs=false so it should never call this — but if a
+        // future change ever enabled logs there, accepting frames from
+        // both bridges would let log events survive after
+        // disableLogBuffering nils out logBridgeID (because the status
+        // bridge stays connected for traffic/memory), leaking into a
+        // buffer the view believes is empty.
+        guard self.logBridgeID == bridgeID else { return }
         guard logBufferingEnabled else { return }
         logs.append(entry)
         if logs.count > Self.trimThreshold {
