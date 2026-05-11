@@ -43,18 +43,6 @@ public enum LibmihomoBridge {
         LibmihomoStop()
     }
 
-    /// Push a runtime log filter directly into mihomo, bypassing the
-    /// heavyweight reload path. Levels: 0=DEBUG 1=INFO 2=WARNING
-    /// 3=ERROR 4=SILENT. Out-of-range values are clamped on the Go side.
-    ///
-    /// Called locally by `RuntimeSettings` in the host process so
-    /// host-side log emissions (e.g. from `validate()`) honor the
-    /// user's choice. The extension's mihomo learns about the change
-    /// via the gRPC `SetLogLevel` RPC, not this call.
-    public static func setLogLevel(_ level: Int) {
-        LibmihomoSetLogLevel(level)
-    }
-
     public static func setHomeDir(_ path: String) {
         LibmihomoSetHomeDir(path)
     }
@@ -153,14 +141,6 @@ public enum LibmihomoBridge {
         try await Task.detached(priority: .userInitiated) {
             try validate(yaml: yaml)
         }.value
-    }
-
-    public static func subscribeLogs(_ delegate: LibmihomoLogDelegateProtocol) -> Int64 {
-        LibmihomoSubscribeLogs(delegate)
-    }
-
-    public static func unsubscribeLogs(_ id: Int64) {
-        LibmihomoUnsubscribeLogs(id)
     }
 
     /// Tell the persist layer where to write per-session log files.

@@ -3,8 +3,6 @@ package libmihomo
 import (
 	"encoding/json"
 	"os"
-
-	"github.com/metacubex/mihomo/log"
 )
 
 // RuntimeSettings mirrors the on-disk shape of the host app's
@@ -15,22 +13,22 @@ import (
 //
 // Field tags must match Library/RuntimeSettings.swift's `Snapshot`. Add
 // fields here AND in the Swift type — the JSON is the contract.
+//
+// Note: the Swift Snapshot also carries a `logLevel` field, but it is a
+// host-side UI filter only. Go has no level filter for observable
+// subscribers, so the field is intentionally absent here; json.Unmarshal
+// ignores it.
 type RuntimeSettings struct {
 	// UUID string of the currently selected profile. Empty on a fresh
 	// install (no profile picked yet); Start returns a "no profile
 	// selected" error in that case so the host UI can prompt the user.
 	ActiveProfileID           string `json:"activeProfileID"`
 	DisableExternalController bool   `json:"disableExternalController"`
-	// 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Defaults to WARNING
-	// so a fresh install (no runtime_settings.json yet) doesn't flood
-	// the log stream with mihomo's debug chatter.
-	LogLevel int `json:"logLevel"`
 }
 
 func defaultSettings() RuntimeSettings {
 	return RuntimeSettings{
 		DisableExternalController: false,
-		LogLevel:                  int(log.WARNING),
 	}
 }
 
@@ -61,13 +59,5 @@ func loadSettings() RuntimeSettings {
 		return s
 	}
 	_ = json.Unmarshal(data, &s)
-	// Guard the log level so a hand-edited runtime_settings.json with an
-	// out-of-range value can't desync the runtime filter.
-	if s.LogLevel < 0 {
-		s.LogLevel = 0
-	}
-	if s.LogLevel > 4 {
-		s.LogLevel = 4
-	}
 	return s
 }

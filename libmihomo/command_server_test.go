@@ -12,15 +12,15 @@ func TestEnqueueLatestLogEventDropsOldestWhenFull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	out := make(chan mihomolog.Event, 1)
-	out <- mihomolog.Event{Payload: "old"}
+	out := make(chan stampedLogEvent, 1)
+	out <- stampedLogEvent{event: mihomolog.Event{Payload: "old"}}
 
-	enqueueLatestLogEvent(ctx, out, mihomolog.Event{Payload: "new"})
+	enqueueLatestLogEvent(ctx, out, stampedLogEvent{event: mihomolog.Event{Payload: "new"}})
 
 	select {
 	case got := <-out:
-		if got.Payload != "new" {
-			t.Fatalf("payload = %q, want newest event", got.Payload)
+		if got.event.Payload != "new" {
+			t.Fatalf("payload = %q, want newest event", got.event.Payload)
 		}
 	default:
 		t.Fatal("queue unexpectedly empty")
@@ -31,10 +31,10 @@ func TestEnqueueLatestLogEventReturnsWhenCanceledAndFull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	out := make(chan mihomolog.Event)
+	out := make(chan stampedLogEvent)
 	done := make(chan struct{})
 	go func() {
-		enqueueLatestLogEvent(ctx, out, mihomolog.Event{Payload: "ignored"})
+		enqueueLatestLogEvent(ctx, out, stampedLogEvent{event: mihomolog.Event{Payload: "ignored"}})
 		close(done)
 	}()
 

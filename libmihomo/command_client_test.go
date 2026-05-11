@@ -42,7 +42,7 @@ func (d *commandClientTestDelegate) OnStatus(status *CommandStatus) {
 	}
 }
 
-func (d *commandClientTestDelegate) OnLog(int, string) {}
+func (d *commandClientTestDelegate) OnLog(int, string, int64) {}
 
 func TestCommandClientStreamsStatusAndCloses(t *testing.T) {
 	dir, err := os.MkdirTemp("/tmp", "pcmd-")

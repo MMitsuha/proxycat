@@ -1,6 +1,9 @@
 import Foundation
 
-/// Mihomo log levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
+/// Log level enum used as both the on-wire identifier (Go's
+/// `mihomo/log.LogLevel`, 0=DEBUG…3=ERROR) and the host-side display
+/// filter cutoff (`silent` shows nothing). `silent` is a UI-only state;
+/// the extension never produces an event at that level.
 public enum LogLevel: Int, CaseIterable, Identifiable, Sendable {
     case debug = 0
     case info = 1
@@ -44,12 +47,19 @@ public struct LogEntry: Identifiable, Equatable, Sendable {
         self.timestamp = timestamp
     }
 
-    /// Convenience initializer for the gomobile bridge which surfaces level
-    /// as a raw Int.
-    public init(rawLevel: Int, message: String) {
+    /// Convenience initializer for the gomobile bridge: `timestampNs` is
+    /// the Unix-nanoseconds value stamped on the extension side when the
+    /// observable drained the event. Pass 0 (or anything ≤0) to fall
+    /// back to wall-clock — covers older Go cores or unit tests that
+    /// synthesize entries.
+    public init(rawLevel: Int, message: String, timestampNs: Int64) {
         self.id = UUID()
         self.level = LogLevel(rawValue: rawLevel) ?? .info
         self.message = message
-        self.timestamp = .init()
+        if timestampNs > 0 {
+            self.timestamp = Date(timeIntervalSince1970: TimeInterval(timestampNs) / 1_000_000_000)
+        } else {
+            self.timestamp = .init()
+        }
     }
 }

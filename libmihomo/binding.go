@@ -36,12 +36,6 @@ import (
 	"github.com/metacubex/mihomo/log"
 )
 
-// Mihomo log level bounds: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
-const (
-	logLevelMin = 0
-	logLevelMax = 4
-)
-
 // Virtual TUN addresses installed in fd-mode. They MUST match the
 // NEPacketTunnelNetworkSettings configured by PacketTunnelProvider so
 // gvisor's netstack recognises incoming packets as locally addressed.
@@ -67,15 +61,6 @@ var (
 // gRPC status code (FailedPrecondition) via errors.Is — matching on the
 // error message text would silently degrade if the wording changed.
 var errMihomoNotStarted = errors.New("mihomo not started")
-
-// Default the log filter to WARNING so a fresh install (no
-// runtime_settings.json yet) and YAML profiles shipping with
-// `log-level: debug|info` don't flood the host app's log stream.
-// Start / Reload override this from runtime_settings.json; mid-session
-// SetLogLevel updates it directly.
-func init() {
-	log.SetLevel(log.WARNING)
-}
 
 // SetCommandSocketPath chooses where the gRPC command server listens.
 // Must point at a path inside an App Group container so the host app
@@ -320,22 +305,20 @@ func prepareConfig(yamlConfig []byte, settings RuntimeSettings) (*config.Config,
 		return nil, err
 	}
 
-	applyLogLevel(cfg, settings.LogLevel)
+	// Force the mihomo log filter to DEBUG so the observable broadcasts
+	// every event; the host's Logs tab is the one place a user-facing
+	// filter is applied (LogView.selectedLevel). YAML profile `log-level`
+	// is intentionally discarded so a profile import cannot silently
+	// suppress debug logs the user might be looking at.
+	log.SetLevel(log.DEBUG)
+	cfg.General.LogLevel = log.DEBUG
+
 	applyControllerPolicy(cfg, settings.DisableExternalController)
 	applyIOSDefaults(cfg)
 	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
 		applyTunFd(cfg, int(fd))
 	}
 	return cfg, nil
-}
-
-// applyLogLevel forces the log filter to whatever the host wrote into
-// runtime_settings.json. The YAML's own `log-level:` is intentionally
-// discarded — the host app owns this setting at runtime, and we don't
-// want a profile import to silently re-enable debug logging.
-func applyLogLevel(cfg *config.Config, level int) {
-	log.SetLevel(log.LogLevel(clampLogLevel(level)))
-	cfg.General.LogLevel = log.Level()
 }
 
 // applyIOSDefaults asserts the few cfg fields that the YAML must not be
@@ -471,28 +454,6 @@ func Validate(yamlConfig []byte) error {
 
 	_, err := executor.ParseWithBytes(yamlConfig)
 	return err
-}
-
-// SetLogLevel changes the runtime log filter without rebuilding the
-// running mihomo config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR
-// 4=SILENT. Wired up to the host app's gRPC SetLogLevel RPC so a
-// Logs-tab toggle takes effect immediately in the extension's mihomo
-// without going through hub.ApplyConfig.
-//
-// Mirrors mihomo's own /configs PATCH handler in hub/route/configs.go,
-// which also updates the level by calling log.SetLevel directly.
-func SetLogLevel(level int) {
-	log.SetLevel(log.LogLevel(clampLogLevel(level)))
-}
-
-func clampLogLevel(level int) int {
-	if level < logLevelMin {
-		return logLevelMin
-	}
-	if level > logLevelMax {
-		return logLevelMax
-	}
-	return level
 }
 
 // Wrapper-level build identifiers. Populated by `go build -ldflags -X` at

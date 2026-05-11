@@ -13,11 +13,13 @@ public enum CommandConnectionState: Equatable, Sendable {
 }
 
 /// Host-app-side counterpart to the gRPC command server running inside
-/// the Network Extension. Subscribes to `Status` (traffic + memory) and
-/// `Log` streams over a Unix-domain socket in the App Group container,
-/// and exposes unary `reload` / `setLogLevel` RPCs the host calls when
-/// the user changes the active profile, edits the active YAML, or
-/// toggles a runtime setting.
+/// the Network Extension. Subscribes to `Status` (traffic + memory) and,
+/// only while the Logs tab is visible AND the app is foreground, the
+/// `Log` stream — over a Unix-domain socket in the App Group container.
+/// Exposes the unary `reload` RPC the host calls when the user changes
+/// the active profile, edits the active YAML, or toggles a runtime
+/// setting. There is no `setLogLevel` RPC: mihomo's observable emits
+/// every event regardless of level, and the Logs tab filters locally.
 ///
 /// The actual gRPC speaking is done in Go (`Libmihomo.CommandClient`),
 /// matching sing-box's libbox approach. Swift only implements a delegate
@@ -43,9 +45,11 @@ public final class CommandClient: ControllerTransport {
     /// memmove across ~375 appends, turning the per-append cost into O(1).
     private static let trimThreshold = maxLogBuffer + maxLogBuffer / 4
 
-    /// Logs from the gRPC stream are kept on the host side only while a
-    /// LogView is on screen. Off by default so a host app that never
-    /// visits the Logs tab pays no buffer cost over a long session.
+    /// The log stream and its in-memory buffer only exist while the
+    /// Logs tab requests them AND the host app is foreground. Off by
+    /// default so a host app that never visits the Logs tab pays no
+    /// buffer cost — and never leaves a gRPC log stream open against
+    /// a suspended reader, which would backpressure mihomo's logger.
     @ObservationIgnored private var logBufferingEnabled = false
 
     @ObservationIgnored private var goClient: LibmihomoCommandClient?
@@ -127,22 +131,6 @@ public final class CommandClient: ControllerTransport {
         try await Task.detached { try client.reload() }.value
     }
 
-    /// Pushes a runtime log filter into the extension's mihomo without
-    /// triggering a hub.ApplyConfig. Mihomo's filter is just one
-    /// atomic; rebuilding proxies/listeners/rules to update it would
-    /// be gratuitous (mihomo's own /configs PATCH handler also uses
-    /// log.SetLevel directly).
-    ///
-    /// Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Out-of-range
-    /// values are clamped on the Go side.
-    ///
-    /// No-op when the connection isn't established — the next Start
-    /// reads the new level from runtime_settings.json.
-    public func setLogLevel(_ level: Int) async throws {
-        guard let client = goClient else { return }
-        try await Task.detached { try client.setLogLevel(level) }.value
-    }
-
     /// Sends a native-controller REST request through the command IPC
     /// channel. The Go side executes the HTTP request with net/http over
     /// mihomo's private controller Unix socket, so Swift never parses raw
@@ -176,13 +164,16 @@ public final class CommandClient: ControllerTransport {
         reconcileLogStreaming()
     }
 
-    /// Stop live log buffering. Existing in-memory logs are kept so brief
-    /// navigation away from the Logs tab does not blank the view; memory
-    /// pressure and explicit Clear still drop them through `clearLogs()`.
-    /// Safe to call when buffering is already off.
+    /// Stop live log buffering and discard the in-memory buffer. The
+    /// gRPC log stream is closed too, so a backgrounded host can never
+    /// hold mihomo's logger hostage. Idempotent — second call is a
+    /// no-op (the buffer is already empty). For historical browsing the
+    /// host reads the on-disk session log via Saved Logs; this in-memory
+    /// buffer is strictly the "live page" data source.
     public func disableLogBuffering() {
         logBufferingEnabled = false
         stopLogStreaming()
+        logs.removeAll(keepingCapacity: false)
     }
 
     /// Lets the app lifecycle suspend live log streaming before iOS freezes
@@ -425,8 +416,8 @@ private final class ClientBridge: NSObject, LibmihomoCommandClientDelegateProtoc
         Task { @MainActor [weak owner] in owner?.didReceive(status: status, from: id) }
     }
 
-    func onLog(_ level: Int, payload: String?) {
-        let entry = LogEntry(rawLevel: level, message: payload ?? "")
+    func onLog(_ level: Int, payload: String?, timestampNs: Int64) {
+        let entry = LogEntry(rawLevel: level, message: payload ?? "", timestampNs: timestampNs)
         let id = id
         Task { @MainActor [weak owner] in owner?.didReceive(log: entry, from: id) }
     }

@@ -9,12 +9,15 @@ import Network
 @preconcurrency import NetworkExtension
 
 /// Network Extension entry point. Intentionally a thin shim — the Go
-/// core owns all runtime state (YAML, settings, log level, controller
-/// config), and we only configure paths once and trigger lifecycle
-/// events. A setting toggled in the host UI propagates by writing
-/// runtime_settings.json (which Go re-reads) and a gRPC `Reload` /
-/// `SetLogLevel` RPC handled inside the embedded command server. This
-/// type owns no business logic of its own.
+/// core owns all runtime state (YAML, settings, controller config),
+/// and we only configure paths once and trigger lifecycle events. A
+/// setting toggled in the host UI propagates by writing
+/// runtime_settings.json (which Go re-reads) and a gRPC `Reload` RPC
+/// handled inside the embedded command server. Log level is the
+/// exception: it is a host-side display filter for the Logs tab, so
+/// no IPC ever carries it — mihomo here always emits every event,
+/// the host filters before display. This type owns no business logic
+/// of its own.
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
@@ -130,8 +133,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // 4. Tell the Go core where every shared file lives. After this
         //    point Start / Reload re-read the active YAML and runtime
         //    settings on their own — nothing flows through this
-        //    extension's options dictionary. Host commands ride the gRPC
-        //    command service (Reload / SetLogLevel RPCs).
+        //    extension's options dictionary. Host commands (Reload,
+        //    ControllerRequest) ride the gRPC command service.
         configureLibmihomoPaths()
 
         // 4a. Seed compile-time bundled geo databases and external UI

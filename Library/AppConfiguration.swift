@@ -83,11 +83,11 @@ public enum AppConfiguration {
     public static let runtimeSettingsDidChange = Notification.Name("io.proxycat.RuntimeSettings.didChange")
 
     /// Posted by RuntimeSettings when only the log level changed.
-    /// Subscribers route this to a lightweight IPC (gRPC SetLogLevel
-    /// RPC) that calls `log.SetLevel` directly in the extension,
-    /// bypassing the full `hub.ApplyConfig` reload (which would re-read
-    /// the YAML profile, rebuild proxies/listeners/rules/DNS, and
-    /// briefly suspend traffic for a one-line filter change).
+    /// Currently only feeds iCloud sync: log level is a host-side
+    /// display filter, so there is no IPC consumer — the running
+    /// extension never needs to be told. Kept distinct from
+    /// `runtimeSettingsDidChange` so the change does not falsely
+    /// trigger the heavyweight tunnel Reload path.
     public static let runtimeLogLevelDidChange = Notification.Name("io.proxycat.RuntimeSettings.logLevelDidChange")
 
     /// Posted by HostSettingsStore whenever the user changes a

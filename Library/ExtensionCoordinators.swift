@@ -60,16 +60,20 @@ public final class VPNLifecycleCoordinator {
 
 // MARK: - Settings change
 
-/// Observes the three notifications that should trigger a tunnel reload
-/// (or, in the log-level case, the cheaper fast-path RPC): active
-/// profile content changed, runtime settings changed, log level
-/// changed. Errors from the reload bubble up via `onError`.
+/// Observes the two notifications that should trigger a tunnel reload:
+/// active profile content changed, runtime settings changed. Errors
+/// from the reload bubble up via `onError`.
 ///
 /// Dispatches to the extension's mihomo via the gRPC `CommandClient`
 /// rather than `NETunnelProviderSession.sendProviderMessage` — one
 /// channel for both streaming events and unary commands. The extension
 /// has no opinion of its own; runtime_settings.json is the source of
 /// truth, and the gRPC RPC is just a nudge to re-read it.
+///
+/// Log level is intentionally NOT handled here: it is a host-side
+/// display filter (the extension always emits every event), so a
+/// change to `RuntimeSettings.logLevel` reaches the Logs tab via the
+/// shared @Observable and never needs to cross IPC.
 @MainActor
 public final class SettingsChangeCoordinator {
     public var onError: ((String) -> Void)?
@@ -98,17 +102,6 @@ public final class SettingsChangeCoordinator {
                 await self?.reloadIfConnected()
             }
         })
-
-        // Fast path: a log-level change skips hub.ApplyConfig entirely
-        // and lands at log.SetLevel inside the extension. Falls back
-        // silently when disconnected — the next start() reads the new
-        // level from runtime_settings.json.
-        tasks.append(Task { @MainActor [weak self] in
-            for await note in center.notifications(named: AppConfiguration.runtimeLogLevelDidChange) {
-                guard let level = note.userInfo?["level"] as? Int else { continue }
-                await self?.applyLogLevelIfConnected(level)
-            }
-        })
     }
 
     deinit {
@@ -119,15 +112,6 @@ public final class SettingsChangeCoordinator {
         guard commandClient.isConnected else { return }
         do {
             try await commandClient.reload()
-        } catch {
-            onError?(error.localizedDescription)
-        }
-    }
-
-    private func applyLogLevelIfConnected(_ level: Int) async {
-        guard commandClient.isConnected else { return }
-        do {
-            try await commandClient.setLogLevel(level)
         } catch {
             onError?(error.localizedDescription)
         }

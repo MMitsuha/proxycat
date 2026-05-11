@@ -170,11 +170,16 @@ func (s *commandServiceImpl) SubscribeStatus(req *pb.StatusRequest, stream pb.Co
 // suspended in the background while its Unix-socket gRPC stream stays open.
 // If stream.Send blocked while also owning the observable subscription, a
 // full subscriber buffer would eventually block mihomo's global logger.
+//
+// Every event is forwarded — there is no server-side level filter.
+// mihomo's observable broadcasts every Debug/Info/Warning/Error
+// regardless of the runtime log level, and the host (LogView) applies
+// `selectedLevel` locally before display.
 func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_SubscribeLogsServer) error {
 	sub := log.Subscribe()
 	defer log.UnSubscribe(sub)
 
-	events := make(chan log.Event, logStreamBuffer)
+	events := make(chan stampedLogEvent, logStreamBuffer)
 	go drainLogSubscription(stream.Context(), sub, events)
 
 	for {
@@ -186,8 +191,9 @@ func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_S
 				return nil
 			}
 			err := stream.Send(&pb.LogMessage{
-				Level:   int32(event.LogLevel),
-				Payload: event.Payload,
+				Level:       int32(event.event.LogLevel),
+				Payload:     event.event.Payload,
+				TimestampNs: event.timestamp.UnixNano(),
 			})
 			if err != nil {
 				return err
@@ -196,7 +202,17 @@ func (s *commandServiceImpl) SubscribeLogs(_ *pb.LogRequest, stream pb.Command_S
 	}
 }
 
-func drainLogSubscription(ctx context.Context, sub <-chan log.Event, out chan log.Event) {
+// stampedLogEvent pairs a mihomo log.Event with the wall-clock time it
+// was lifted off the observable. Stamping at drain time keeps the
+// timestamp accurate even if stream.Send later spends time in
+// backpressure: the host sees the time mihomo emitted the line, not the
+// time the gRPC frame eventually flushed.
+type stampedLogEvent struct {
+	event     log.Event
+	timestamp time.Time
+}
+
+func drainLogSubscription(ctx context.Context, sub <-chan log.Event, out chan stampedLogEvent) {
 	defer close(out)
 	for {
 		select {
@@ -206,12 +222,12 @@ func drainLogSubscription(ctx context.Context, sub <-chan log.Event, out chan lo
 			if !ok {
 				return
 			}
-			enqueueLatestLogEvent(ctx, out, event)
+			enqueueLatestLogEvent(ctx, out, stampedLogEvent{event: event, timestamp: time.Now()})
 		}
 	}
 }
 
-func enqueueLatestLogEvent(ctx context.Context, out chan log.Event, event log.Event) {
+func enqueueLatestLogEvent(ctx context.Context, out chan stampedLogEvent, event stampedLogEvent) {
 	select {
 	case out <- event:
 		return
@@ -251,13 +267,6 @@ func (s *commandServiceImpl) Reload(_ context.Context, _ *pb.ReloadRequest) (*pb
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &pb.ReloadResponse{}, nil
-}
-
-// SetLogLevel pushes a runtime log filter without rebuilding the
-// running config. Out-of-range levels are clamped on the Go side.
-func (s *commandServiceImpl) SetLogLevel(_ context.Context, req *pb.SetLogLevelRequest) (*pb.SetLogLevelResponse, error) {
-	SetLogLevel(int(req.GetLevel()))
-	return &pb.SetLogLevelResponse{}, nil
 }
 
 // ControllerRequest executes a mihomo REST-controller request on behalf

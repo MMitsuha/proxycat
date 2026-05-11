@@ -229,11 +229,12 @@ final class LogStreamData {
 @MainActor @Observable
 final class LogViewModel {
     var searchText: String = ""
-    /// Mirror of `RuntimeSettings.shared.logLevel`, exposed as a
-    /// `LogLevel` enum so the picker binding stays type-safe. Two-way:
-    /// the didSet writes back into RuntimeSettings (which persists +
-    /// nudges the extension); external changes to RuntimeSettings flow
-    /// back here through the Observed.values pipe set up in `bind`.
+    /// Host-side display filter for the Logs tab. The mihomo extension
+    /// always streams every event; this picker decides what the user
+    /// sees. Mirrors `RuntimeSettings.shared.logLevel` so the choice
+    /// persists across launches (and rides iCloud sync), but no IPC
+    /// nudge is sent — the recompute pipeline applies the cutoff
+    /// locally before publishing to `stream.visible`.
     var selectedLevel: LogLevel {
         didSet {
             guard loaded, selectedLevel != oldValue else { return }
@@ -270,11 +271,15 @@ final class LogViewModel {
         searchText = environment.logSearchText
 
         guard let client = commandClient else { return }
-        // Keep the live log stream tied to the visible Logs tab. iOS can
-        // suspend the host app in the background; leaving a log gRPC stream
-        // open against a suspended reader risks backpressuring the extension.
-        // CommandClient keeps already-buffered logs until Clear or memory
-        // pressure, so short navigation away does not blank the view.
+        // Open the live log stream and the host-side buffer. Both are
+        // tied to this view's lifetime: detach() closes the stream and
+        // discards the buffer so a backgrounded host never holds a
+        // gRPC log subscription against a suspended reader (which
+        // would backpressure mihomo's global logger).
+        //
+        // For historical browsing the user goes to Saved Logs; the
+        // mihomo-*.log file already captures every event at every
+        // level, written by the Go side independently of this stream.
         client.enableLogBuffering()
 
         // Single observation pipeline for recompute. Touching the four
@@ -331,18 +336,26 @@ final class LogViewModel {
         })
     }
 
-    /// Called from `onDisappear`. Persists the search term and tears
-    /// down the observation pipes so we stop allocating filtered arrays
-    /// while invisible — but the underlying `commandClient` buffer is
-    /// left running so the user finds their history intact when they
-    /// return to the Logs tab. The visible list is also kept so the
-    /// re-appearance is instantaneous (it gets refreshed once the new
-    /// pipeline emits).
+    /// Called from `onDisappear`. Persists the search term, tears down
+    /// the observation pipes, and asks CommandClient to drop the log
+    /// gRPC subscription + clear its in-memory buffer. Each re-entry
+    /// to the Logs tab is therefore a fresh subscription — matching
+    /// "open connection to receive everything while page is visible"
+    /// and guaranteeing the extension never streams logs to a host
+    /// that has navigated away or backgrounded the app.
+    ///
+    /// Pause is reset on the way out too: the underlying `logs` buffer
+    /// is cleared on disable, so a stale paused snapshot would show
+    /// pre-navigation data on re-entry. Coming back in `live` mode
+    /// matches what the empty buffer actually represents.
     func detach() {
         environment?.logSearchText = searchText
         for task in pipelineTasks { task.cancel() }
         pipelineTasks.removeAll()
         commandClient?.disableLogBuffering()
+        pausedSnapshot = nil
+        isPaused = false
+        stream.visible.removeAll()
     }
 
     deinit {

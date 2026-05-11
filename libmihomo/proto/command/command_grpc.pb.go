@@ -22,7 +22,6 @@ const (
 	Command_SubscribeStatus_FullMethodName   = "/proxycat.command.Command/SubscribeStatus"
 	Command_SubscribeLogs_FullMethodName     = "/proxycat.command.Command/SubscribeLogs"
 	Command_Reload_FullMethodName            = "/proxycat.command.Command/Reload"
-	Command_SetLogLevel_FullMethodName       = "/proxycat.command.Command/SetLogLevel"
 	Command_ControllerRequest_FullMethodName = "/proxycat.command.Command/ControllerRequest"
 )
 
@@ -37,10 +36,20 @@ const (
 // Host-facing control traffic stays on this gRPC channel; when the
 // native UI needs mihomo's REST handlers, the extension proxies the
 // request internally to mihomo's private Unix-domain controller socket.
+//
+// Logs are unfiltered: mihomo's observable broadcasts every event
+// regardless of the runtime log filter (which only gates stdout in
+// mihomo's logrus shim — useless on iOS where stdout goes nowhere).
+// Filtering is therefore a pure host concern; the Logs tab applies
+// `selectedLevel` locally and there is no SetLogLevel RPC.
 type CommandClient interface {
 	// Streams a Status message every IntervalMs (default 1000).
 	SubscribeStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StatusMessage], error)
 	// Streams every log event produced by mihomo from subscription onward.
+	// The host is expected to keep this stream open ONLY while the Logs
+	// tab is visible and the app is active — see command_server.go for
+	// the bounded-buffer drain that protects mihomo's global logger from
+	// a backgrounded host that stops reading.
 	SubscribeLogs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogMessage], error)
 	// Asks the running mihomo core to re-read runtime_settings.json + the
 	// active profile YAML, then hot-apply via hub.ApplyConfig. Used by the
@@ -49,11 +58,6 @@ type CommandClient interface {
 	// (e.g. external controller). Errors (mihomo not started, YAML parse
 	// failure, semantic config rejection) flow back via gRPC status.
 	Reload(ctx context.Context, in *ReloadRequest, opts ...grpc.CallOption) (*ReloadResponse, error)
-	// Pushes a runtime log filter into mihomo without rebuilding the
-	// running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
-	// (clamped on the server). Mirrors mihomo's own /configs PATCH
-	// log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
-	SetLogLevel(ctx context.Context, in *SetLogLevelRequest, opts ...grpc.CallOption) (*SetLogLevelResponse, error)
 	// Proxies a single native-controller HTTP request through the command
 	// IPC channel. The extension side executes the request with Go's
 	// net/http client over mihomo's private Unix-domain controller socket.
@@ -119,16 +123,6 @@ func (c *commandClient) Reload(ctx context.Context, in *ReloadRequest, opts ...g
 	return out, nil
 }
 
-func (c *commandClient) SetLogLevel(ctx context.Context, in *SetLogLevelRequest, opts ...grpc.CallOption) (*SetLogLevelResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetLogLevelResponse)
-	err := c.cc.Invoke(ctx, Command_SetLogLevel_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *commandClient) ControllerRequest(ctx context.Context, in *ControllerRequestRequest, opts ...grpc.CallOption) (*ControllerRequestResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ControllerRequestResponse)
@@ -150,10 +144,20 @@ func (c *commandClient) ControllerRequest(ctx context.Context, in *ControllerReq
 // Host-facing control traffic stays on this gRPC channel; when the
 // native UI needs mihomo's REST handlers, the extension proxies the
 // request internally to mihomo's private Unix-domain controller socket.
+//
+// Logs are unfiltered: mihomo's observable broadcasts every event
+// regardless of the runtime log filter (which only gates stdout in
+// mihomo's logrus shim — useless on iOS where stdout goes nowhere).
+// Filtering is therefore a pure host concern; the Logs tab applies
+// `selectedLevel` locally and there is no SetLogLevel RPC.
 type CommandServer interface {
 	// Streams a Status message every IntervalMs (default 1000).
 	SubscribeStatus(*StatusRequest, grpc.ServerStreamingServer[StatusMessage]) error
 	// Streams every log event produced by mihomo from subscription onward.
+	// The host is expected to keep this stream open ONLY while the Logs
+	// tab is visible and the app is active — see command_server.go for
+	// the bounded-buffer drain that protects mihomo's global logger from
+	// a backgrounded host that stops reading.
 	SubscribeLogs(*LogRequest, grpc.ServerStreamingServer[LogMessage]) error
 	// Asks the running mihomo core to re-read runtime_settings.json + the
 	// active profile YAML, then hot-apply via hub.ApplyConfig. Used by the
@@ -162,11 +166,6 @@ type CommandServer interface {
 	// (e.g. external controller). Errors (mihomo not started, YAML parse
 	// failure, semantic config rejection) flow back via gRPC status.
 	Reload(context.Context, *ReloadRequest) (*ReloadResponse, error)
-	// Pushes a runtime log filter into mihomo without rebuilding the
-	// running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
-	// (clamped on the server). Mirrors mihomo's own /configs PATCH
-	// log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
-	SetLogLevel(context.Context, *SetLogLevelRequest) (*SetLogLevelResponse, error)
 	// Proxies a single native-controller HTTP request through the command
 	// IPC channel. The extension side executes the request with Go's
 	// net/http client over mihomo's private Unix-domain controller socket.
@@ -192,9 +191,6 @@ func (UnimplementedCommandServer) SubscribeLogs(*LogRequest, grpc.ServerStreamin
 }
 func (UnimplementedCommandServer) Reload(context.Context, *ReloadRequest) (*ReloadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Reload not implemented")
-}
-func (UnimplementedCommandServer) SetLogLevel(context.Context, *SetLogLevelRequest) (*SetLogLevelResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SetLogLevel not implemented")
 }
 func (UnimplementedCommandServer) ControllerRequest(context.Context, *ControllerRequestRequest) (*ControllerRequestResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ControllerRequest not implemented")
@@ -260,24 +256,6 @@ func _Command_Reload_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Command_SetLogLevel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetLogLevelRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CommandServer).SetLogLevel(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Command_SetLogLevel_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CommandServer).SetLogLevel(ctx, req.(*SetLogLevelRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Command_ControllerRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ControllerRequestRequest)
 	if err := dec(in); err != nil {
@@ -306,10 +284,6 @@ var Command_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Reload",
 			Handler:    _Command_Reload_Handler,
-		},
-		{
-			MethodName: "SetLogLevel",
-			Handler:    _Command_SetLogLevel_Handler,
 		},
 		{
 			MethodName: "ControllerRequest",

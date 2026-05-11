@@ -17,10 +17,13 @@ import Observation
 ///     `runtimeSettingsDidChange`, routed to the heavyweight reload
 ///     path (gRPC Reload RPC) that re-reads runtime_settings.json and
 ///     rebuilds the config.
-///   * `logLevel` — toggling posts `runtimeLogLevelDidChange`, routed
-///     to the lightweight gRPC SetLogLevel RPC that calls
-///     `log.SetLevel` directly in the extension's mihomo (no
-///     `hub.ApplyConfig`).
+///   * `logLevel` — host-side UI display filter for the Logs tab.
+///     Persisted so it survives launches and so iCloud sync can carry
+///     the user's choice between devices. mihomo's observable emits
+///     every event regardless, and the host filters locally; the Go
+///     core ignores this field on parse. Toggling posts
+///     `runtimeLogLevelDidChange` so iCloud sync can debounce-upload
+///     without falsely triggering a tunnel Reload.
 @MainActor @Observable
 public final class RuntimeSettings {
     public static let shared = RuntimeSettings()
@@ -55,13 +58,12 @@ public final class RuntimeSettings {
     public var logLevel: Int {
         didSet {
             guard loaded, logLevel != oldValue else { return }
-            // Apply in-session even when persist fails: the gRPC
-            // SetLogLevel RPC calls `log.SetLevel` directly (it does
-            // not re-read runtime_settings.json), so a failed save
-            // doesn't make the live filter snap back. Disk loses on
-            // cold launch; the running session honors the user's tap.
+            // logLevel is a host-side display filter; the extension's
+            // mihomo always emits every event over the gRPC log stream
+            // and the Logs tab filters locally. There is no IPC nudge
+            // — the notification only feeds iCloud sync so the choice
+            // round-trips to other devices.
             _ = persist()
-            LibmihomoBridge.setLogLevel(logLevel)
             NotificationCenter.default.post(
                 name: AppConfiguration.runtimeLogLevelDidChange,
                 object: nil,

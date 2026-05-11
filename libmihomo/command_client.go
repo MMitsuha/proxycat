@@ -30,11 +30,16 @@ import (
 //     enabled it fires immediately after the gRPC client is created.
 //   - OnDisconnected fires at most once per Connect call, when a stream
 //     ends, an open fails, or Close/Disconnect is invoked.
+//
+// OnLog carries the extension-side timestamp (Unix nanoseconds) the
+// observable drain captured for this event. Swift uses it directly so
+// the time shown in the live view matches the Go-side session log even
+// when the gRPC frame was delayed by a backpressure cycle.
 type CommandClientDelegate interface {
 	OnConnected()
 	OnDisconnected(message string)
 	OnStatus(status *CommandStatus)
-	OnLog(level int, payload string)
+	OnLog(level int, payload string, timestampNs int64)
 }
 
 // CommandClientConfig selects which command IPC streams to subscribe to and
@@ -98,10 +103,7 @@ type commandClientSession struct {
 	stopping     atomic.Bool
 }
 
-const (
-	commandReloadTimeout      = 30 * time.Second
-	commandSetLogLevelTimeout = 5 * time.Second
-)
+const commandReloadTimeout = 30 * time.Second
 
 var commandConnectBackoff = backoff.Config{
 	BaseDelay:  100 * time.Millisecond,
@@ -222,7 +224,7 @@ func (s *commandClientSession) start(config commandClientConfig) {
 		stream, err := s.client.SubscribeLogs(s.ctx, &pb.LogRequest{})
 		go runCommandStream(s, stream, err, func(msg *pb.LogMessage) {
 			if s.delegate != nil {
-				s.delegate.OnLog(int(msg.Level), msg.Payload)
+				s.delegate.OnLog(int(msg.Level), msg.Payload, msg.TimestampNs)
 			}
 		})
 		subscribed = true
@@ -315,21 +317,6 @@ func (c *CommandClient) Reload() error {
 	ctx, cancel := context.WithTimeout(context.Background(), commandReloadTimeout)
 	defer cancel()
 	if _, err := cli.Reload(ctx, &pb.ReloadRequest{}); err != nil {
-		return fmt.Errorf("%s", grpcMessage(err))
-	}
-	return nil
-}
-
-// SetLogLevel pushes a runtime log filter into the extension's mihomo without
-// triggering hub.ApplyConfig. Levels are clamped on the server.
-func (c *CommandClient) SetLogLevel(level int) error {
-	cli := c.grpcClient()
-	if cli == nil {
-		return nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), commandSetLogLevelTimeout)
-	defer cancel()
-	if _, err := cli.SetLogLevel(ctx, &pb.SetLogLevelRequest{Level: int32(level)}); err != nil {
 		return fmt.Errorf("%s", grpcMessage(err))
 	}
 	return nil

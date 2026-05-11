@@ -11,11 +11,21 @@ option go_package = "github.com/proxycat/libmihomo/proto/command;command";
 // Host-facing control traffic stays on this gRPC channel; when the
 // native UI needs mihomo's REST handlers, the extension proxies the
 // request internally to mihomo's private Unix-domain controller socket.
+//
+// Logs are unfiltered: mihomo's observable broadcasts every event
+// regardless of the runtime log filter (which only gates stdout in
+// mihomo's logrus shim — useless on iOS where stdout goes nowhere).
+// Filtering is therefore a pure host concern; the Logs tab applies
+// `selectedLevel` locally and there is no SetLogLevel RPC.
 service Command {
   // Streams a Status message every IntervalMs (default 1000).
   rpc SubscribeStatus(StatusRequest) returns (stream StatusMessage);
 
   // Streams every log event produced by mihomo from subscription onward.
+  // The host is expected to keep this stream open ONLY while the Logs
+  // tab is visible and the app is active — see command_server.go for
+  // the bounded-buffer drain that protects mihomo's global logger from
+  // a backgrounded host that stops reading.
   rpc SubscribeLogs(LogRequest) returns (stream LogMessage);
 
   // Asks the running mihomo core to re-read runtime_settings.json + the
@@ -25,12 +35,6 @@ service Command {
   // (e.g. external controller). Errors (mihomo not started, YAML parse
   // failure, semantic config rejection) flow back via gRPC status.
   rpc Reload(ReloadRequest) returns (ReloadResponse);
-
-  // Pushes a runtime log filter into mihomo without rebuilding the
-  // running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
-  // (clamped on the server). Mirrors mihomo's own /configs PATCH
-  // log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
-  rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
 
   // Proxies a single native-controller HTTP request through the command
   // IPC channel. The extension side executes the request with Go's
@@ -64,21 +68,20 @@ message StatusMessage {
 message LogRequest {}
 
 message LogMessage {
-  // Mihomo log level: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
+  // Mihomo log level: 0=DEBUG 1=INFO 2=WARNING 3=ERROR. SILENT (=4) is
+  // a host-side display filter and never appears on the wire.
   int32 level = 1;
   string payload = 2;
+  // Unix nanoseconds captured the moment mihomo emitted the event.
+  // The host uses this directly so the timestamp shown in the live UI
+  // matches the one written to the on-disk session log, even when the
+  // gRPC frame is delayed by a backpressure cycle.
+  int64 timestamp_ns = 3;
 }
 
 message ReloadRequest {}
 
 message ReloadResponse {}
-
-message SetLogLevelRequest {
-  // 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Clamped on the server.
-  int32 level = 1;
-}
-
-message SetLogLevelResponse {}
 
 message ControllerRequestRequest {
   string method = 1;

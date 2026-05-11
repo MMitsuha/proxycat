@@ -201,9 +201,15 @@ func (*LogRequest) Descriptor() ([]byte, []int) {
 
 type LogMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Mihomo log level: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT.
-	Level         int32  `protobuf:"varint,1,opt,name=level,proto3" json:"level,omitempty"`
-	Payload       string `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Mihomo log level: 0=DEBUG 1=INFO 2=WARNING 3=ERROR. SILENT (=4) is
+	// a host-side display filter and never appears on the wire.
+	Level   int32  `protobuf:"varint,1,opt,name=level,proto3" json:"level,omitempty"`
+	Payload string `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	// Unix nanoseconds captured the moment mihomo emitted the event.
+	// The host uses this directly so the timestamp shown in the live UI
+	// matches the one written to the on-disk session log, even when the
+	// gRPC frame is delayed by a backpressure cycle.
+	TimestampNs   int64 `protobuf:"varint,3,opt,name=timestamp_ns,json=timestampNs,proto3" json:"timestamp_ns,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -250,6 +256,13 @@ func (x *LogMessage) GetPayload() string {
 		return x.Payload
 	}
 	return ""
+}
+
+func (x *LogMessage) GetTimestampNs() int64 {
+	if x != nil {
+		return x.TimestampNs
+	}
+	return 0
 }
 
 type ReloadRequest struct {
@@ -324,87 +337,6 @@ func (*ReloadResponse) Descriptor() ([]byte, []int) {
 	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{5}
 }
 
-type SetLogLevelRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Clamped on the server.
-	Level         int32 `protobuf:"varint,1,opt,name=level,proto3" json:"level,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetLogLevelRequest) Reset() {
-	*x = SetLogLevelRequest{}
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetLogLevelRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetLogLevelRequest) ProtoMessage() {}
-
-func (x *SetLogLevelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetLogLevelRequest.ProtoReflect.Descriptor instead.
-func (*SetLogLevelRequest) Descriptor() ([]byte, []int) {
-	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *SetLogLevelRequest) GetLevel() int32 {
-	if x != nil {
-		return x.Level
-	}
-	return 0
-}
-
-type SetLogLevelResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetLogLevelResponse) Reset() {
-	*x = SetLogLevelResponse{}
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetLogLevelResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetLogLevelResponse) ProtoMessage() {}
-
-func (x *SetLogLevelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetLogLevelResponse.ProtoReflect.Descriptor instead.
-func (*SetLogLevelResponse) Descriptor() ([]byte, []int) {
-	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{7}
-}
-
 type ControllerRequestRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Method string                 `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
@@ -420,7 +352,7 @@ type ControllerRequestRequest struct {
 
 func (x *ControllerRequestRequest) Reset() {
 	*x = ControllerRequestRequest{}
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[8]
+	mi := &file_libmihomo_proto_command_command_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -432,7 +364,7 @@ func (x *ControllerRequestRequest) String() string {
 func (*ControllerRequestRequest) ProtoMessage() {}
 
 func (x *ControllerRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[8]
+	mi := &file_libmihomo_proto_command_command_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -445,7 +377,7 @@ func (x *ControllerRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControllerRequestRequest.ProtoReflect.Descriptor instead.
 func (*ControllerRequestRequest) Descriptor() ([]byte, []int) {
-	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{8}
+	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ControllerRequestRequest) GetMethod() string {
@@ -486,7 +418,7 @@ type ControllerRequestResponse struct {
 
 func (x *ControllerRequestResponse) Reset() {
 	*x = ControllerRequestResponse{}
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[9]
+	mi := &file_libmihomo_proto_command_command_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -498,7 +430,7 @@ func (x *ControllerRequestResponse) String() string {
 func (*ControllerRequestResponse) ProtoMessage() {}
 
 func (x *ControllerRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_libmihomo_proto_command_command_proto_msgTypes[9]
+	mi := &file_libmihomo_proto_command_command_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -511,7 +443,7 @@ func (x *ControllerRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControllerRequestResponse.ProtoReflect.Descriptor instead.
 func (*ControllerRequestResponse) Descriptor() ([]byte, []int) {
-	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{9}
+	return file_libmihomo_proto_command_command_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ControllerRequestResponse) GetStatus() int32 {
@@ -546,16 +478,14 @@ const file_libmihomo_proto_command_command_proto_rawDesc = "" +
 	"\x0fmemory_resident\x18\x06 \x01(\x03R\x0ememoryResident\x12#\n" +
 	"\rmemory_budget\x18\a \x01(\x03R\fmemoryBudget\"\f\n" +
 	"\n" +
-	"LogRequest\"<\n" +
+	"LogRequest\"_\n" +
 	"\n" +
 	"LogMessage\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\x05R\x05level\x12\x18\n" +
-	"\apayload\x18\x02 \x01(\tR\apayload\"\x0f\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\x12!\n" +
+	"\ftimestamp_ns\x18\x03 \x01(\x03R\vtimestampNs\"\x0f\n" +
 	"\rReloadRequest\"\x10\n" +
-	"\x0eReloadResponse\"*\n" +
-	"\x12SetLogLevelRequest\x12\x14\n" +
-	"\x05level\x18\x01 \x01(\x05R\x05level\"\x15\n" +
-	"\x13SetLogLevelResponse\"}\n" +
+	"\x0eReloadResponse\"}\n" +
 	"\x18ControllerRequestRequest\x12\x16\n" +
 	"\x06method\x18\x01 \x01(\tR\x06method\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12!\n" +
@@ -563,12 +493,11 @@ const file_libmihomo_proto_command_command_proto_rawDesc = "" +
 	"\x04body\x18\x04 \x01(\fR\x04body\"G\n" +
 	"\x19ControllerRequestResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\x05R\x06status\x12\x12\n" +
-	"\x04body\x18\x02 \x01(\fR\x04body2\xc6\x03\n" +
+	"\x04body\x18\x02 \x01(\fR\x04body2\xea\x02\n" +
 	"\aCommand\x12U\n" +
 	"\x0fSubscribeStatus\x12\x1f.proxycat.command.StatusRequest\x1a\x1f.proxycat.command.StatusMessage0\x01\x12M\n" +
 	"\rSubscribeLogs\x12\x1c.proxycat.command.LogRequest\x1a\x1c.proxycat.command.LogMessage0\x01\x12K\n" +
-	"\x06Reload\x12\x1f.proxycat.command.ReloadRequest\x1a .proxycat.command.ReloadResponse\x12Z\n" +
-	"\vSetLogLevel\x12$.proxycat.command.SetLogLevelRequest\x1a%.proxycat.command.SetLogLevelResponse\x12l\n" +
+	"\x06Reload\x12\x1f.proxycat.command.ReloadRequest\x1a .proxycat.command.ReloadResponse\x12l\n" +
 	"\x11ControllerRequest\x12*.proxycat.command.ControllerRequestRequest\x1a+.proxycat.command.ControllerRequestResponseB5Z3github.com/proxycat/libmihomo/proto/command;commandb\x06proto3"
 
 var (
@@ -583,7 +512,7 @@ func file_libmihomo_proto_command_command_proto_rawDescGZIP() []byte {
 	return file_libmihomo_proto_command_command_proto_rawDescData
 }
 
-var file_libmihomo_proto_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_libmihomo_proto_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_libmihomo_proto_command_command_proto_goTypes = []any{
 	(*StatusRequest)(nil),             // 0: proxycat.command.StatusRequest
 	(*StatusMessage)(nil),             // 1: proxycat.command.StatusMessage
@@ -591,24 +520,20 @@ var file_libmihomo_proto_command_command_proto_goTypes = []any{
 	(*LogMessage)(nil),                // 3: proxycat.command.LogMessage
 	(*ReloadRequest)(nil),             // 4: proxycat.command.ReloadRequest
 	(*ReloadResponse)(nil),            // 5: proxycat.command.ReloadResponse
-	(*SetLogLevelRequest)(nil),        // 6: proxycat.command.SetLogLevelRequest
-	(*SetLogLevelResponse)(nil),       // 7: proxycat.command.SetLogLevelResponse
-	(*ControllerRequestRequest)(nil),  // 8: proxycat.command.ControllerRequestRequest
-	(*ControllerRequestResponse)(nil), // 9: proxycat.command.ControllerRequestResponse
+	(*ControllerRequestRequest)(nil),  // 6: proxycat.command.ControllerRequestRequest
+	(*ControllerRequestResponse)(nil), // 7: proxycat.command.ControllerRequestResponse
 }
 var file_libmihomo_proto_command_command_proto_depIdxs = []int32{
 	0, // 0: proxycat.command.Command.SubscribeStatus:input_type -> proxycat.command.StatusRequest
 	2, // 1: proxycat.command.Command.SubscribeLogs:input_type -> proxycat.command.LogRequest
 	4, // 2: proxycat.command.Command.Reload:input_type -> proxycat.command.ReloadRequest
-	6, // 3: proxycat.command.Command.SetLogLevel:input_type -> proxycat.command.SetLogLevelRequest
-	8, // 4: proxycat.command.Command.ControllerRequest:input_type -> proxycat.command.ControllerRequestRequest
-	1, // 5: proxycat.command.Command.SubscribeStatus:output_type -> proxycat.command.StatusMessage
-	3, // 6: proxycat.command.Command.SubscribeLogs:output_type -> proxycat.command.LogMessage
-	5, // 7: proxycat.command.Command.Reload:output_type -> proxycat.command.ReloadResponse
-	7, // 8: proxycat.command.Command.SetLogLevel:output_type -> proxycat.command.SetLogLevelResponse
-	9, // 9: proxycat.command.Command.ControllerRequest:output_type -> proxycat.command.ControllerRequestResponse
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
+	6, // 3: proxycat.command.Command.ControllerRequest:input_type -> proxycat.command.ControllerRequestRequest
+	1, // 4: proxycat.command.Command.SubscribeStatus:output_type -> proxycat.command.StatusMessage
+	3, // 5: proxycat.command.Command.SubscribeLogs:output_type -> proxycat.command.LogMessage
+	5, // 6: proxycat.command.Command.Reload:output_type -> proxycat.command.ReloadResponse
+	7, // 7: proxycat.command.Command.ControllerRequest:output_type -> proxycat.command.ControllerRequestResponse
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -625,7 +550,7 @@ func file_libmihomo_proto_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_libmihomo_proto_command_command_proto_rawDesc), len(file_libmihomo_proto_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
