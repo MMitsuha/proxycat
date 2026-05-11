@@ -59,8 +59,9 @@ public struct AutoConnectConfig: Codable, Equatable, Sendable {
 }
 
 /// How many tunnel sessions the host app keeps in `FilePath.logsDirectory`.
-/// Mihomo and ProxyCat Swift logs are retained separately, and files
-/// currently being written to are always preserved.
+/// Mihomo, host Swift, and extension Swift logs are retained separately;
+/// unrecognized `.log` files are removed, and files currently being
+/// written to are always preserved.
 public enum LogRetention: Int, Codable, CaseIterable, Sendable {
     case keepAll = 0
     case last10 = 10

@@ -16,47 +16,54 @@ import Testing
         try? FileManager.default.removeItem(at: tempDir)
     }
 
-    @Test func writesProxyCatPrefixedUTF8SessionLog() throws {
+    @Test func writesProxyCatExtensionPrefixedUTF8SessionLog() throws {
         let date = Date(timeIntervalSince1970: 1_778_484_600)
         let file = try PersistentLogFile(
             directory: tempDir,
-            prefix: AppConfiguration.proxyCatLogFilePrefix,
-            sessionName: "proxycat",
+            prefix: AppConfiguration.proxyCatExtensionLogFilePrefix,
+            sessionName: "proxycat-extension",
             openedAt: date
         )
 
         file.append(level: "INFO", category: "PTP", message: "startTunnel", at: date)
-        file.close(sessionName: "proxycat", at: date)
+        file.close(sessionName: "proxycat-extension", at: date)
 
-        #expect(file.url.lastPathComponent.hasPrefix("proxycat-"))
+        #expect(file.url.lastPathComponent.hasPrefix("proxycat-extension-"))
         #expect(file.url.pathExtension == "log")
 
         let text = try String(contentsOf: file.url, encoding: .utf8)
-        #expect(text.contains("=== proxycat session started "))
+        #expect(text.contains("=== proxycat-extension session started "))
         #expect(text.contains("[INFO] [PTP] startTunnel"))
-        #expect(text.contains("=== proxycat session ended "))
+        #expect(text.contains("=== proxycat-extension session ended "))
     }
 
     @Test func sameSecondCollisionGetsNumericSuffix() throws {
         let date = Date(timeIntervalSince1970: 1_778_484_600)
         let first = try PersistentLogFile(
             directory: tempDir,
-            prefix: AppConfiguration.proxyCatLogFilePrefix,
-            sessionName: "proxycat",
+            prefix: AppConfiguration.proxyCatHostLogFilePrefix,
+            sessionName: "proxycat-host",
             openedAt: date
         )
         let second = try PersistentLogFile(
             directory: tempDir,
-            prefix: AppConfiguration.proxyCatLogFilePrefix,
-            sessionName: "proxycat",
+            prefix: AppConfiguration.proxyCatHostLogFilePrefix,
+            sessionName: "proxycat-host",
             openedAt: date
         )
 
-        first.close(sessionName: "proxycat", at: date)
-        second.close(sessionName: "proxycat", at: date)
+        first.close(sessionName: "proxycat-host", at: date)
+        second.close(sessionName: "proxycat-host", at: date)
 
-        #expect(first.url.lastPathComponent.hasPrefix("proxycat-"))
-        #expect(second.url.lastPathComponent.hasPrefix("proxycat-"))
+        #expect(first.url.lastPathComponent.hasPrefix("proxycat-host-"))
+        #expect(second.url.lastPathComponent.hasPrefix("proxycat-host-"))
         #expect(second.url.lastPathComponent.hasSuffix("-1.log"))
+    }
+
+    @Test func hostAndExtensionRolesUseSeparateFilesAndMarkers() {
+        #expect(ProxyCatLogRole.hostApp.prefix == AppConfiguration.proxyCatHostLogFilePrefix)
+        #expect(ProxyCatLogRole.packetTunnel.prefix == AppConfiguration.proxyCatExtensionLogFilePrefix)
+        #expect(ProxyCatLogRole.hostApp.markerFileName == AppConfiguration.activeProxyCatHostLogMarkerFileName)
+        #expect(ProxyCatLogRole.packetTunnel.markerFileName == AppConfiguration.activeProxyCatExtensionLogMarkerFileName)
     }
 }

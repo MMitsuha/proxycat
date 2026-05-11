@@ -15,9 +15,9 @@ public enum CommandConnectionState: Equatable, Sendable {
 /// Host-app-side counterpart to the gRPC command server running inside
 /// the Network Extension. Subscribes to `Status` (traffic + memory) and
 /// `Log` streams over a Unix-domain socket in the App Group container,
-/// and exposes unary `reload` / `setLogLevel` RPCs the host calls when
-/// the user changes the active profile, edits the active YAML, or
-/// toggles a runtime setting.
+/// and exposes unary `reload` / controller request RPCs the host calls
+/// when the user changes the active profile, edits the active YAML, or
+/// drives native controller UI.
 ///
 /// The actual gRPC speaking is done in Go (`Libmihomo.CommandClient`),
 /// matching sing-box's libbox approach. Swift only implements a delegate
@@ -127,17 +127,10 @@ public final class CommandClient: ControllerTransport {
         try await Task.detached { try client.reload() }.value
     }
 
-    /// Pushes a runtime log filter into the extension's mihomo without
-    /// triggering a hub.ApplyConfig. Mihomo's filter is just one
-    /// atomic; rebuilding proxies/listeners/rules to update it would
-    /// be gratuitous (mihomo's own /configs PATCH handler also uses
-    /// log.SetLevel directly).
-    ///
-    /// Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Out-of-range
-    /// values are clamped on the Go side.
-    ///
-    /// No-op when the connection isn't established — the next Start
-    /// reads the new level from runtime_settings.json.
+    /// Legacy escape hatch for changing mihomo's own logrus print level.
+    /// The Logs tab no longer calls this: it receives every streamed log
+    /// event and filters locally in Swift so a UI preference cannot make
+    /// the extension stop persisting lower-level events.
     public func setLogLevel(_ level: Int) async throws {
         guard let client = goClient else { return }
         try await Task.detached { try client.setLogLevel(level) }.value

@@ -11,11 +11,12 @@ import Observation
 /// ExtensionProfile.
 ///
 /// The shape is deliberately small: `start()` and `stop()` for
-/// lifecycle, `applyAutoConnect` for on-demand rules. Reload and
-/// log-level changes flow through `CommandClient` (gRPC) instead — the
-/// extension reads runtime_settings.json on every Start / Reload, so
-/// settings travel through the file system + a single gRPC nudge, not
-/// through `sendProviderMessage`.
+/// lifecycle, `applyAutoConnect` for on-demand rules. Reloads flow
+/// through `CommandClient` (gRPC) instead — the extension reads
+/// runtime_settings.json on every Start / Reload, so settings travel
+/// through the file system + a single gRPC nudge, not through
+/// `sendProviderMessage`. The Logs-view level is host-local and does
+/// not reach the tunnel.
 @MainActor @Observable
 public final class ExtensionProfile {
     public private(set) var status: NEVPNStatus = .invalid

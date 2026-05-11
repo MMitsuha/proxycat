@@ -333,11 +333,11 @@ final class LogViewModel {
 
     /// Called from `onDisappear`. Persists the search term and tears
     /// down the observation pipes so we stop allocating filtered arrays
-    /// while invisible — but the underlying `commandClient` buffer is
-    /// left running so the user finds their history intact when they
-    /// return to the Logs tab. The visible list is also kept so the
-    /// re-appearance is instantaneous (it gets refreshed once the new
-    /// pipeline emits).
+    /// while invisible. The live gRPC log stream is closed, but
+    /// `CommandClient` keeps its in-memory log buffer so the user finds
+    /// their history intact when they return to the Logs tab. The visible
+    /// list is also kept so the re-appearance is instantaneous (it gets
+    /// refreshed once the new pipeline emits).
     func detach() {
         environment?.logSearchText = searchText
         for task in pipelineTasks { task.cancel() }

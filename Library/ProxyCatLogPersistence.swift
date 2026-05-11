@@ -32,6 +32,38 @@ public final class ProxyCatLogger: @unchecked Sendable {
     }
 }
 
+public enum ProxyCatLogRole: Sendable {
+    case hostApp
+    case packetTunnel
+
+    var prefix: String {
+        switch self {
+        case .hostApp:
+            return AppConfiguration.proxyCatHostLogFilePrefix
+        case .packetTunnel:
+            return AppConfiguration.proxyCatExtensionLogFilePrefix
+        }
+    }
+
+    var sessionName: String {
+        switch self {
+        case .hostApp:
+            return "proxycat-host"
+        case .packetTunnel:
+            return "proxycat-extension"
+        }
+    }
+
+    var markerFileName: String {
+        switch self {
+        case .hostApp:
+            return AppConfiguration.activeProxyCatHostLogMarkerFileName
+        case .packetTunnel:
+            return AppConfiguration.activeProxyCatExtensionLogMarkerFileName
+        }
+    }
+}
+
 public final class ProxyCatLogPersistence: @unchecked Sendable {
     public static let shared = ProxyCatLogPersistence()
 
@@ -42,7 +74,10 @@ public final class ProxyCatLogPersistence: @unchecked Sendable {
     private init() {}
 
     @discardableResult
-    public func start(directory: URL = FilePath.logsDirectory) throws -> String {
+    public func start(
+        directory: URL = FilePath.logsDirectory,
+        role: ProxyCatLogRole = .packetTunnel
+    ) throws -> String {
         lock.lock()
         if let current {
             let path = current.url.path
@@ -56,10 +91,10 @@ public final class ProxyCatLogPersistence: @unchecked Sendable {
 
         let file = try PersistentLogFile(
             directory: directory,
-            prefix: AppConfiguration.proxyCatLogFilePrefix,
-            sessionName: "proxycat"
+            prefix: role.prefix,
+            sessionName: role.sessionName
         )
-        let marker = directory.appendingPathComponent(AppConfiguration.activeProxyCatLogMarkerFileName)
+        let marker = directory.appendingPathComponent(role.markerFileName)
 
         lock.lock()
         if let current {
@@ -68,7 +103,7 @@ public final class ProxyCatLogPersistence: @unchecked Sendable {
                 Self.writeActiveMarker(markerURL, path: path)
             }
             lock.unlock()
-            file.close(sessionName: "proxycat")
+            file.close()
             try? FileManager.default.removeItem(at: file.url)
             return path
         }
@@ -88,6 +123,13 @@ public final class ProxyCatLogPersistence: @unchecked Sendable {
         file?.append(level: level, category: category, message: message)
     }
 
+    public func flush() {
+        lock.lock()
+        let file = current
+        lock.unlock()
+        file?.flush()
+    }
+
     public func stop() {
         lock.lock()
         let file = current
@@ -100,7 +142,7 @@ public final class ProxyCatLogPersistence: @unchecked Sendable {
         if let marker {
             Self.removeActiveMarker(marker, path: file.url.path)
         }
-        file.close(sessionName: "proxycat")
+        file.close()
     }
 
     private static func writeActiveMarker(_ markerURL: URL, path: String) {
@@ -120,6 +162,7 @@ final class PersistentLogFile: @unchecked Sendable {
     let url: URL
 
     private let lock = NSLock()
+    private let sessionName: String
     private var handle: FileHandle?
 
     init(
@@ -128,6 +171,7 @@ final class PersistentLogFile: @unchecked Sendable {
         sessionName: String,
         openedAt: Date = Date()
     ) throws {
+        self.sessionName = sessionName
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let opened = try Self.openNewFile(directory: directory, prefix: prefix, at: openedAt)
         self.url = opened.url
@@ -139,7 +183,7 @@ final class PersistentLogFile: @unchecked Sendable {
         appendRaw("\(Self.lineTimestamp(date)) [\(level)] [\(category)] \(message)\n")
     }
 
-    func close(sessionName: String, at date: Date = Date()) {
+    func close(at date: Date = Date()) {
         lock.lock()
         guard let handle else {
             lock.unlock()
@@ -152,8 +196,18 @@ final class PersistentLogFile: @unchecked Sendable {
         lock.unlock()
     }
 
+    func close(sessionName _: String, at date: Date = Date()) {
+        close(at: date)
+    }
+
+    func flush() {
+        lock.lock()
+        handle?.synchronizeFile()
+        lock.unlock()
+    }
+
     deinit {
-        close(sessionName: "proxycat")
+        close()
     }
 
     private func appendRaw(_ line: String) {

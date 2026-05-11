@@ -57,14 +57,14 @@ public enum AppConfiguration {
     /// would query the host process' separate Go runtime.
     public static let activeLogMarkerFileName = ".active-log-path"
 
-    /// Prefix for Swift-side per-session logs written by the Network
-    /// Extension. Mihomo's Go-side log files keep using `mihomo-`.
-    public static let proxyCatLogFilePrefix = "proxycat-"
+    /// Prefixes for Swift-side logs. Mihomo's Go-side log files keep using
+    /// `mihomo-`; Swift writes separate host and extension files because
+    /// those processes have independent lifecycles and file handles.
+    public static let proxyCatHostLogFilePrefix = "proxycat-host-"
+    public static let proxyCatExtensionLogFilePrefix = "proxycat-extension-"
 
-    /// Hidden marker containing the active Swift-side session log path.
-    /// Kept separate from `.active-log-path` so the Go persistence layer
-    /// can keep its existing one-path marker format.
-    public static let activeProxyCatLogMarkerFileName = ".active-proxycat-log-path"
+    public static let activeProxyCatHostLogMarkerFileName = ".active-proxycat-host-log-path"
+    public static let activeProxyCatExtensionLogMarkerFileName = ".active-proxycat-extension-log-path"
 
     /// Filename of the profile catalog index. Lives inside
     /// `Profiles/` alongside the per-profile YAMLs and maps each
@@ -74,20 +74,17 @@ public enum AppConfiguration {
     /// to a YAML path.
     public static let profileIndexFileName = "index.json"
 
-    /// Posted by RuntimeSettings when the user changes a runtime
-    /// preference *other than* log level (or when log level changes
-    /// alongside another field). Subscribers (ExtensionEnvironment)
-    /// react by asking the running tunnel to re-read
+    /// Posted by RuntimeSettings when the user changes a tunnel-owned
+    /// runtime preference. Subscribers (ExtensionEnvironment) react by
+    /// asking the running tunnel to re-read
     /// runtime_settings.json and hot-apply via the heavyweight reload
     /// path (gRPC Reload RPC).
     public static let runtimeSettingsDidChange = Notification.Name("io.proxycat.RuntimeSettings.didChange")
 
-    /// Posted by RuntimeSettings when only the log level changed.
-    /// Subscribers route this to a lightweight IPC (gRPC SetLogLevel
-    /// RPC) that calls `log.SetLevel` directly in the extension,
-    /// bypassing the full `hub.ApplyConfig` reload (which would re-read
-    /// the YAML profile, rebuild proxies/listeners/rules/DNS, and
-    /// briefly suspend traffic for a one-line filter change).
+    /// Posted by RuntimeSettings when the host-local Logs-view filter
+    /// changed. This is for host-side observers such as iCloud sync; it
+    /// intentionally does not trigger extension IPC because mihomo logs
+    /// every event and Swift filters locally while the Logs page is open.
     public static let runtimeLogLevelDidChange = Notification.Name("io.proxycat.RuntimeSettings.logLevelDidChange")
 
     /// Posted by HostSettingsStore whenever the user changes a

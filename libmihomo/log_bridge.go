@@ -12,8 +12,9 @@ import (
 //
 //	func onLog(_ level: Int, message: String?)
 //
-// Implementations MUST NOT block. Swift implementations should hop the work
-// to the main queue via DispatchQueue.main.async if they touch UI state.
+// Implementations should still return promptly to avoid unbounded queue growth.
+// Swift implementations should hop the work to the main queue via
+// DispatchQueue.main.async if they touch UI state.
 type LogDelegate interface {
 	OnLog(level int, message string)
 }

@@ -253,8 +253,8 @@ func (s *commandServiceImpl) Reload(_ context.Context, _ *pb.ReloadRequest) (*pb
 	return &pb.ReloadResponse{}, nil
 }
 
-// SetLogLevel pushes a runtime log filter without rebuilding the
-// running config. Out-of-range levels are clamped on the Go side.
+// SetLogLevel is a legacy diagnostic RPC. The current host app does not
+// call it for the Logs-view picker; UI filtering is local to Swift.
 func (s *commandServiceImpl) SetLogLevel(_ context.Context, req *pb.SetLogLevelRequest) (*pb.SetLogLevelResponse, error) {
 	SetLogLevel(int(req.GetLevel()))
 	return &pb.SetLogLevelResponse{}, nil

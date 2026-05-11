@@ -26,10 +26,9 @@ service Command {
   // failure, semantic config rejection) flow back via gRPC status.
   rpc Reload(ReloadRequest) returns (ReloadResponse);
 
-  // Pushes a runtime log filter into mihomo without rebuilding the
-  // running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
-  // (clamped on the server). Mirrors mihomo's own /configs PATCH
-  // log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
+  // Legacy diagnostic hook for changing mihomo's own logrus print level.
+  // The current host app does not use this for the Logs-view picker; live
+  // and saved logs are captured unfiltered and Swift filters locally.
   rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
 
   // Proxies a single native-controller HTTP request through the command
@@ -75,6 +74,7 @@ message ReloadResponse {}
 
 message SetLogLevelRequest {
   // 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Clamped on the server.
+  // Legacy diagnostic only; not the host app's Logs-view filter.
   int32 level = 1;
 }
 

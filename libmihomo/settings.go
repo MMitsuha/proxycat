@@ -21,9 +21,9 @@ type RuntimeSettings struct {
 	// selected" error in that case so the host UI can prompt the user.
 	ActiveProfileID           string `json:"activeProfileID"`
 	DisableExternalController bool   `json:"disableExternalController"`
-	// 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Defaults to WARNING
-	// so a fresh install (no runtime_settings.json yet) doesn't flood
-	// the log stream with mihomo's debug chatter.
+	// Host-local Logs-view filter. Parsed for JSON compatibility with
+	// Library/RuntimeSettings.swift, but intentionally not applied to
+	// mihomo's Go logger; the extension persists and streams all events.
 	LogLevel int `json:"logLevel"`
 }
 
@@ -61,8 +61,8 @@ func loadSettings() RuntimeSettings {
 		return s
 	}
 	_ = json.Unmarshal(data, &s)
-	// Guard the log level so a hand-edited runtime_settings.json with an
-	// out-of-range value can't desync the runtime filter.
+	// Guard the host-local UI filter so hand-edited JSON stays inside the
+	// Swift LogLevel enum's raw-value range.
 	if s.LogLevel < 0 {
 		s.LogLevel = 0
 	}

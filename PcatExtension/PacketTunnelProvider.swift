@@ -9,12 +9,12 @@ import Network
 @preconcurrency import NetworkExtension
 
 /// Network Extension entry point. Intentionally a thin shim — the Go
-/// core owns all runtime state (YAML, settings, log level, controller
-/// config), and we only configure paths once and trigger lifecycle
+/// core owns all runtime state (YAML, settings, controller config), and
+/// we only configure paths once and trigger lifecycle
 /// events. A setting toggled in the host UI propagates by writing
-/// runtime_settings.json (which Go re-reads) and a gRPC `Reload` /
-/// `SetLogLevel` RPC handled inside the embedded command server. This
-/// type owns no business logic of its own.
+/// runtime_settings.json (which Go re-reads) and a gRPC `Reload` nudge
+/// handled inside the embedded command server. The Logs-view level is
+/// host-local; this type owns no business logic of its own.
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
@@ -131,7 +131,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //    point Start / Reload re-read the active YAML and runtime
         //    settings on their own — nothing flows through this
         //    extension's options dictionary. Host commands ride the gRPC
-        //    command service (Reload / SetLogLevel RPCs).
+        //    command service (Reload / controller RPCs).
         configureLibmihomoPaths()
 
         // 4a. Seed compile-time bundled geo databases and external UI
@@ -226,7 +226,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private func startProxyCatLogFile() {
         do {
-            let logPath = try ProxyCatLogPersistence.shared.start(directory: FilePath.logsDirectory)
+            let logPath = try ProxyCatLogPersistence.shared.start(
+                directory: FilePath.logsDirectory,
+                role: .packetTunnel
+            )
             Self.logger.info("proxycat session log = \(logPath)")
         } catch {
             Self.logger.warning("could not open proxycat session log: \(error.localizedDescription)")
@@ -258,8 +261,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
         // Wire the on-disk shared state Go reads on every Reload:
         // runtime_settings.json (active profile id, controller toggle,
-        // log level), the profiles directory, and the profile catalog
-        // JSON inside it.
+        // host-local log filter), the profiles directory, and the
+        // profile catalog JSON inside it.
         LibmihomoBridge.setRuntimeSettingsPath(FilePath.runtimeSettingsFilePath)
         LibmihomoBridge.setProfilesDir(FilePath.profilesDirectory.path)
         LibmihomoBridge.setProfileIndexPath(FilePath.profileIndexFilePath)

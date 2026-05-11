@@ -320,8 +320,8 @@ func (c *CommandClient) Reload() error {
 	return nil
 }
 
-// SetLogLevel pushes a runtime log filter into the extension's mihomo without
-// triggering hub.ApplyConfig. Levels are clamped on the server.
+// SetLogLevel is a legacy diagnostic hook for changing mihomo's own logrus
+// print level. The current Logs tab filters locally and does not call this.
 func (c *CommandClient) SetLogLevel(level int) error {
 	cli := c.grpcClient()
 	if cli == nil {

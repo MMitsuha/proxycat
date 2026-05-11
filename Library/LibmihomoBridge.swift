@@ -43,14 +43,10 @@ public enum LibmihomoBridge {
         LibmihomoStop()
     }
 
-    /// Push a runtime log filter directly into mihomo, bypassing the
-    /// heavyweight reload path. Levels: 0=DEBUG 1=INFO 2=WARNING
-    /// 3=ERROR 4=SILENT. Out-of-range values are clamped on the Go side.
-    ///
-    /// Called locally by `RuntimeSettings` in the host process so
-    /// host-side log emissions (e.g. from `validate()`) honor the
-    /// user's choice. The extension's mihomo learns about the change
-    /// via the gRPC `SetLogLevel` RPC, not this call.
+    /// Legacy diagnostic hook for changing mihomo's own logrus print
+    /// level in the current process. The app's Logs-view picker no
+    /// longer calls this; live and saved logs are captured unfiltered
+    /// and filtered locally in Swift.
     public static func setLogLevel(_ level: Int) {
         LibmihomoSetLogLevel(level)
     }

@@ -37,10 +37,40 @@ import Testing
         ])
     }
 
-    @Test func managedLogFilePrefixesIncludeMihomoAndProxyCat() {
+    @Test func managedLogFilePrefixesIncludeCurrentLogFamiliesOnly() {
         #expect(FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/mihomo-20260511-120000.log")))
-        #expect(FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.log")))
+        #expect(FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-host-20260511-120000.log")))
+        #expect(FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-extension-20260511-120000.log")))
+        #expect(!FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.log")))
         #expect(!FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/other-20260511-120000.log")))
         #expect(!FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.txt")))
+    }
+
+    @Test func pruneSavedLogsRemovesUnrecognizedLogFilesEvenWhenKeepingAll() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("io.proxycat.saved-log-prune.\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let managed = tempDir.appendingPathComponent("proxycat-host-20260511-120000.log")
+        let unknown = tempDir.appendingPathComponent("proxycat-20260511-120000.log")
+        let activeUnknown = tempDir.appendingPathComponent("manual-active.log")
+        let nonLog = tempDir.appendingPathComponent("notes.txt")
+
+        try Data("managed\n".utf8).write(to: managed)
+        try Data("old\n".utf8).write(to: unknown)
+        try Data("active\n".utf8).write(to: activeUnknown)
+        try Data("note\n".utf8).write(to: nonLog)
+
+        FilePath.pruneSavedLogs(
+            in: tempDir,
+            policy: .keepAll,
+            activePaths: [activeUnknown.path]
+        )
+
+        #expect(FileManager.default.fileExists(atPath: managed.path))
+        #expect(!FileManager.default.fileExists(atPath: unknown.path))
+        #expect(FileManager.default.fileExists(atPath: activeUnknown.path))
+        #expect(FileManager.default.fileExists(atPath: nonLog.path))
     }
 }

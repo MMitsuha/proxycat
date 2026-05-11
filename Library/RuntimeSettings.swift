@@ -4,8 +4,8 @@ import Observation
 /// Single source of truth for runtime preferences shared between the
 /// host app and the Network Extension. Persists to
 /// `runtime_settings.json` in the App Group container; the Go core
-/// reads the same file directly on every Start / Reload, so toggling a
-/// value here propagates without any option-dictionary plumbing.
+/// reads tunnel-owned values from the same file on every Start / Reload,
+/// so those changes propagate without any option-dictionary plumbing.
 ///
 /// Holds three fields:
 ///   * `activeProfileID` — UUID of the currently selected profile.
@@ -17,10 +17,12 @@ import Observation
 ///     `runtimeSettingsDidChange`, routed to the heavyweight reload
 ///     path (gRPC Reload RPC) that re-reads runtime_settings.json and
 ///     rebuilds the config.
-///   * `logLevel` — toggling posts `runtimeLogLevelDidChange`, routed
-///     to the lightweight gRPC SetLogLevel RPC that calls
-///     `log.SetLevel` directly in the extension's mihomo (no
-///     `hub.ApplyConfig`).
+///   * `logLevel` — the host app's local Logs-view display filter.
+///     Toggling it persists the preference and posts
+///     `runtimeLogLevelDidChange` for host-side observers such as iCloud
+///     sync. It intentionally does not change mihomo's Go log level:
+///     the extension streams and persists every event, and filtering is
+///     applied only in the visible Swift UI.
 @MainActor @Observable
 public final class RuntimeSettings {
     public static let shared = RuntimeSettings()
@@ -55,13 +57,7 @@ public final class RuntimeSettings {
     public var logLevel: Int {
         didSet {
             guard loaded, logLevel != oldValue else { return }
-            // Apply in-session even when persist fails: the gRPC
-            // SetLogLevel RPC calls `log.SetLevel` directly (it does
-            // not re-read runtime_settings.json), so a failed save
-            // doesn't make the live filter snap back. Disk loses on
-            // cold launch; the running session honors the user's tap.
             _ = persist()
-            LibmihomoBridge.setLogLevel(logLevel)
             NotificationCenter.default.post(
                 name: AppConfiguration.runtimeLogLevelDidChange,
                 object: nil,

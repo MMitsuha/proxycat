@@ -5,9 +5,10 @@ import UIKit
 /// Browser for the per-session log files the Network Extension drops
 /// in the App Group container. The extension opens a fresh
 /// `mihomo-YYYYMMDD-HHMMSS.log` for Go-side logs and
-/// `proxycat-YYYYMMDD-HHMMSS.log` for Swift-side logs whenever it starts
-/// the tunnel; this view lists them newest-first with size + modified
-/// date and opens files through an in-app UTF-8 text viewer.
+/// `proxycat-extension-YYYYMMDD-HHMMSS.log` for Swift-side tunnel logs.
+/// The host app writes `proxycat-host-...` logs from its own process.
+/// This view lists them newest-first with size + modified date and opens
+/// files through an in-app UTF-8 text viewer.
 public struct SavedLogsView: View {
     @State private var model = SavedLogsViewModel()
 

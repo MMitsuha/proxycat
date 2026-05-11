@@ -327,6 +327,7 @@ func (*ReloadResponse) Descriptor() ([]byte, []int) {
 type SetLogLevelRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT. Clamped on the server.
+	// Legacy diagnostic only; not the host app's Logs-view filter.
 	Level         int32 `protobuf:"varint,1,opt,name=level,proto3" json:"level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

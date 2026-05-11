@@ -49,10 +49,9 @@ type CommandClient interface {
 	// (e.g. external controller). Errors (mihomo not started, YAML parse
 	// failure, semantic config rejection) flow back via gRPC status.
 	Reload(ctx context.Context, in *ReloadRequest, opts ...grpc.CallOption) (*ReloadResponse, error)
-	// Pushes a runtime log filter into mihomo without rebuilding the
-	// running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
-	// (clamped on the server). Mirrors mihomo's own /configs PATCH
-	// log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
+	// Legacy diagnostic hook for changing mihomo's own logrus print level.
+	// The current host app does not use this for the Logs-view picker; live
+	// and saved logs are captured unfiltered and Swift filters locally.
 	SetLogLevel(ctx context.Context, in *SetLogLevelRequest, opts ...grpc.CallOption) (*SetLogLevelResponse, error)
 	// Proxies a single native-controller HTTP request through the command
 	// IPC channel. The extension side executes the request with Go's
@@ -162,10 +161,9 @@ type CommandServer interface {
 	// (e.g. external controller). Errors (mihomo not started, YAML parse
 	// failure, semantic config rejection) flow back via gRPC status.
 	Reload(context.Context, *ReloadRequest) (*ReloadResponse, error)
-	// Pushes a runtime log filter into mihomo without rebuilding the
-	// running config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR 4=SILENT
-	// (clamped on the server). Mirrors mihomo's own /configs PATCH
-	// log-level handler — calls log.SetLevel directly, no hub.ApplyConfig.
+	// Legacy diagnostic hook for changing mihomo's own logrus print level.
+	// The current host app does not use this for the Logs-view picker; live
+	// and saved logs are captured unfiltered and Swift filters locally.
 	SetLogLevel(context.Context, *SetLogLevelRequest) (*SetLogLevelResponse, error)
 	// Proxies a single native-controller HTTP request through the command
 	// IPC channel. The extension side executes the request with Go's

@@ -11,7 +11,8 @@
 // Reload re-reads everything fresh from disk so a setting toggled in the
 // host UI takes effect on the next Reload without anyone shuttling
 // values through NEPacketTunnelProvider's option dictionary. Host-side
-// reload / log-level commands ride the gRPC command service instead.
+// reload commands ride the gRPC command service instead. The host Logs-view
+// level is a local display filter; it does not change mihomo's Go logger.
 package libmihomo
 
 import (
@@ -68,13 +69,11 @@ var (
 // error message text would silently degrade if the wording changed.
 var errMihomoNotStarted = errors.New("mihomo not started")
 
-// Default the log filter to WARNING so a fresh install (no
-// runtime_settings.json yet) and YAML profiles shipping with
-// `log-level: debug|info` don't flood the host app's log stream.
-// Start / Reload override this from runtime_settings.json; mid-session
-// SetLogLevel updates it directly.
+// Keep mihomo's own logger at DEBUG so every event is available to the
+// extension-side file writer and to foreground-only live subscribers. The
+// host app applies the user's selected level locally in Swift.
 func init() {
-	log.SetLevel(log.WARNING)
+	log.SetLevel(log.DEBUG)
 }
 
 // SetCommandSocketPath chooses where the gRPC command server listens.
@@ -310,7 +309,7 @@ func Reload() error {
 
 // prepareConfig parses the YAML and applies the iOS-specific overrides
 // that every Start / Reload needs, layering runtime_settings.json
-// (controller toggle, log level) on top of whatever the YAML carried.
+// (controller toggle) on top of whatever the YAML carried.
 // The caller drives the actual hub.ApplyConfig.
 func prepareConfig(yamlConfig []byte, settings RuntimeSettings) (*config.Config, error) {
 	applyHomeDir()
@@ -320,7 +319,7 @@ func prepareConfig(yamlConfig []byte, settings RuntimeSettings) (*config.Config,
 		return nil, err
 	}
 
-	applyLogLevel(cfg, settings.LogLevel)
+	applyFullLogCapture(cfg)
 	applyControllerPolicy(cfg, settings.DisableExternalController)
 	applyIOSDefaults(cfg)
 	if fd := atomic.LoadInt32(&pendingFd); fd > 0 {
@@ -329,13 +328,13 @@ func prepareConfig(yamlConfig []byte, settings RuntimeSettings) (*config.Config,
 	return cfg, nil
 }
 
-// applyLogLevel forces the log filter to whatever the host wrote into
-// runtime_settings.json. The YAML's own `log-level:` is intentionally
-// discarded — the host app owns this setting at runtime, and we don't
-// want a profile import to silently re-enable debug logging.
-func applyLogLevel(cfg *config.Config, level int) {
-	log.SetLevel(log.LogLevel(clampLogLevel(level)))
-	cfg.General.LogLevel = log.Level()
+// applyFullLogCapture forces mihomo to emit and print every level in the
+// extension process. The user's Logs-view picker is a Swift-side display
+// filter, so imported YAML and runtime_settings.json must not suppress
+// lower-level events before the file writer or live stream can see them.
+func applyFullLogCapture(cfg *config.Config) {
+	log.SetLevel(log.DEBUG)
+	cfg.General.LogLevel = log.DEBUG
 }
 
 // applyIOSDefaults asserts the few cfg fields that the YAML must not be
@@ -473,11 +472,10 @@ func Validate(yamlConfig []byte) error {
 	return err
 }
 
-// SetLogLevel changes the runtime log filter without rebuilding the
-// running mihomo config. Levels: 0=DEBUG 1=INFO 2=WARNING 3=ERROR
-// 4=SILENT. Wired up to the host app's gRPC SetLogLevel RPC so a
-// Logs-tab toggle takes effect immediately in the extension's mihomo
-// without going through hub.ApplyConfig.
+// SetLogLevel changes mihomo's own logrus print level without rebuilding the
+// running config. Kept for compatibility with older host builds and manual
+// diagnostics. The current Logs tab does not call this because live and
+// persisted logs are intentionally unfiltered at the Go level.
 //
 // Mirrors mihomo's own /configs PATCH handler in hub/route/configs.go,
 // which also updates the level by calling log.SetLevel directly.

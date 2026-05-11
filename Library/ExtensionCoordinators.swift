@@ -60,10 +60,10 @@ public final class VPNLifecycleCoordinator {
 
 // MARK: - Settings change
 
-/// Observes the three notifications that should trigger a tunnel reload
-/// (or, in the log-level case, the cheaper fast-path RPC): active
-/// profile content changed, runtime settings changed, log level
-/// changed. Errors from the reload bubble up via `onError`.
+/// Observes notifications that should trigger a tunnel reload: active
+/// profile content changed and runtime settings changed. The Logs-view
+/// level is now a host-local filter, so it deliberately does not nudge
+/// the extension or mutate mihomo's Go log level.
 ///
 /// Dispatches to the extension's mihomo via the gRPC `CommandClient`
 /// rather than `NETunnelProviderSession.sendProviderMessage` — one
@@ -98,17 +98,6 @@ public final class SettingsChangeCoordinator {
                 await self?.reloadIfConnected()
             }
         })
-
-        // Fast path: a log-level change skips hub.ApplyConfig entirely
-        // and lands at log.SetLevel inside the extension. Falls back
-        // silently when disconnected — the next start() reads the new
-        // level from runtime_settings.json.
-        tasks.append(Task { @MainActor [weak self] in
-            for await note in center.notifications(named: AppConfiguration.runtimeLogLevelDidChange) {
-                guard let level = note.userInfo?["level"] as? Int else { continue }
-                await self?.applyLogLevelIfConnected(level)
-            }
-        })
     }
 
     deinit {
@@ -119,15 +108,6 @@ public final class SettingsChangeCoordinator {
         guard commandClient.isConnected else { return }
         do {
             try await commandClient.reload()
-        } catch {
-            onError?(error.localizedDescription)
-        }
-    }
-
-    private func applyLogLevelIfConnected(_ level: Int) async {
-        guard commandClient.isConnected else { return }
-        do {
-            try await commandClient.setLogLevel(level)
         } catch {
             onError?(error.localizedDescription)
         }
