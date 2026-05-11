@@ -216,22 +216,35 @@ public enum FilePath {
         }
         .filter { !$0.isActive }
 
-        // Sort by startedAt desc so retention drops the oldest
-        // *sessions* (matching the user's mental model: "keep last
-        // 10 runs"). Going by modification date would let an active
-        // session's last write reorder old, finished sessions and
-        // accidentally evict a sibling kind on the same disk write.
+        // Sort by startedAt desc, with a filename tiebreak so two
+        // sessions that opened in the same wall-clock second
+        // (writer appends `-N` to the second one's filename) have a
+        // deterministic order. Pruning then picks the same survivor
+        // every run, which matters because the user may delete by
+        // hand from the list and expect retention to keep "the same
+        // ones" next time. Retention drops the oldest *sessions* —
+        // going by mtime would let an active session's last write
+        // reorder old, finished sessions and accidentally evict a
+        // sibling kind on the same disk write.
         for entries in Dictionary(grouping: candidates, by: \.kind).values {
             guard entries.count > keep else { continue }
-            let sorted = entries.sorted { $0.startedAt > $1.startedAt }
+            let sorted = entries.sorted(by: orderByStartedAtDesc)
             for entry in sorted.dropFirst(keep) {
                 try? FileManager.default.removeItem(at: entry.url)
             }
         }
     }
 
-    public static func pruneSavedLogs(policy: LogRetention, activePath: String?) {
-        pruneSavedLogs(policy: policy, activePaths: activePath.map { Set([$0]) } ?? [])
+    /// Shared comparator used by both `pruneSavedLogs` and the
+    /// SavedLogsView listing so the on-disk file the user sees at
+    /// position N is exactly the file that survives at position N
+    /// after a retention sweep. Newer session → earlier in the list;
+    /// fileName breaks ties so same-second collisions stay stable.
+    public static func orderByStartedAtDesc(_ lhs: SavedLogFileInfo, _ rhs: SavedLogFileInfo) -> Bool {
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt > rhs.startedAt
+        }
+        return lhs.fileName < rhs.fileName
     }
 
     public static func isManagedSavedLogFile(_ url: URL) -> Bool {

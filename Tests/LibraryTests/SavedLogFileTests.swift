@@ -112,6 +112,18 @@ import Testing
         ) == nil)
     }
 
+    @Test func rejectsTimestampWithoutTimePart() {
+        // Just the date, no `-HHMMSS` time portion: `parts.count >= 2`
+        // guard must reject this so the formatter doesn't silently
+        // parse `20260511` against a 14-char pattern.
+        #expect(SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/mihomo-20260511.log"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: false
+        ) == nil)
+    }
+
     @Test func rejectsNonLogExtension() {
         #expect(SavedLogFileInfo.parse(
             url: URL(fileURLWithPath: "/tmp/mihomo-20260511-120000.txt"),

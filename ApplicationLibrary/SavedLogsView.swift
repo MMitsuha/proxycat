@@ -51,7 +51,7 @@ public struct SavedLogsView: View {
                     } label: {
                         Label("Refresh", systemImage: "arrow.clockwise")
                     }
-                    if !model.entries.isEmpty {
+                    if model.deletableCount > 0 {
                         Button(role: .destructive) {
                             model.confirmDeleteAll = true
                         } label: {
@@ -325,10 +325,11 @@ final class SavedLogsViewModel {
             )
         }
 
-        // Newest-session first. Sorting on `startedAt` (vs. mtime)
-        // keeps a long-running LIVE session anchored at the top
-        // instead of bouncing around as it writes.
-        entries = parsed.sorted { $0.startedAt > $1.startedAt }
+        // Newest-session first. Sort matches `FilePath.pruneSavedLogs`
+        // so the position the user sees in the list is the position
+        // retention will operate on — no surprise about which sibling
+        // gets evicted when two sessions share the same second.
+        entries = parsed.sorted(by: FilePath.orderByStartedAtDesc)
     }
 
     func delete(at offsets: IndexSet) {
