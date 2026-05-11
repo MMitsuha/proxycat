@@ -6,8 +6,10 @@ import UIKit
 /// in the App Group container. The extension opens a fresh
 /// `mihomo-YYYYMMDD-HHMMSS.log` for Go-side logs and
 /// `proxycat-YYYYMMDD-HHMMSS.log` for Swift-side logs whenever it starts
-/// the tunnel; this view lists them newest-first with size + modified
-/// date and opens files through an in-app UTF-8 text viewer.
+/// the tunnel; this view lists them newest-first with size + the
+/// session's start time (parsed from the filename — file mtime drifts
+/// every write so it's a poor row title for the live file) and opens
+/// each through an in-app UTF-8 text viewer.
 public struct SavedLogsView: View {
     @State private var model = SavedLogsViewModel()
 
@@ -73,18 +75,15 @@ public struct SavedLogsView: View {
             Button("Delete All", role: .destructive) { model.deleteAll() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            // Single concrete sentence — avoids the previous %lld/%@
-            // duplicate-key mess in the string catalog and matches a
-            // Chinese form that doesn't need a plural marker either.
-            Text("This deletes \(model.entries.count) saved log files. The active session is preserved.")
+            Text("This deletes \(model.deletableCount) saved log files. The active session is preserved.")
         }
         .onAppear { model.reload() }
     }
 
-    private func row(for entry: SavedLogEntry) -> some View {
+    private func row(for entry: SavedLogFileInfo) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(entry.displayDate)
+            HStack(spacing: 6) {
+                Text(entry.startedAt, format: SavedLogsView.titleDateFormat)
                     .font(.body)
                 if entry.isActive {
                     Text("LIVE")
@@ -94,10 +93,14 @@ public struct SavedLogsView: View {
                         .background(Color.red.opacity(0.85), in: Capsule())
                         .foregroundStyle(.white)
                 }
+                Spacer()
+                KindBadge(kind: entry.kind)
             }
             HStack(spacing: 8) {
                 Text(entry.fileName)
                     .font(.system(.caption2, design: .monospaced))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                 Spacer()
                 Text(ByteFormatter.fileSize(entry.size))
                     .font(.caption2)
@@ -114,12 +117,43 @@ public struct SavedLogsView: View {
             localizedDescription: "A new file is created each time the tunnel connects."
         )
     }
+
+    /// Row title uses `.dateTime` so SwiftUI picks up the user's
+    /// locale + 12/24-hour preference automatically. Localized via
+    /// the system catalog — no string in `Localizable.xcstrings`.
+    static let titleDateFormat: Date.FormatStyle = .dateTime
+        .year().month(.abbreviated).day()
+        .hour().minute().second()
+}
+
+// MARK: - Kind badge
+
+private struct KindBadge: View {
+    let kind: SavedLogFileInfo.Kind
+
+    var body: some View {
+        Text(kind.displayName)
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(kind.tint.opacity(0.18), in: Capsule())
+            .foregroundStyle(kind.tint)
+    }
+}
+
+private extension SavedLogFileInfo.Kind {
+    var tint: Color {
+        switch self {
+        case .mihomo: return .blue
+        case .proxycat: return .purple
+        }
+    }
 }
 
 // MARK: - Text viewer
 
 private struct SavedLogFileView: View {
-    let entry: SavedLogEntry
+    let entry: SavedLogFileInfo
 
     @State private var model = SavedLogFileViewModel()
 
@@ -143,7 +177,11 @@ private struct SavedLogFileView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .navigationTitle(entry.fileName)
+        // Title is the parsed session-start date, not the raw filename
+        // — matches what the list row showed before the user tapped in
+        // so the navigation doesn't feel like it's "renaming" the
+        // entry between screens.
+        .navigationTitle(Text(entry.startedAt, format: SavedLogsView.titleDateFormat))
         .navigationBarTitleDisplayMode(.inline)
         .task(id: entry.id) {
             await model.load(path: entry.url.path)
@@ -250,8 +288,15 @@ private final class SavedLogFileViewModel {
 
 @MainActor @Observable
 final class SavedLogsViewModel {
-    var entries: [SavedLogEntry] = []
+    var entries: [SavedLogFileInfo] = []
     var confirmDeleteAll: Bool = false
+
+    /// Count shown in the "delete all" confirmation. Excludes the
+    /// LIVE session(s) because `deleteAll()` skips them — the user
+    /// needs to know exactly how many files will disappear.
+    var deletableCount: Int {
+        entries.lazy.filter { !$0.isActive }.count
+    }
 
     func reload() {
         let dir = FilePath.logsDirectory
@@ -268,20 +313,22 @@ final class SavedLogsViewModel {
             options: [.skipsHiddenFiles]
         )) ?? []
 
-        let mapped: [SavedLogEntry] = urls.compactMap { url in
-            guard FilePath.isManagedSavedLogFile(url),
-                  let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey]),
+        let parsed: [SavedLogFileInfo] = urls.compactMap { url in
+            guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey]),
                   values.isRegularFile == true
             else { return nil }
-            return SavedLogEntry(
+            return SavedLogFileInfo.parse(
                 url: url,
                 size: Int64(values.fileSize ?? 0),
-                modified: values.contentModificationDate ?? .distantPast,
+                modifiedAt: values.contentModificationDate ?? .distantPast,
                 isActive: active.contains(url.path)
             )
         }
-        // Newest first.
-        entries = mapped.sorted { $0.modified > $1.modified }
+
+        // Newest-session first. Sorting on `startedAt` (vs. mtime)
+        // keeps a long-running LIVE session anchored at the top
+        // instead of bouncing around as it writes.
+        entries = parsed.sorted { $0.startedAt > $1.startedAt }
     }
 
     func delete(at offsets: IndexSet) {
@@ -304,26 +351,6 @@ final class SavedLogsViewModel {
         }
         reload()
     }
-}
-
-// MARK: - Entry
-
-struct SavedLogEntry: Identifiable, Hashable {
-    let url: URL
-    let size: Int64
-    let modified: Date
-    let isActive: Bool
-
-    var id: String { url.path }
-    var fileName: String { url.lastPathComponent }
-    var displayDate: String { Self.dateFormatter.string(from: modified) }
-
-    private static let dateFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.dateStyle = .medium
-        df.timeStyle = .medium
-        return df
-    }()
 }
 
 // MARK: - Share sheet bridge

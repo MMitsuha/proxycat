@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -116,10 +117,16 @@ func StartLogFile() (string, error) {
 	// (a slice append behind a mutex inside mihomo); the goroutine
 	// itself starts non-blocking.
 	s.pump = startLogPump(func(event log.Event) {
+		// Uppercase the level so this file's lines look identical in
+		// shape to the Swift-side proxycat-*.log written by
+		// ProxyCatLogPersistence ([INFO], [DEBUG], …). mihomo's own
+		// LogLevel.String returns lowercase; we don't want the two
+		// log files in the same directory to disagree on case for no
+		// reason a reader can divine.
 		line := fmt.Sprintf(
 			"%s [%s] %s\n",
 			time.Now().Format("2006-01-02T15:04:05.000"),
-			event.LogLevel.String(),
+			strings.ToUpper(event.LogLevel.String()),
 			event.Payload,
 		)
 		_, _ = s.file.WriteString(line)

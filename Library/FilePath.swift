@@ -68,10 +68,10 @@ public enum FilePath {
         logsDirectory.appendingPathComponent(AppConfiguration.activeProxyCatLogMarkerFileName)
     }
 
-    public static func activeLogFilePath() -> String? {
-        activeLogPath(from: activeLogMarkerFile)
-    }
-
+    /// Paths of the per-process log files the Network Extension is
+    /// currently writing into (one for the Go-side mihomo log, one
+    /// for the Swift-side ProxyCat log). Used to keep those files
+    /// out of retention pruning and to render the LIVE badge.
     public static func activeLogFilePaths() -> Set<String> {
         Set([activeLogMarkerFile, activeProxyCatLogMarkerFile].compactMap { activeLogPath(from: $0) })
     }
@@ -191,33 +191,39 @@ public enum FilePath {
         guard keep > 0 else { return }
 
         let dir = logsDirectory
-        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .fileSizeKey, .isRegularFileKey]
         guard let urls = try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: keys,
             options: [.skipsHiddenFiles]
         ) else { return }
 
-        let candidates: [(url: URL, modified: Date, prefix: String)] = urls.compactMap { url in
-            // Match the writer naming schemes (mihomo-/proxycat- timestamped logs).
-            // Anything else dropped in here — a future feature's file, a
-            // test artifact — is left alone instead of being silently
-            // counted against the retention budget.
-            guard let prefix = managedSavedLogPrefix(for: url),
-                  !activePaths.contains(url.path),
-                  let values = try? url.resourceValues(forKeys: Set(keys)),
+        // Parse each URL into a SavedLogFileInfo so retention groups,
+        // sorting, and the "managed" filter all rely on a single
+        // filename-format check. Malformed filenames are silently
+        // skipped — same behaviour as the SavedLogsView listing, so
+        // the list and the pruner never disagree on what counts.
+        let candidates = urls.compactMap { url -> SavedLogFileInfo? in
+            guard let values = try? url.resourceValues(forKeys: Set(keys)),
                   values.isRegularFile == true
             else { return nil }
-            return (url, values.contentModificationDate ?? .distantPast, prefix)
+            return SavedLogFileInfo.parse(
+                url: url,
+                size: Int64(values.fileSize ?? 0),
+                modifiedAt: values.contentModificationDate ?? .distantPast,
+                isActive: activePaths.contains(url.path)
+            )
         }
+        .filter { !$0.isActive }
 
-        // Active file doesn't count against the keep budget — it's
-        // implicitly always kept, separate from the policy. So if
-        // policy=last10 and there are 11 inactive + 1 active, we keep
-        // 10 inactive + 1 active for that log family.
-        for entries in Dictionary(grouping: candidates, by: { $0.prefix }).values {
+        // Sort by startedAt desc so retention drops the oldest
+        // *sessions* (matching the user's mental model: "keep last
+        // 10 runs"). Going by modification date would let an active
+        // session's last write reorder old, finished sessions and
+        // accidentally evict a sibling kind on the same disk write.
+        for entries in Dictionary(grouping: candidates, by: \.kind).values {
             guard entries.count > keep else { continue }
-            let sorted = entries.sorted { $0.modified > $1.modified }
+            let sorted = entries.sorted { $0.startedAt > $1.startedAt }
             for entry in sorted.dropFirst(keep) {
                 try? FileManager.default.removeItem(at: entry.url)
             }
@@ -229,19 +235,7 @@ public enum FilePath {
     }
 
     public static func isManagedSavedLogFile(_ url: URL) -> Bool {
-        managedSavedLogPrefix(for: url) != nil
-    }
-
-    private static func managedSavedLogPrefix(for url: URL) -> String? {
-        guard url.pathExtension == "log" else { return nil }
-        let name = url.lastPathComponent
-        if name.hasPrefix("mihomo-") {
-            return "mihomo-"
-        }
-        if name.hasPrefix(AppConfiguration.proxyCatLogFilePrefix) {
-            return AppConfiguration.proxyCatLogFilePrefix
-        }
-        return nil
+        SavedLogFileInfo.Kind.matching(filename: url.lastPathComponent) != nil
     }
 
     /// Removes everything inside `workingDirectory` so mihomo will

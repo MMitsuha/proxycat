@@ -44,3 +44,102 @@ import Testing
         #expect(!FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.txt")))
     }
 }
+
+@Suite struct SavedLogFileInfoTests {
+    @Test func parsesMihomoFilename() {
+        let url = URL(fileURLWithPath: "/tmp/mihomo-20260511-141233.log")
+        let info = SavedLogFileInfo.parse(
+            url: url,
+            size: 1024,
+            modifiedAt: .distantPast,
+            isActive: false
+        )
+        #expect(info?.kind == .mihomo)
+        #expect(info?.url == url)
+        #expect(info?.size == 1024)
+        #expect(info?.startedAt == makeLocalDate(year: 2026, month: 5, day: 11, hour: 14, minute: 12, second: 33))
+        #expect(info?.isActive == false)
+    }
+
+    @Test func parsesProxyCatFilename() {
+        let info = SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/proxycat-20260511-141233.log"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: true
+        )
+        #expect(info?.kind == .proxycat)
+        #expect(info?.isActive == true)
+    }
+
+    @Test func toleratesSameSecondCollisionSuffix() {
+        // Writer appends `-1`, `-2`, …, `-99` when multiple sessions
+        // start in the same wall-clock second. The suffix must not
+        // affect the parsed startedAt.
+        let suffixed = SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/mihomo-20260511-141233-2.log"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: false
+        )
+        let plain = SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/mihomo-20260511-141233.log"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: false
+        )
+        #expect(suffixed?.startedAt == plain?.startedAt)
+    }
+
+    @Test func rejectsUnknownPrefix() {
+        #expect(SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/other-20260511-120000.log"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: false
+        ) == nil)
+    }
+
+    @Test func rejectsMalformedTimestamp() {
+        // Prefix matches but the date portion is garbage — the
+        // pruner relies on this returning nil to skip suspect
+        // files instead of letting them poison the retention sort.
+        #expect(SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/mihomo-not-a-date.log"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: false
+        ) == nil)
+    }
+
+    @Test func rejectsNonLogExtension() {
+        #expect(SavedLogFileInfo.parse(
+            url: URL(fileURLWithPath: "/tmp/mihomo-20260511-120000.txt"),
+            size: 0,
+            modifiedAt: .distantPast,
+            isActive: false
+        ) == nil)
+    }
+
+    @Test func kindMatchingOnlyChecksPrefixAndExtension() {
+        // The cheap "is this our file" check used by isManagedSavedLogFile
+        // intentionally doesn't validate the date — that's parse()'s job.
+        #expect(SavedLogFileInfo.Kind.matching(filename: "mihomo-anything.log") == .mihomo)
+        #expect(SavedLogFileInfo.Kind.matching(filename: "proxycat-something.log") == .proxycat)
+        #expect(SavedLogFileInfo.Kind.matching(filename: "mihomo-anything.txt") == nil)
+        #expect(SavedLogFileInfo.Kind.matching(filename: "random.log") == nil)
+    }
+
+    private func makeLocalDate(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int) -> Date {
+        var components = DateComponents()
+        components.calendar = Calendar(identifier: .gregorian)
+        components.timeZone = .current
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hour
+        components.minute = minute
+        components.second = second
+        return components.date!
+    }
+}
