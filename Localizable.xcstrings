@@ -11,6 +11,12 @@
             "value" : "［省略済み - 最後の %lld / %lld バイトを表示］\n\n"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[Сокращено: показаны последние %1$lld из %2$lld байт]\n\n"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23,6 +29,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@"
@@ -45,6 +57,12 @@
             "value" : "%@ 件のアクティブ接続"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ активных соединений"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -63,6 +81,12 @@
             "value" : "%@ 行"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ строк"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -78,6 +102,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 行をクリップボードにコピーしました。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировано %@ строк в буфер обмена."
           }
         },
         "zh-Hans" : {
@@ -98,6 +128,12 @@
             "value" : "%lld 件のアクティブ接続"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld активных соединений"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -114,6 +150,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "7 日"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 дней"
           }
         },
         "zh-Hans" : {
@@ -134,6 +176,12 @@
             "value" : "14 日"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 дней"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -150,6 +198,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 日"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 дней"
           }
         },
         "zh-Hans" : {
@@ -169,6 +223,12 @@
             "value" : "トンネルが接続するたびに新しいファイルが作成されます。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При каждом подключении туннеля создаётся новый файл."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -184,6 +244,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "情報"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "О приложении"
           }
         },
         "zh-Hans" : {
@@ -203,6 +269,12 @@
             "value" : "アクション"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Действие"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -220,6 +292,12 @@
             "value" : "アクションに失敗しました"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось выполнить действие"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -235,6 +313,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "アクション"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Действия"
           }
         },
         "zh-Hans" : {
@@ -255,6 +339,12 @@
             "value" : "アクティブ"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "активно"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -270,6 +360,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "追加"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить"
           }
         },
         "zh-Hans" : {
@@ -289,6 +385,12 @@
             "value" : "SSID を追加"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить SSID"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -304,6 +406,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "アドレス"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адрес"
           }
         },
         "zh-Hans" : {
@@ -323,6 +431,12 @@
             "value" : "詳細"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дополнительно"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -338,6 +452,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書を開いた後、iOS 設定 > 一般 > VPN とデバイス管理でダウンロード済みプロファイルをインストールし、設定 > 一般 > 情報 > 証明書信頼設定で完全信頼を有効にしてください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "После открытия сертификата установите загруженный профиль в Настройках iOS > Основные > VPN и управление устройством, затем включите полное доверие в Настройках > Основные > Об этом устройстве > Доверие сертификатам."
           }
         },
         "zh-Hans" : {
@@ -357,6 +477,12 @@
             "value" : "すでにリストにあります。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Уже есть в списке."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -369,6 +495,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Group"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "App Group"
@@ -391,6 +523,12 @@
             "value" : "アプリバージョン"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Версия приложения"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -406,6 +544,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自動接続"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автоподключение"
           }
         },
         "zh-Hans" : {
@@ -425,6 +569,12 @@
             "value" : "今すぐバックアップ"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создать копию"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -440,6 +590,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル、アクティブなプロファイル、ランタイム設定、自動接続、ログ保持設定を iCloud Drive にバックアップします。ログ、キャッシュファイル、使用履歴、MITM キーは含まれません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохраняет в iCloud Drive профили, активный профиль, настройки среды выполнения, автоподключения и хранения журналов. Сами журналы, файлы кэша, история использования и ключи MITM не включаются."
           }
         },
         "zh-Hans" : {
@@ -459,6 +615,12 @@
             "value" : "バックアップに重複したプロファイルファイル %@ が含まれています。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В резервной копии есть дублирующийся файл профиля %@."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -474,6 +636,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "バックアップに重複したプロファイル ID %@ が含まれています。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В резервной копии есть дублирующийся идентификатор профиля %@."
           }
         },
         "zh-Hans" : {
@@ -493,6 +661,12 @@
             "value" : "バックアップに無効なプロファイルファイル %@ が含まれています。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В резервной копии есть недействительный файл профиля %@."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -508,6 +682,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "バックアップに %@ の YAML がありません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В резервной копии отсутствует YAML для %@."
           }
         },
         "zh-Hans" : {
@@ -527,6 +707,12 @@
             "value" : "ローカルデータと iCloud バックアップの両方が変更されています。今すぐバックアップするか、iCloud から復元してください。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Локальные данные и резервная копия в iCloud изменились. Выберите «Создать копию» или «Восстановить из iCloud»."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -542,6 +728,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ビルド日時"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Собрано"
           }
         },
         "zh-Hans" : {
@@ -561,6 +753,12 @@
             "value" : "バンドル済みアセット"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Встроенные ресурсы"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -576,6 +774,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャッシュサイズ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Размер кэша"
           }
         },
         "zh-Hans" : {
@@ -595,6 +799,12 @@
             "value" : "キャンセル"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отмена"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -610,6 +820,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続できません"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удаётся подключиться"
           }
         },
         "zh-Hans" : {
@@ -629,6 +845,12 @@
             "value" : "保存済みログに保持するセッション別ログファイル数の上限です。現在のセッションは常に保持されます。古いファイルは、この設定の変更時、アプリが前面に戻った時、保存済みログの一覧を開いた時に削除されます。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ограничивает число посеансовых файлов журнала в разделе «Сохранённые журналы». Текущий сеанс всегда сохраняется. Более старые файлы удаляются при изменении этой настройки, возврате приложения на передний план и открытии списка «Сохранённые журналы»."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -644,6 +866,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログに保持するトンネルセッション数の上限です。現在のセッションは常に保持されます。古いセッションは、この設定の変更時、アプリが前面に戻った時、保存済みログの一覧を開いた時に削除されます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ограничивает число сеансов туннеля в разделе «Сохранённые журналы». Текущий сеанс всегда сохраняется. Более старые сеансы удаляются при изменении этой настройки, возврате приложения на передний план и открытии списка «Сохранённые журналы»."
           }
         },
         "zh-Hans" : {
@@ -663,6 +891,12 @@
             "value" : "モバイル通信"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сотовая связь"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -678,6 +912,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書のインストールに失敗しました"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось установить сертификат"
           }
         },
         "zh-Hans" : {
@@ -697,6 +937,12 @@
             "value" : "チェーン"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цепочка"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -712,6 +958,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文字"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "симв."
           }
         },
         "zh-Hans" : {
@@ -731,6 +983,12 @@
             "value" : "消去"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Очистить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -746,6 +1004,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャッシュを消去"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Очистить кэш"
           }
         },
         "zh-Hans" : {
@@ -765,6 +1029,12 @@
             "value" : "キャッシュを消去しますか？"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Очистить кэш?"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -780,6 +1050,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "消去に失敗しました"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось очистить"
           }
         },
         "zh-Hans" : {
@@ -799,6 +1075,12 @@
             "value" : "閉じる"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрыть"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -814,6 +1096,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべて閉じる"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрыть все"
           }
         },
         "zh-Hans" : {
@@ -833,6 +1121,12 @@
             "value" : "すべての接続を閉じますか？"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закрыть все соединения?"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -848,6 +1142,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "折りたたむ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свернуть"
           }
         },
         "zh-Hans" : {
@@ -867,6 +1167,12 @@
             "value" : "コミット"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коммит"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -882,6 +1188,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定は有効です。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфигурация выглядит корректной."
           }
         },
         "zh-Hans" : {
@@ -901,6 +1213,12 @@
             "value" : "競合"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфликт"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -916,6 +1234,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключиться"
           }
         },
         "zh-Hans" : {
@@ -935,6 +1259,12 @@
             "value" : "プロキシを管理するには先に接続してください"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключитесь, чтобы управлять прокси"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -950,6 +1280,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続を表示するには先に接続してください"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключитесь, чтобы просматривать соединения"
           }
         },
         "zh-Hans" : {
@@ -970,6 +1306,12 @@
             "value" : "日別使用量の収集を開始するにはトンネルに接続してください。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключите туннель, чтобы начать собирать ежедневную статистику."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -985,6 +1327,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続済み"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключено"
           }
         },
         "zh-Hans" : {
@@ -1004,6 +1352,12 @@
             "value" : "接続中"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключение"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1019,6 +1373,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接続"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соединение"
           }
         },
         "zh-Hans" : {
@@ -1038,6 +1398,12 @@
             "value" : "接続"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соединения"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1053,6 +1419,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "コピーしました"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировано"
           }
         },
         "zh-Hans" : {
@@ -1073,6 +1445,12 @@
             "value" : "%lld 行をクリップボードにコピーしました。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировано %lld строк в буфер обмена."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1090,6 +1468,12 @@
             "value" : "コピー"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Копировать"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1105,6 +1489,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべてコピー"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Копировать все"
           }
         },
         "zh-Hans" : {
@@ -1125,6 +1515,12 @@
             "value" : "閉じられませんでした（HTTP %lld）"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось закрыть (HTTP %lld)"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1141,6 +1537,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべて閉じられませんでした（HTTP %lld）"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось закрыть все (HTTP %lld)"
           }
         },
         "zh-Hans" : {
@@ -1161,6 +1563,12 @@
             "value" : "読み込めませんでした"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1176,6 +1584,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログを開けませんでした"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось открыть журнал"
           }
         },
         "zh-Hans" : {
@@ -1195,6 +1609,12 @@
             "value" : "保存できませんでした"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось сохранить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1210,6 +1630,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "MITM HTTPS 書き換えを使用する前に、ローカルルート CA を作成してインストールしてください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создайте и установите локальный корневой сертификат, прежде чем использовать перезапись HTTPS через MITM."
           }
         },
         "zh-Hans" : {
@@ -1230,6 +1656,12 @@
             "value" : "日別通信量"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ежедневный трафик"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1245,6 +1677,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日別通信量"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ежедневный трафик"
           }
         },
         "zh-Hans" : {
@@ -1264,6 +1702,12 @@
             "value" : "ダッシュボード"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Панель"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1279,6 +1723,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "デバッグ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отладка"
           }
         },
         "zh-Hans" : {
@@ -1298,6 +1748,12 @@
             "value" : "デフォルト"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По умолчанию"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1313,6 +1769,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "削除"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить"
           }
         },
         "zh-Hans" : {
@@ -1332,6 +1794,12 @@
             "value" : "すべて削除"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить все"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1347,6 +1815,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログをすべて削除しますか？"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить все сохранённые журналы?"
           }
         },
         "zh-Hans" : {
@@ -1366,6 +1840,12 @@
             "value" : "宛先"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Назначение"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1381,6 +1861,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "診断"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Диагностика"
           }
         },
         "zh-Hans" : {
@@ -1400,6 +1886,12 @@
             "value" : "Web コントローラーを無効化"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отключить Web-контроллер"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1415,6 +1907,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切断"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отключиться"
           }
         },
         "zh-Hans" : {
@@ -1434,6 +1932,12 @@
             "value" : "切断済み"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отключено"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1449,6 +1953,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切断中"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отключение"
           }
         },
         "zh-Hans" : {
@@ -1468,6 +1978,12 @@
             "value" : "完了"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Готово"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1483,6 +1999,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ダウンロード"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скачать"
           }
         },
         "zh-Hans" : {
@@ -1502,6 +2024,12 @@
             "value" : "URL からダウンロード"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скачать по URL"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1519,6 +2047,12 @@
             "value" : "プロファイルをダウンロード"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скачать профиль"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1534,6 +2068,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GeoIP / GeoSite / MMDB ファイルを BundledAssets/geo/ に、external-ui ディレクトリを BundledAssets/ui/ に配置し、xcodegen を再実行して再ビルドすると、コンパイル時に埋め込まれます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поместите файлы GeoIP / GeoSite / MMDB в BundledAssets/geo/, а каталог external-ui — в BundledAssets/ui/, затем повторно запустите xcodegen и пересоберите, чтобы встроить их во время компиляции."
           }
         },
         "zh-Hans" : {
@@ -1554,6 +2094,12 @@
             "value" : "ローカルに保存された日別合計を削除します。ダッシュボードのライブ通信量カウンターには影響しません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаляет локально сохранённые ежедневные итоги. Счётчики трафика в реальном времени на Панели не затрагиваются."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1569,6 +2115,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "編集"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменить"
           }
         },
         "zh-Hans" : {
@@ -1588,6 +2140,12 @@
             "value" : "プロファイルを編集"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменить профиль"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1603,6 +2161,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "編集済み"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменено"
           }
         },
         "zh-Hans" : {
@@ -1623,6 +2187,12 @@
             "value" : "%@ を編集しました"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изменено %@"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1638,6 +2208,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "コンパイル時にアプリへ埋め込まれ、初回起動時に作業ディレクトリへコピーされます。キャッシュ消去後も保持され、mihomo によって再ダウンロードされません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Встраиваются в приложение при компиляции и копируются в рабочий каталог при первом запуске. Они сохраняются при очистке кэша и не загружаются повторно через mihomo."
           }
         },
         "zh-Hans" : {
@@ -1657,6 +2233,12 @@
             "value" : "正確な Wi-Fi 名を入力してください。iOS は大文字と小文字を区別して照合します。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Введите точное имя Wi-Fi. iOS учитывает регистр."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1672,6 +2254,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "エラー"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ошибка"
           }
         },
         "zh-Hans" : {
@@ -1691,6 +2279,12 @@
             "value" : "展開"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Развернуть"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1706,6 +2300,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拡張機能バンドル"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бандл расширения"
           }
         },
         "zh-Hans" : {
@@ -1725,6 +2325,12 @@
             "value" : "外部 UI"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "External UI"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1740,6 +2346,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "フィルターレベル"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Уровень фильтра"
           }
         },
         "zh-Hans" : {
@@ -1760,6 +2372,12 @@
             "value" : "無期限"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бессрочно"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1773,6 +2391,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go"
@@ -1795,6 +2419,12 @@
             "value" : "ホスト"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хост"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1810,6 +2440,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud バックアップ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резервная копия iCloud"
           }
         },
         "zh-Hans" : {
@@ -1829,6 +2465,12 @@
             "value" : "iCloud Drive を利用できません。iCloud にサインインし、ProxyCat の iCloud Drive を有効にしてください。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud Drive недоступен. Войдите в iCloud и включите iCloud Drive для ProxyCat."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1846,6 +2488,12 @@
             "value" : "iCloud 同期"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Синхронизация iCloud"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1858,6 +2506,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ID"
@@ -1880,6 +2534,12 @@
             "value" : "無視"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Игнорировать"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1895,6 +2555,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "YAML 設定をインポートするか、貼り付けてください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Импортируйте YAML-конфигурацию или вставьте её здесь."
           }
         },
         "zh-Hans" : {
@@ -1914,6 +2580,12 @@
             "value" : "インポートに失敗しました"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось импортировать"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1929,6 +2601,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "YAML をインポート"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Импортировать YAML"
           }
         },
         "zh-Hans" : {
@@ -1948,6 +2626,12 @@
             "value" : "情報"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Информация"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1963,6 +2647,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書をインストール"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Установить сертификат"
           }
         },
         "zh-Hans" : {
@@ -1982,6 +2672,12 @@
             "value" : "無効"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Недействительно"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1999,6 +2695,12 @@
             "value" : "iOS は SSID の大文字と小文字を区別します。最初に一致したルールが優先され、一覧にないネットワークは下のデフォルトアクションに従います。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS сравнивает SSID с учётом регистра. Срабатывает первое подходящее правило; сети не из списка обрабатываются действием «По умолчанию» ниже."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2014,6 +2716,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このデバイスで一度ダッシュボードの接続をタップした後にのみ、iOS の自動接続が動作します。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS подключается автоматически только после того, как вы хотя бы раз нажали «Подключиться» на Панели на этом устройстве."
           }
         },
         "zh-Hans" : {
@@ -2034,6 +2742,12 @@
             "value" : "直近 10 セッションを保持"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранить последние 10 сеансов"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2050,6 +2764,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "直近 50 セッションを保持"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранить последние 50 сеансов"
           }
         },
         "zh-Hans" : {
@@ -2070,6 +2790,12 @@
             "value" : "直近 100 セッションを保持"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранить последние 100 сеансов"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2085,6 +2811,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "前回のバックアップ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последняя копия"
           }
         },
         "zh-Hans" : {
@@ -2104,6 +2836,12 @@
             "value" : "前回の同期"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последняя синхронизация"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2121,6 +2859,12 @@
             "value" : "行"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "строк"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2134,6 +2878,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LIVE"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "LIVE"
@@ -2156,6 +2906,12 @@
             "value" : "ログレベル"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Уровень журнала"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2171,6 +2927,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ログ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Журналы"
           }
         },
         "zh-Hans" : {
@@ -2190,6 +2952,12 @@
             "value" : "メモリ"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Память"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2203,6 +2971,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meta"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meta"
@@ -2225,6 +2999,12 @@
             "value" : "mihomo Core"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ядро mihomo"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2240,6 +3020,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GitHub の mihomo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mihomo на GitHub"
           }
         },
         "zh-Hans" : {
@@ -2259,6 +3045,12 @@
             "value" : "MITM 証明書"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сертификат MITM"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2274,6 +3066,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "名前"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя"
           }
         },
         "zh-Hans" : {
@@ -2293,6 +3091,12 @@
             "value" : "ネットワーク"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сеть"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2308,6 +3112,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ネットワーク名"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя сети"
           }
         },
         "zh-Hans" : {
@@ -2327,6 +3137,12 @@
             "value" : "ネットワーク名は空にできません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя сети не может быть пустым."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2342,6 +3158,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新規 / YAML を貼り付け"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Создать / вставить YAML"
           }
         },
         "zh-Hans" : {
@@ -2361,6 +3183,12 @@
             "value" : "新規プロファイル"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новый профиль"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2378,6 +3206,12 @@
             "value" : "アクティブな接続はありません"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет активных соединений"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2393,6 +3227,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このビルドにはアセットがバンドルされていません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В этой сборке нет встроенных ресурсов."
           }
         },
         "zh-Hans" : {
@@ -2413,6 +3253,12 @@
             "value" : "日別合計はまだありません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ежедневных итогов пока нет."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2428,6 +3274,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iCloud バックアップが見つかりません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резервная копия в iCloud не найдена."
           }
         },
         "zh-Hans" : {
@@ -2448,6 +3300,12 @@
             "value" : "ログはまだありません"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Журналов пока нет"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2464,6 +3322,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "一致する接続はありません"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подходящих соединений нет"
           }
         },
         "zh-Hans" : {
@@ -2483,6 +3347,12 @@
             "value" : "一致するログはありません"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подходящих записей нет"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2498,6 +3368,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルなし"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет профиля"
           }
         },
         "zh-Hans" : {
@@ -2517,6 +3393,12 @@
             "value" : "プロファイルが選択されていません"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Профиль не выбран"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2534,6 +3416,12 @@
             "value" : "プロファイルがありません"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет профилей"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2549,6 +3437,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログはまだありません"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранённых журналов пока нет"
           }
         },
         "zh-Hans" : {
@@ -2569,6 +3463,12 @@
             "value" : "記録された通信量はまだありません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Трафик ещё не зафиксирован."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2584,6 +3484,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未設定"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не настроено"
           }
         },
         "zh-Hans" : {
@@ -2603,6 +3509,12 @@
             "value" : "未作成"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не создан"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2618,6 +3530,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未信頼"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не доверен"
           }
         },
         "zh-Hans" : {
@@ -2637,6 +3555,12 @@
             "value" : "オフ"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выкл."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2649,6 +3573,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "OK"
@@ -2671,6 +3601,12 @@
             "value" : "Web UI を開く"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть Web UI"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2686,6 +3622,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ここに YAML を貼り付けるか入力…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вставьте или введите YAML здесь…"
           }
         },
         "zh-Hans" : {
@@ -2705,6 +3647,12 @@
             "value" : "一時停止"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пауза"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2720,6 +3668,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ペイロード"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Полезная нагрузка"
           }
         },
         "zh-Hans" : {
@@ -2739,6 +3693,12 @@
             "value" : "先にプロファイルを選択してください。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сначала выберите профиль."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2754,6 +3714,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プラットフォーム"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Платформа"
           }
         },
         "zh-Hans" : {
@@ -2773,6 +3739,12 @@
             "value" : "プライバシー"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфиденциальность"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2788,6 +3760,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロセス"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Процесс"
           }
         },
         "zh-Hans" : {
@@ -2807,6 +3785,12 @@
             "value" : "プロセスパス"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Путь процесса"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2822,6 +3806,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Профиль"
           }
         },
         "zh-Hans" : {
@@ -2841,6 +3831,12 @@
             "value" : "プロファイルファイルが見つかりません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Файл профиля отсутствует."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2856,6 +3852,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイルにリモート URL がありません"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У профиля нет удалённого URL"
           }
         },
         "zh-Hans" : {
@@ -2875,6 +3877,12 @@
             "value" : "プロファイル名"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя профиля"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2890,6 +3898,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プロファイル"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Профили"
           }
         },
         "zh-Hans" : {
@@ -2909,6 +3923,12 @@
             "value" : "プロファイルは保持されます。トンネルが実行中の場合、解放された容量は次回の再接続まで反映されません。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Профили сохраняются. Если туннель работает, освобождённое место будет видно только после следующего переподключения."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2926,6 +3946,12 @@
             "value" : "プロキシ"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Прокси"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2941,6 +3967,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GitHub の ProxyCat"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ProxyCat на GitHub"
           }
         },
         "zh-Hans" : {
@@ -2961,6 +3993,12 @@
             "value" : "範囲"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Период"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2978,6 +4016,12 @@
             "value" : "準備完了"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Готово"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2993,6 +4037,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再確立中"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Восстановление"
           }
         },
         "zh-Hans" : {
@@ -3013,6 +4063,12 @@
             "value" : "最近の日付"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последние дни"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3028,6 +4084,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近の日付"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Последние дни"
           }
         },
         "zh-Hans" : {
@@ -3047,6 +4109,12 @@
             "value" : "更新"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обновить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3062,6 +4130,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状態を更新"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обновить состояние"
           }
         },
         "zh-Hans" : {
@@ -3082,6 +4156,12 @@
             "value" : "再読み込みに失敗しました"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось перезагрузить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3097,6 +4177,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "rule-provider キャッシュ、ダウンロード済みの GeoIP / GeoSite データベース、ダウンロード済みの外部 UI を削除します。次回起動時に mihomo が再取得します。バンドル済みアセットは保持されます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаляет кэш rule-provider, загруженные базы GeoIP / GeoSite и загруженный External UI. mihomo заново загрузит их при следующем запуске. Встроенные ресурсы сохраняются."
           }
         },
         "zh-Hans" : {
@@ -3117,6 +4203,12 @@
             "value" : "リセット"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3135,6 +4227,12 @@
             "value" : "統計をリセット"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить статистику"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3149,6 +4247,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "統計をリセット"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить статистику"
           }
         },
         "zh-Hans" : {
@@ -3169,6 +4273,12 @@
             "value" : "統計をリセットしますか？"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сбросить статистику?"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3184,6 +4294,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "復元"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Восстановить"
           }
         },
         "zh-Hans" : {
@@ -3203,6 +4319,12 @@
             "value" : "iCloud から復元"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Восстановить из iCloud"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3220,6 +4342,12 @@
             "value" : "iCloud から復元しますか？"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Восстановить из iCloud?"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3235,6 +4363,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再開"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Возобновить"
           }
         },
         "zh-Hans" : {
@@ -3255,6 +4389,12 @@
             "value" : "保持"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранение"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3270,6 +4410,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再試行"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повторить"
           }
         },
         "zh-Hans" : {
@@ -3289,6 +4435,12 @@
             "value" : "ルーティング"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Маршрутизация"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3304,6 +4456,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ルール"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правило"
           }
         },
         "zh-Hans" : {
@@ -3323,6 +4481,12 @@
             "value" : "ランタイム"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Среда выполнения"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3340,6 +4504,12 @@
             "value" : "保存"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3354,6 +4524,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存時にプロファイルをダウンロードし、mihomo で検証してから追加します。検証に失敗した場合は書き込みません。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Сохранить» загружает профиль, проверяет его через mihomo и затем добавляет. Если проверка не пройдена, ничего не записывается."
           }
         },
         "zh-Hans" : {
@@ -3373,6 +4549,12 @@
             "value" : "保存に失敗しました"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось сохранить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3388,6 +4570,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存前に mihomo で検証し、成功した場合のみ書き込みます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Сохранить» проверяет конфигурацию через mihomo перед записью."
           }
         },
         "zh-Hans" : {
@@ -3407,6 +4595,12 @@
             "value" : "保存済み"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранено"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3422,6 +4616,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存済みログ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранённые журналы"
           }
         },
         "zh-Hans" : {
@@ -3441,6 +4641,12 @@
             "value" : "ログを検索"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поиск в журналах"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3456,6 +4662,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "サーバーが空の本文を返しました"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер вернул пустой ответ"
           }
         },
         "zh-Hans" : {
@@ -3475,6 +4687,12 @@
             "value" : "サーバーが HTTP %lld を返しました"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер вернул HTTP %lld"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3490,6 +4708,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "サービスが開始されていません"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Служба не запущена"
           }
         },
         "zh-Hans" : {
@@ -3509,6 +4733,12 @@
             "value" : "設定"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3524,6 +4754,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "共有"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поделиться"
           }
         },
         "zh-Hans" : {
@@ -3543,6 +4779,12 @@
             "value" : "ファイルを共有"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поделиться файлом"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3560,6 +4802,12 @@
             "value" : "サイレント"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Без вывода"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3572,6 +4820,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SNI"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "SNI"
@@ -3595,6 +4849,12 @@
             "value" : "一部の無効な UTF-8 バイトを置換しました。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Некорректные байты UTF-8 были заменены."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3612,6 +4872,12 @@
             "value" : "ソース"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Источник"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3627,6 +4893,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開始済み"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запущено"
           }
         },
         "zh-Hans" : {
@@ -3647,6 +4919,12 @@
             "value" : "統計"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Статистика"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3662,6 +4940,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状態"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Состояние"
           }
         },
         "zh-Hans" : {
@@ -3681,6 +4965,12 @@
             "value" : "mihomo の HTTP コントローラーとバンドル済み Web UI のバインドを停止します。ホストアプリはプライベート接続経由で引き続き動作します。接続中でもすぐに適用されます。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запрещает mihomo привязывать HTTP-контроллер и встроенный Web UI. Основное приложение продолжает работать через приватное соединение. Применяется немедленно при активном подключении."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3696,6 +4986,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ストレージ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранилище"
           }
         },
         "zh-Hans" : {
@@ -3715,6 +5011,12 @@
             "value" : "今すぐ同期"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Синхронизировать"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3730,6 +5032,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同期中"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Синхронизация"
           }
         },
         "zh-Hans" : {
@@ -3749,6 +5057,12 @@
             "value" : "タグ"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Теги"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3764,6 +5078,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存前に **検証** をタップしてください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перед сохранением нажмите **Проверить**."
           }
         },
         "zh-Hans" : {
@@ -3783,6 +5103,12 @@
             "value" : "保存前に **検証** をタップして、mihomo でダウンロードと解析を行ってください。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите **Проверить**, чтобы загрузить и разобрать конфигурацию через mihomo перед сохранением."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3798,6 +5124,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ターゲット"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цель"
           }
         },
         "zh-Hans" : {
@@ -3817,6 +5149,12 @@
             "value" : "遅延をテスト"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тест задержки"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3832,6 +5170,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "証明書ファイルが無効です。もう一度インストールして新しい証明書を作成してください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Файл сертификата недействителен. Установите снова, чтобы создать новый сертификат."
           }
         },
         "zh-Hans" : {
@@ -3851,6 +5195,12 @@
             "value" : "ローカル MITM ルート CA は iOS で信頼されています。MITM を有効にしたプロファイルで HTTPS 書き換えを使用できます。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Локальный корневой сертификат MITM является доверенным для iOS. Перезапись HTTPS работает для профилей с включённым MITM."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3865,6 +5215,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 件の保存済みログファイルを削除します。アクティブなセッションは保持されます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это удалит %@ сохранённых файлов журналов. Активный сеанс сохраняется."
           }
         },
         "zh-Hans" : {
@@ -3885,6 +5241,12 @@
             "value" : "%lld 件の保存済みログファイルを削除します。アクティブなセッションは保持されます。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это удалит %lld сохранённых файлов журналов. Активный сеанс сохраняется."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3902,6 +5264,12 @@
             "value" : "この iCloud バックアップは未対応のスキーマバージョン %lld を使用しています。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эта резервная копия iCloud использует неподдерживаемую версию схемы %lld."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3917,6 +5285,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ローカルのプロファイルと設定を最新の iCloud バックアップで置き換えます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменит локальные профили и настройки последней резервной копией iCloud."
           }
         },
         "zh-Hans" : {
@@ -3937,6 +5311,12 @@
             "value" : "今日"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сегодня"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3953,6 +5333,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "合計"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всего"
           }
         },
         "zh-Hans" : {
@@ -3972,6 +5358,12 @@
             "value" : "通信量"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Трафик"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3987,6 +5379,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "信頼済み"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Доверен"
           }
         },
         "zh-Hans" : {
@@ -4007,6 +5405,12 @@
             "value" : "別の検索語を試してください。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попробуйте другой запрос."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4022,6 +5426,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "種類"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Тип"
           }
         },
         "zh-Hans" : {
@@ -4041,6 +5451,12 @@
             "value" : "利用不可"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Недоступно"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4056,6 +5472,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不明"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Неизвестно"
           }
         },
         "zh-Hans" : {
@@ -4075,6 +5497,12 @@
             "value" : "アップロード"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузить"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4087,6 +5515,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "URL"
@@ -4109,6 +5543,12 @@
             "value" : "URL が無効です"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL некорректен"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4124,6 +5564,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用量"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Использование"
           }
         },
         "zh-Hans" : {
@@ -4143,6 +5589,12 @@
             "value" : "上のルールに一致しないネットワークに使用されます。"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используется для сетей, не указанных выше."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4158,6 +5610,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "検証"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проверить"
           }
         },
         "zh-Hans" : {
@@ -4177,6 +5635,12 @@
             "value" : "バージョン"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Версия"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4192,6 +5656,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VPN 設定が読み込まれていません"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Конфигурация VPN не загружена"
           }
         },
         "zh-Hans" : {
@@ -4211,6 +5681,12 @@
             "value" : "警告"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Предупреждение"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4226,6 +5702,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "オンにすると、ProxyCat は下のルールに基づいて自動的に接続または切断します。オフの場合は、ダッシュボードでトンネルを手動操作します。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Когда включено, ProxyCat подключается или отключается автоматически по правилам ниже. Когда выключено, управляйте туннелем вручную с Панели."
           }
         },
         "zh-Hans" : {
@@ -4245,6 +5727,12 @@
             "value" : "Wi-Fi SSID"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSID Wi-Fi"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4260,6 +5748,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ラッパーのビルド日時"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сборка обёртки"
           }
         },
         "zh-Hans" : {
@@ -4279,6 +5773,12 @@
             "value" : "ラッパーコミット"
           }
         },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Коммит обёртки"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -4291,6 +5791,12 @@
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YAML"
+          }
+        },
+        "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "YAML"
@@ -4312,6 +5818,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "昨日"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вчера"
           }
         },
         "zh-Hans" : {
