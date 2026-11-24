@@ -38,10 +38,10 @@ import Testing
     }
 
     @Test func managedLogFilePrefixesIncludeMihomoAndProxyCat() {
-        #expect(FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/mihomo-20260511-120000.log")))
-        #expect(FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.log")))
-        #expect(!FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/other-20260511-120000.log")))
-        #expect(!FilePath.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.txt")))
+        #expect(StorageMaintenance.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/mihomo-20260511-120000.log")))
+        #expect(StorageMaintenance.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.log")))
+        #expect(!StorageMaintenance.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/other-20260511-120000.log")))
+        #expect(!StorageMaintenance.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.txt")))
     }
 }
 

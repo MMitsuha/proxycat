@@ -16,7 +16,7 @@ struct ProxyCatApp: App {
             // idempotent — covers the case where the user never opens
             // Saved Logs but still wants the on-disk count bounded.
             guard phase == .active else { return }
-            FilePath.pruneSavedLogs(
+            StorageMaintenance.pruneSavedLogs(
                 policy: HostSettingsStore.shared.logRetention
             )
         }

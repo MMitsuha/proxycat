@@ -1,11 +1,8 @@
-import Darwin
 import Foundation
 import Library
-// gomobile + NetworkExtension predate Swift concurrency annotations;
+// NetworkExtension predates Swift concurrency annotations;
 // @preconcurrency demotes the resulting Sendable diagnostics on
-// override signatures and Go-bridge calls to warnings.
-@preconcurrency import Libmihomo
-import Network
+// override signatures to warnings.
 @preconcurrency import NetworkExtension
 
 /// Network Extension entry point. Intentionally a thin shim — the Go
@@ -22,77 +19,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Pcat.PcatExtension", category: "PTP")
 
     private var memoryObserverToken: UUID?
-
-    private var pathMonitor: NWPathMonitor?
-    private let pathMonitorQueue = DispatchQueue(label: "io.proxycat.pcat.path", qos: .utility)
-    private var pathMonitorGeneration = 0
-    private var pathBaseline: PathBaselineState = .awaiting
-    private var currentPathSignature: PathSignature?
-    private var pendingPathChangeWorkItem: DispatchWorkItem?
-    private var pendingPathRefreshClosesConnections = false
-    private var pendingPathRefreshReason: String?
-    private var lastWakeConnectionCloseAt: Date?
-
-    /// Whether NWPathMonitor has delivered a usable path yet. Suppresses
-    /// the very first satisfied callback because mihomo just started —
-    /// its caches are fresh, nothing is stale to flush. But if startup
-    /// first observed an unsatisfied path, the later satisfied callback
-    /// is a real offline→online transition and should refresh mihomo.
-    private enum PathBaselineState {
-        case awaiting
-        case sawUnsatisfied
-        case established
-
-        var logDescription: String {
-            switch self {
-            case .awaiting:
-                return "awaiting"
-            case .sawUnsatisfied:
-                return "sawUnsatisfied"
-            case .established:
-                return "established"
-            }
-        }
-    }
-
-    /// How long to coalesce NWPathMonitor updates before nudging mihomo.
-    /// iOS often emits two or three updates back-to-back during a single
-    /// transition (e.g. "Wi-Fi up but unsatisfied" → "cellular satisfied"
-    /// → "Wi-Fi satisfied" all within a second); collapse them so mihomo
-    /// only refreshes once per real-world transition.
-    private static let pathChangeDebounce: DispatchTimeInterval = .milliseconds(500)
-    private static let wakeConnectionCloseMinimumInterval: TimeInterval = 30
-
-    /// Coarse normalized path identity. We intentionally ignore object
-    /// identity and available-interface ordering so repeated callbacks for
-    /// the same still-satisfied cellular path do not look like route changes.
-    private struct PathSignature: Equatable {
-        let status: String
-        let expensive: Bool
-        let constrained: Bool
-        let supportsDNS: Bool
-        let usesWiFi: Bool
-        let usesCellular: Bool
-        let usesWired: Bool
-        let usesLoopback: Bool
-        let usesOther: Bool
-        let interfaces: [String]
-
-        init(_ path: Network.NWPath) {
-            status = PacketTunnelProvider.describe(path.status)
-            expensive = path.isExpensive
-            constrained = path.isConstrained
-            supportsDNS = path.supportsDNS
-            usesWiFi = path.usesInterfaceType(.wifi)
-            usesCellular = path.usesInterfaceType(.cellular)
-            usesWired = path.usesInterfaceType(.wiredEthernet)
-            usesLoopback = path.usesInterfaceType(.loopback)
-            usesOther = path.usesInterfaceType(.other)
-            interfaces = Array(Set(path.availableInterfaces.map {
-                "\($0.name):\(PacketTunnelProvider.describe($0.type))"
-            })).sorted()
-        }
-    }
+    private lazy var pathMonitor = NetworkPathMonitor(logger: Self.logger)
 
     // MARK: - Lifecycle
 
@@ -102,8 +29,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             try await startTunnelImpl()
         } catch {
             Self.logger.error("startTunnel failed: \(error.localizedDescription)")
-            LibmihomoBridge.stopLogFile()
-            ProxyCatLogPersistence.shared.stop()
+            // A failure can happen anywhere between "memory monitor up"
+            // and "mihomo fully started". Tear down everything the
+            // partial attempt created, otherwise a retry leaks the path
+            // monitor / memory listener and may leave mihomo half-alive
+            // with a stale TUN fd.
+            tearDownTunnelResources()
             throw error
         }
     }
@@ -120,7 +51,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //    different iOS versions, then fall back to enumerating the
         //    process's file descriptors and picking out the utun control
         //    socket — the same trick libbox uses for sing-box.
-        let fd = packetFlowFileDescriptor()
+        let fd = TunnelFileDescriptor.locate(in: packetFlow, logger: Self.logger)
         guard fd > 0 else {
             throw PTPError("could not obtain TUN file descriptor — likely running on simulator (no real utun) or KVC path changed in this iOS version")
         }
@@ -140,8 +71,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // 4a. Seed compile-time bundled geo databases and external UI
         //     into the working directory so mihomo finds them on first
         //     run before any download happens. Idempotent — already-up-
-        //     to-date assets are skipped.
-        BundledAssets.installIfNeeded()
+        //     to-date assets are skipped. Copied off the extension's
+        //     async context so a large first-run install doesn't hold
+        //     the start path.
+        _ = await Task.detached(priority: .utility) {
+            BundledAssets.installIfNeeded()
+        }.value
 
         // 4b. Tell the Go OOM killer the actual iOS budget (resident +
         //     available) instead of the 50 MB sing-box default. iOS
@@ -183,14 +118,21 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         //    this, mihomo's interface cache and DNS upstream connections
         //    silently go stale across a network change and the tunnel
         //    appears alive but forwards nothing.
-        startPathMonitor()
+        pathMonitor.start()
 
         Self.logger.info("startTunnel done")
     }
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
         Self.logger.info("stopTunnel reason=\(reason.rawValue)")
-        stopPathMonitor()
+        tearDownTunnelResources()
+    }
+
+    /// Single teardown path shared by `stopTunnel` and a failed
+    /// `startTunnel`. Every step is idempotent, so calling it after a
+    /// partial start is safe.
+    private func tearDownTunnelResources() {
+        pathMonitor.stop()
         // Flush before mihomo shuts down so the trailing "session ended"
         // marker reflects the real reason for stopping. (Stop() also
         // calls StopLogFile defensively, but doing it here is explicit.)
@@ -213,16 +155,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     override func wake() {
         // Belt-and-suspenders for the case where iOS quietly swapped the
         // default route during deep sleep without letting our
-        // NWPathMonitor witness the transition. Treat every wake as a
-        // potential interface change, but throttle the destructive
-        // close-all side so repeated wake callbacks do not look like a
-        // tunnel outage.
-        pathMonitorQueue.async { [weak self] in
-            guard let self else { return }
-            let closeConnections = self.shouldCloseConnectionsForWake()
-            self.performPathRefresh(closeConnections: closeConnections, reason: "wake")
-        }
-        Self.logger.info("wake -> scheduled mihomo path refresh")
+        // NWPathMonitor witness the transition. `NetworkPathMonitor`
+        // throttles the destructive close-all side so repeated wake
+        // callbacks do not look like a tunnel outage.
+        pathMonitor.handleWake()
     }
 
     // MARK: - Setup
@@ -292,70 +228,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         try await setTunnelNetworkSettings(settings)
     }
 
-    /// Find the file descriptor backing the iOS packet flow.
-    ///
-    /// Strategies, in order:
-    ///   1. KVC against several historically-known key paths.
-    ///   2. Enumerate process FDs and pick the one whose peer is an
-    ///      `AF_SYSTEM` control socket (utun). This is what libbox does
-    ///      when KVC fails on newer iOS.
-    private func packetFlowFileDescriptor() -> Int32 {
-        let candidates = [
-            "socket.fileDescriptor",
-            "_socket.fileDescriptor",
-            "socket._fileDescriptor",
-            "_socket._fileDescriptor",
-        ]
-        for keyPath in candidates {
-            // KVC may surface the fd as either a boxed NSNumber or as a
-            // raw Int32 depending on the iOS runtime; accept both.
-            let raw = packetFlow.value(forKeyPath: keyPath)
-            let fd = (raw as? NSNumber)?.int32Value ?? (raw as? Int32) ?? 0
-            if fd > 0 {
-                Self.logger.info("found tun fd via KVC \(keyPath) = \(fd)")
-                return fd
-            }
-        }
-
-        if let fd = findUtunFD() {
-            Self.logger.info("found tun fd by enumeration = \(fd)")
-            return fd
-        }
-
-        let className = String(describing: type(of: self.packetFlow))
-        Self.logger.error("KVC and FD enumeration both failed; packetFlow class=\(className)")
-        return -1
-    }
-
-    /// Returns the fd of the utun control socket created by
-    /// `setTunnelNetworkSettings`, or nil if none is found. We manually
-    /// decode `sockaddr_ctl` because `<sys/kern_control.h>` isn't part
-    /// of Swift's Darwin module on iOS.
-    private func findUtunFD() -> Int32? {
-        let kAF_SYSTEM: UInt8 = 32
-        let kAF_SYS_CONTROL: UInt16 = 2
-        let limit = Int32(getdtablesize())
-        var storage = sockaddr_storage()
-        for fd in 0 ..< limit {
-            var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
-            let result = withUnsafeMutablePointer(to: &storage) { ptr -> Int32 in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { saPtr in
-                    getpeername(fd, saPtr, &len)
-                }
-            }
-            guard result == 0 else { continue }
-            let scFamily: UInt8 = withUnsafeBytes(of: storage) { raw in raw[1] }
-            guard scFamily == kAF_SYSTEM else { continue }
-            let ssSysaddr: UInt16 = withUnsafeBytes(of: storage) { raw in
-                raw.load(fromByteOffset: 2, as: UInt16.self)
-            }
-            if ssSysaddr == kAF_SYS_CONTROL {
-                return fd
-            }
-        }
-        return nil
-    }
-
     // MARK: - Memory pressure
 
     private func startMemoryMonitor() {
@@ -376,173 +248,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             break
         case .critical:
             LibmihomoBridge.closeAllConnections()
-        }
-    }
-
-    // MARK: - Network path
-
-    private func startPathMonitor() {
-        guard pathMonitor == nil else { return }
-        let generation: Int = pathMonitorQueue.sync {
-            resetPathMonitorState()
-            return pathMonitorGeneration
-        }
-
-        let monitor = NWPathMonitor()
-        monitor.pathUpdateHandler = { [weak self] path in
-            self?.handlePathUpdate(path, generation: generation)
-        }
-        monitor.start(queue: pathMonitorQueue)
-        pathMonitor = monitor
-        Self.logger.info("started NWPathMonitor generation=\(generation)")
-    }
-
-    private func stopPathMonitor() {
-        if pathMonitor != nil {
-            Self.logger.info("stopping NWPathMonitor")
-        }
-        pathMonitor?.cancel()
-        pathMonitor = nil
-        // Bump generation so any callback or work item still queued from
-        // the canceled monitor bails before reaching mihomo.
-        pathMonitorQueue.sync { resetPathMonitorState() }
-    }
-
-    /// Bumps the generation counter and clears pending work + baseline.
-    /// Must be called from `pathMonitorQueue`.
-    private func resetPathMonitorState() {
-        pathMonitorGeneration += 1
-        pendingPathChangeWorkItem?.cancel()
-        pendingPathChangeWorkItem = nil
-        pendingPathRefreshClosesConnections = false
-        pendingPathRefreshReason = nil
-        pathBaseline = .awaiting
-        currentPathSignature = nil
-    }
-
-    /// Routes each NWPathMonitor callback to either a debounced refresh
-    /// or a baseline transition. iOS can emit repeated callbacks for the
-    /// same still-satisfied path while the host app backgrounds; those
-    /// must not close all tunneled connections. Real transitions still
-    /// refresh mihomo and force active apps to reconnect through the
-    /// fresh route.
-    private func handlePathUpdate(_ path: Network.NWPath, generation: Int) {
-        guard generation == pathMonitorGeneration else { return }
-        let signature = PathSignature(path)
-        Self.logger.info("NWPathMonitor update generation=\(generation) baseline=\(pathBaseline.logDescription) \(Self.describe(path))")
-
-        switch pathBaseline {
-        case .established:
-            guard path.status == .satisfied else {
-                pathBaseline = .sawUnsatisfied
-                currentPathSignature = signature
-                Self.logger.info("NWPathMonitor baseline -> \(pathBaseline.logDescription)")
-                return
-            }
-            guard let previous = currentPathSignature else {
-                currentPathSignature = signature
-                return
-            }
-            guard previous != signature else {
-                schedulePathRefresh(closeConnections: false, reason: "path update")
-                return
-            }
-            currentPathSignature = signature
-            schedulePathRefresh(closeConnections: true, reason: "path changed")
-        case .awaiting:
-            currentPathSignature = signature
-            pathBaseline = path.status == .satisfied ? .established : .sawUnsatisfied
-            Self.logger.info("NWPathMonitor baseline -> \(pathBaseline.logDescription)")
-        case .sawUnsatisfied:
-            guard path.status == .satisfied else { return }
-            currentPathSignature = signature
-            pathBaseline = .established
-            schedulePathRefresh(closeConnections: true, reason: "path recovered")
-        }
-    }
-
-    private func schedulePathRefresh(closeConnections: Bool, reason: String) {
-        let captured = pathMonitorGeneration
-        pendingPathRefreshClosesConnections = pendingPathRefreshClosesConnections || closeConnections
-        if closeConnections || pendingPathRefreshReason == nil {
-            pendingPathRefreshReason = reason
-        }
-        pendingPathChangeWorkItem?.cancel()
-        let work = DispatchWorkItem { [weak self] in
-            guard let self, captured == self.pathMonitorGeneration else { return }
-            let closeConnections = self.pendingPathRefreshClosesConnections
-            let reason = self.pendingPathRefreshReason ?? reason
-            self.pendingPathChangeWorkItem = nil
-            self.pendingPathRefreshClosesConnections = false
-            self.pendingPathRefreshReason = nil
-            self.performPathRefresh(closeConnections: closeConnections, reason: reason)
-        }
-        pendingPathChangeWorkItem = work
-        pathMonitorQueue.asyncAfter(deadline: .now() + Self.pathChangeDebounce, execute: work)
-    }
-
-    private func performPathRefresh(closeConnections: Bool, reason: String) {
-        LibmihomoBridge.notifyDefaultInterfaceChanged()
-        if closeConnections {
-            let closed = LibmihomoBridge.closeAllConnections()
-            Self.logger.info("refreshed mihomo path reason=\(reason), closed \(closed) connections")
-        } else {
-            Self.logger.info("refreshed mihomo path reason=\(reason)")
-        }
-    }
-
-    private func shouldCloseConnectionsForWake(now: Date = Date()) -> Bool {
-        if let lastWakeConnectionCloseAt,
-           now.timeIntervalSince(lastWakeConnectionCloseAt) < Self.wakeConnectionCloseMinimumInterval {
-            return false
-        }
-        lastWakeConnectionCloseAt = now
-        return true
-    }
-
-    private static func describe(_ path: Network.NWPath) -> String {
-        let interfaces = path.availableInterfaces
-            .map { "\($0.name):\(describe($0.type))" }
-            .joined(separator: ",")
-        let uses = [
-            path.usesInterfaceType(.wifi) ? "wifi" : nil,
-            path.usesInterfaceType(.cellular) ? "cellular" : nil,
-            path.usesInterfaceType(.wiredEthernet) ? "wired" : nil,
-            path.usesInterfaceType(.loopback) ? "loopback" : nil,
-            path.usesInterfaceType(.other) ? "other" : nil,
-        ]
-        .compactMap { $0 }
-        .joined(separator: ",")
-        return "status=\(describe(path.status)) expensive=\(path.isExpensive) constrained=\(path.isConstrained) dns=\(path.supportsDNS) uses=[\(uses)] interfaces=[\(interfaces)]"
-    }
-
-    private static func describe(_ status: Network.NWPath.Status) -> String {
-        switch status {
-        case .satisfied:
-            return "satisfied"
-        case .unsatisfied:
-            return "unsatisfied"
-        case .requiresConnection:
-            return "requiresConnection"
-        @unknown default:
-            return "unknown"
-        }
-    }
-
-    private static func describe(_ type: Network.NWInterface.InterfaceType) -> String {
-        switch type {
-        case .wifi:
-            return "wifi"
-        case .cellular:
-            return "cellular"
-        case .wiredEthernet:
-            return "wired"
-        case .loopback:
-            return "loopback"
-        case .other:
-            return "other"
-        @unknown default:
-            return "unknown"
         }
     }
 }

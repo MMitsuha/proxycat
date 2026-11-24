@@ -53,22 +53,34 @@ proxycat/
 ├── scripts/
 │   └── build-libmihomo.sh  gomobile bind → Frameworks/Libmihomo.xcframework
 ├── Library/                共享 Swift framework：
-│                           AppConfiguration（共享常量）/ FilePath（AppGroup 路径）/
-│                           LibmihomoBridge / ExtensionProfile / ExtensionEnvironment /
-│                           ExtensionCoordinators（VPN 生命周期 / 设置 / Auto Connect / 流量）/
-│                           CommandClient / MihomoController / ControllerTransport /
-│                           RuntimeSettings / HostSettingsStore / JSONFileStore /
-│                           Profile / ProxiesStore / ConnectionsStore /
-│                           DailyUsage / DailyUsageStore / AutoConnect /
-│                           ICloudBackup / SavedLogFile /
-│                           TrafficSnapshot / LogEntry / Observed / ExponentialBackoff /
-│                           BundledAssets / MemoryMonitor
-├── ApplicationLibrary/     SwiftUI 视图：Dashboard / Profiles (含编辑器与下载) /
-│                           Logs (含 SavedLogs) / Connections / Proxies /
-│                           Settings (含 Statistics / AutoConnect / iCloudBackup /
-│                           Storage / MitmCertificate / Advanced)
+│   ├── Models/             纯值类型（Profile / Connections / MitmProfileConfig /
+│   │                       ICloudBackup / DailyUsage / AutoConnect / HostSettings /
+│   │                       LogEntry / SavedLogFile / TrafficSnapshot）
+│   ├── Stores/             可观察状态容器（ProfileStore / ProxiesStore /
+│   │                       ConnectionsStore / RuntimeSettings / HostSettingsStore /
+│   │                       DailyUsageStore / ICloudBackupStore / CommandClient）
+│   ├── Services/           跨进程 / 系统能力（MihomoController / ControllerTransport /
+│   │                       LibmihomoBridge / ExtensionProfile / ExtensionEnvironment /
+│   │                       Coordinators（VPN 生命周期 / 设置 / Auto Connect / 流量）/
+│   │                       RemoteProfileFetcher /
+│   │                       ProxyCatLogger / ProxyCatLogPersistence /
+│   │                       PersistentLogFile / BundledAssets / MemoryMonitor）
+│   └── Support/            基础设施（AppConfiguration / FilePath / StorageMaintenance /
+│                           JSONFileStore / ByteFormatter / ExponentialBackoff /
+│                           Observed / AsyncOneShot / YAMLLine）
+├── ApplicationLibrary/     SwiftUI 视图：
+│   ├── App/                MainView（Tab 容器 + 环境注入）
+│   ├── Dashboard/          Dashboard 及其卡片组件
+│   ├── Profiles/           列表 / 编辑器 / 下载 / MITM 配置 / 分享
+│   ├── Proxies/            代理组与节点
+│   ├── Connections/        连接列表 / 详情
+│   ├── Logs/               实时日志 / Saved Logs / 对应 ViewModel
+│   ├── Statistics/         用量图表 / 数据整形
+│   ├── Settings/           设置各子页
+│   └── Components/         设计系统 / 共享弹窗 / YAML 编辑器 / 表单工具栏
 ├── Pcat/                   iOS App target（入口、Info.plist、entitlements）
-├── PcatExtension/          Network Extension target（PacketTunnelProvider）
+├── PcatExtension/          Network Extension target（PacketTunnelProvider、
+│                           NetworkPathMonitor、TunnelFileDescriptor）
 ├── AppIcon.icon/           Xcode 26 Icon Composer 资源（单一 SVG + icon.json 图层描述）
 ├── docs/                   ProxyCat 专属文档（MITM 证书与 YAML 配置等）
 ├── Tests/LibraryTests/     Swift Testing 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
@@ -184,7 +196,7 @@ mihomo 自身的运行时日志缓冲被刻意保持在很小的规模——真�
 
 ## 宿主 App ↔ 扩展 IPC
 
-完全对应 sing-box `experimental/libbox.CommandServer` 的方案，所有通信集中在一条 gRPC 通道上：扩展端启动 gRPC server，监听 App Group 容器内的一个 Unix domain socket（路径来自 `Library/FilePath.swift`），宿主 App 通过 `Library/CommandClient.swift` 拨入。
+完全对应 sing-box `experimental/libbox.CommandServer` 的方案，所有通信集中在一条 gRPC 通道上：扩展端启动 gRPC server，监听 App Group 容器内的一个 Unix domain socket（路径来自 `Library/Support/FilePath.swift`），宿主 App 通过 `Library/Stores/CommandClient.swift` 拨入。
 
 **Streaming（扩展 → 宿主）** — 高频遥测：
 
@@ -201,20 +213,20 @@ mihomo 自身的运行时日志缓冲被刻意保持在很小的规模——真�
 
 > 没有 `SetLogLevel` RPC：日志等级是宿主端的显示过滤器，扩展永远推全量日志。这同时简化了 IPC 表面，又规避了"扩展挂起 → 日志流堵塞 → mihomo observable 全 buffer 写满 → 日志调用反过来阻塞 mihomo goroutine"这条链路（旧版的故障路径之一）。
 
-宿主 App 一侧不引入 grpc-swift；gRPC client 也住在 Go 里（`libmihomo/command_client.go`），Swift 只实现一个 `LibmihomoCommandClientHandlerProtocol` 委托接收流帧，并在 `CommandClient` 上暴露 `reload()` / `sendControllerRequest(...)` 包装 Go 的 unary 调用。Swift 端的依赖足迹为零。
+宿主 App 一侧不引入 grpc-swift；gRPC client 也住在 Go 里（`libmihomo/command_client.go`），Swift 只实现一个 `LibmihomoCommandClientDelegateProtocol` 委托接收流帧，并在 `CommandClient` 上暴露 `reload()` / `sendControllerRequest(...)` 包装 Go 的 unary 调用。Swift 端的依赖足迹为零。
 
-`Library/CommandClient.swift` 是 `@Observable`（iOS 17 Observation 框架），封装重连退避（200ms → 5s 上限），SwiftUI 视图直接通过 `@Environment(CommandClient.self)` 订阅。`Reload` 默认 30 秒超时；扩展卡住时不会让 UI 永远悬挂，错误以 gRPC `status` 返回，由 `SettingsChangeCoordinator.onError` 转给宿主 UI。gRPC 流任一边出错时也会主动取消共享 context，避免另一条流在重连周期内继续向宿主推送过期帧。
+`Library/Stores/CommandClient.swift` 是 `@Observable`（iOS 17 Observation 框架），封装重连退避（200ms → 5s 上限），SwiftUI 视图直接通过 `@Environment(CommandClient.self)` 订阅。`Reload` 默认 30 秒超时；扩展卡住时不会让 UI 永远悬挂，错误以 gRPC `status` 返回，由 `SettingsChangeCoordinator.onError` 转给宿主 UI。gRPC 流任一边出错时也会主动取消共享 context，避免另一条流在重连周期内继续向宿主推送过期帧。
 
-宿主端的运行时偏好集中在 `Library/RuntimeSettings.swift`，写入 `runtime_settings.json` 后由 `Library/ExtensionCoordinators.swift` 的 `SettingsChangeCoordinator` 调用对应的 gRPC RPC 通知扩展。扩展自身没有 `handleAppMessage` 业务逻辑——`runtime_settings.json` 是源文件，gRPC 调用只是 "请重新读盘" 的提示。
+宿主端的运行时偏好集中在 `Library/Stores/RuntimeSettings.swift`，写入 `runtime_settings.json` 后由 `Library/Services/Coordinators/SettingsChangeCoordinator.swift` 调用对应的 gRPC RPC 通知扩展。扩展自身没有 `handleAppMessage` 业务逻辑——`runtime_settings.json` 是源文件，gRPC 调用只是 "请重新读盘" 的提示。
 
-`runtime_settings.json` 同时承担当前 active profile 的指针——schema 是 `{ activeProfileID, disableExternalController, logLevel }`，`Library/Profile.swift` 的 `ProfileStore.setActive` 直接改写 `RuntimeSettings.shared.activeProfileID`，由后者负责持久化；Go 端的 `loadActiveYAML` 从同一个 JSON 里读取 UUID 解析对应的 YAML 文件。`logLevel` 字段是宿主端独占的显示过滤器（Logs 标签页本地用），写进同一份 JSON 只是为了让 iCloud 同步带走它；Go 端 `loadSettings` 不解码这个字段。
+`runtime_settings.json` 同时承担当前 active profile 的指针——schema 是 `{ activeProfileID, disableExternalController, logLevel }`，`Library/Stores/ProfileStore.swift` 的 `ProfileStore.setActive` 直接改写 `RuntimeSettings.shared.activeProfileID`，由后者负责持久化；Go 端的 `loadActiveYAML` 从同一个 JSON 里读取 UUID 解析对应的 YAML 文件。`logLevel` 字段是宿主端独占的显示过滤器（Logs 标签页本地用），写进同一份 JSON 只是为了让 iCloud 同步带走它；Go 端 `loadSettings` 不解码这个字段。
 
 mihomo 自身的 REST 控制器（`external-controller`）同时绑定两条监听：
 
 - **HTTP 回环**（`127.0.0.1:9090`，搭配 `metacubexd` 作为 `external-ui`）：面向 Dashboard 上的 "Open Web UI" 内嵌浏览器。用户可以在 Settings → "Disable Web Controller" 关闭它（写入 `runtime_settings.json` 的 `disableExternalController`，下一次 reload 生效）。
-- **App Group 内的 Unix 域 socket**（`controller.sock`，路径来自 `Library/FilePath.swift`）：扩展端的 `ControllerRequest` RPC 走这一条，用 Go 标准 `net/http` 调用 `/proxies`、`/group/.../delay`、`/connections` 等。Unix 监听始终开启（与 "Disable Web Controller" 无关），原生的 Proxies / Connections 标签页不再受该开关影响——开关只控制内嵌的 metacubexd 浏览页。
+- **App Group 内的 Unix 域 socket**（`controller.sock`，路径来自 `Library/Support/FilePath.swift`）：扩展端的 `ControllerRequest` RPC 走这一条，用 Go 标准 `net/http` 调用 `/proxies`、`/group/.../delay`、`/connections` 等。Unix 监听始终开启（与 "Disable Web Controller" 无关），原生的 Proxies / Connections 标签页不再受该开关影响——开关只控制内嵌的 metacubexd 浏览页。
 
-`Library/ControllerTransport.swift` 定义了原生 UI 的轻量 request/response 抽象；生产实现是 `CommandClient`。`MihomoController` 和 `ConnectionsStore` 不再在 Swift 里手写 HTTP/1.1 over AF_UNIX 解析，避免 chunked/EOF/timeout 等边界条件落在 UI 进程。`ConnectionsStore` 仍每秒请求一次 `/connections`（替代原本的 WebSocket），UI 视感与 WebSocket 轮询节拍一致。
+`Library/Services/ControllerTransport.swift` 定义了原生 UI 的轻量 request/response 抽象；生产实现是 `CommandClient`。`MihomoController` 统一封装 `/proxies`、`/connections`、`/group/.../delay` 等请求与解码，`ProxiesStore` / `ConnectionsStore` 只消费它，不在 Swift 里手写 HTTP/1.1 over AF_UNIX 解析，避免 chunked/EOF/timeout 等边界条件落在 UI 进程。`ConnectionsStore` 仍每秒请求一次 `/connections`（替代原本的 WebSocket），UI 视感与 WebSocket 轮询节拍一致。
 
 ## 日志视图
 
@@ -223,10 +235,10 @@ mihomo 自身的 REST 控制器（`external-controller`）同时绑定两条监�
 写盘路径（始终开启，与 UI 无关）：
 
 - `libmihomo/log_persist.go` 在 `startTunnel` 期间订阅 `log.Subscribe()`，把每条事件以 `时间戳 [LEVEL] payload` 行格式写进新开的 `mihomo-YYYYMMDD-HHMMSS.log`。会话结束写一条 “session ended” 标记并 `Sync()`。等级标签 `strings.ToUpper`，与 Swift 端的写法一致（`[INFO]/[DEBUG]/…`）。
-- `Library/ProxyCatLogPersistence.swift` 同样在 `PacketTunnelProvider.startTunnel` 里开 `proxycat-YYYYMMDD-HHMMSS.log`，承接 Swift 侧 `ProxyCatLogger` 的输出（`os.Logger` 也会照样收到）；行格式为 `时间戳 [LEVEL] [CATEGORY] message`。
+- `Library/Services/ProxyCatLogPersistence.swift` 同样在 `PacketTunnelProvider.startTunnel` 里开 `proxycat-YYYYMMDD-HHMMSS.log`，承接 Swift 侧 `ProxyCatLogger` 的输出（`os.Logger` 也会照样收到）；行格式为 `时间戳 [LEVEL] [CATEGORY] message`。
 - 这两份会话日志放在同一个 `Logs/` 目录里，用 hidden marker 文件（`.active-log-path` / `.active-proxycat-log-path`）标出当前正在写入的路径，宿主据此避免删除/裁剪 LIVE 文件。
 
-实时流路径（`ApplicationLibrary/LogView.swift`）：
+实时流路径（`ApplicationLibrary/Logs/LogView.swift`）：
 
 - `onAppear` → `CommandClient.enableLogBuffering()`：开第二个 `LibmihomoCommandClient`（只订阅 logs 不订阅 status），帧抵达后 append 到 `client.logs`（cap 1500，超出 25% 才一次性截尾摊销 O(n) 写）。
 - `onDisappear` → `disableLogBuffering()`：关订阅、清缓冲、把 paused 状态归位；下次进入 Logs 是一次全新的订阅。`MainView.scenePhase` 切到非 active 时也会通过 `setAppActive(false)` 关闭日志流（其他状态流不受影响）。
@@ -235,11 +247,11 @@ mihomo 自身的 REST 控制器（`external-controller`）同时绑定两条监�
 - 复制全部：把当前 `stream.visible`（已经按等级 + 搜索过滤）一次写入 `UIPasteboard.general`，alert 报告行数。
 - Pause/Resume 冻结一份 `pausedSnapshot`，避免自动滚动；Clear 清空 `client.logs` + 当前 visible。
 
-`SavedLogsView` 按 **会话开始时间** 列出历史 `mihomo-*.log` 和 `proxycat-*.log` 文件——`SavedLogFileInfo.parse` 从文件名 `(mihomo|proxycat)-YYYYMMDD-HHMMSS[-N].log` 里抽出 `startedAt`，行标题用它而不是文件 mtime；写入中的 LIVE 文件 mtime 每行一变，拿来当标题会让用户感觉条目在“跳动”。每行旁边一个浅色的 `mihomo` / `ProxyCat` kind 徽标点出归属；点按后进入内置的 UTF-8 文本查看器（`Library/SavedLogFile.swift`）：在后台线程内存映射文件、剥离 BOM、对非法字节用 `U+FFFD` 替换，再按行号惰性渲染，避免把 MB 级日志一次性塞进 SwiftUI 文本视图。当前会话用红色 `LIVE` 徽标标注；行菜单提供 Share File；列表支持下拉刷新和滑动删除。Settings → Logs → Retention 提供 `Forever / 10 / 50 / 100` 四档保留策略（默认 Forever，存于 `host_settings.json`），在设置变更、应用进入前台、以及打开 Saved Logs 列表三处由 `FilePath.pruneSavedLogs` 按 `startedAt` 排序清理；当前正在写入的会话文件始终保留。
+`SavedLogsView` 按 **会话开始时间** 列出历史 `mihomo-*.log` 和 `proxycat-*.log` 文件——`SavedLogFileInfo.parse` 从文件名 `(mihomo|proxycat)-YYYYMMDD-HHMMSS[-N].log` 里抽出 `startedAt`，行标题用它而不是文件 mtime；写入中的 LIVE 文件 mtime 每行一变，拿来当标题会让用户感觉条目在“跳动”。每行旁边一个浅色的 `mihomo` / `ProxyCat` kind 徽标点出归属；点按后进入内置的 UTF-8 文本查看器（`Library/Models/SavedLogFile.swift`）：在后台线程内存映射文件、剥离 BOM、对非法字节用 `U+FFFD` 替换，再按行号惰性渲染，避免把 MB 级日志一次性塞进 SwiftUI 文本视图。当前会话用红色 `LIVE` 徽标标注；行菜单提供 Share File；列表支持下拉刷新和滑动删除。Settings → Logs → Retention 提供 `Forever / 10 / 50 / 100` 四档保留策略（默认 Forever，存于 `host_settings.json`），在设置变更、应用进入前台、以及打开 Saved Logs 列表三处由 `StorageMaintenance.pruneSavedLogs` 按 `startedAt` 排序清理；当前正在写入的会话文件始终保留。
 
 ## 每日流量统计
 
-Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift Charts 堆叠柱状图 + 列表），数据由 `Library/DailyUsageStore.swift` 在宿主 App 内聚合：
+Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift Charts 堆叠柱状图 + 列表），数据由 `Library/Stores/DailyUsageStore.swift` 在宿主 App 内聚合：
 
 - `ExtensionEnvironment` 把 `CommandClient.$traffic` 的每帧推送给 store；store 在内存里持有上一次观测到的 `upTotal / downTotal`，对每个新样本计算 delta 加到当天的 bucket。
 - 扩展重启会让累计计数清零；store 检测到 `nextTotal < previousTotal` 时改用新值本身作 delta，避免负数；首帧只播种基线、不计入流量，防止跨进程重启时把已经计过的字节再加一遍。
@@ -251,7 +263,7 @@ Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift C
 
 Settings → iCloud Backup 把 profiles（含每份 YAML 原文）、active profile 指针、`runtime_settings.json` 和 `host_settings.json` 序列化为一份 schema-versioned 快照写到 iCloud Drive：容器 `iCloud.io.proxycat.Pcat`，路径 `Documents/ProxyCat/profile-settings-backup.json`。**日志、缓存、每日用量、MITM 私钥不会进入备份**——MITM CA 私钥按设计仅留在本机 App Group。
 
-- 实现在 `Library/ICloudBackup.swift` 的 `ICloudBackupStore`（`@MainActor @Observable` 单例）。本地侧状态写到 App Group 的 `icloud_sync_state.json`：保存 `deviceID`（首次启动随机生成，用于在快照里区分来源设备）、`lastSyncedAt`、`lastSyncedChecksum`、`lastCloudSnapshotID`。这个文件本身不上传 iCloud。
+- 实现在 `Library/Stores/ICloudBackupStore.swift` 的 `ICloudBackupStore`（`@MainActor @Observable` 单例）。本地侧状态写到 App Group 的 `icloud_sync_state.json`：保存 `deviceID`（首次启动随机生成，用于在快照里区分来源设备）、`lastSyncedAt`、`lastSyncedChecksum`、`lastCloudSnapshotID`。这个文件本身不上传 iCloud。
 - `syncNow()` 通过 `reconcile()` 比较 `(localChecksum, cloudChecksum, lastSyncedChecksum)`：完全一致或本地与云端一致时是 no-op；只云端变了（`local == lastSynced`）→ 拉取 cloud；只本地变了（`cloud == lastSynced`）→ 推送 local；两端相对上次都变了 → 进入 `conflict` 状态，由用户在 UI 上手动选择 `Back Up Now` 或 `Restore from iCloud`，不做静默覆盖。
 - 写入用 `Data.write(options: .atomic)` 让 NSFileManager 自己做 ubiquitous 文件的原子替换；读取前先 `startDownloadingUbiquitousItem` 把云端最新版拉到本地。Checksum 用 SHA-256 over `JSONEncoder(.sortedKeys)`，读 / 写 / 编解码都跑在 detached task 上，主 actor 只更新 `phase / lastBackup / lastError / isSyncing` 等可观察状态。
 - 触发点：App 启动以及 `scenePhase == .active` 时 `ICloudBackupStore.startAutoSync`；本机的 `ProfileStore.catalogDidChange / activeContentDidChange` 与 `AppConfiguration.runtimeSettingsDidChange / runtimeLogLevelDidChange / hostSettingsDidChange` 几条 `NotificationCenter` 通知则走 2 秒去抖再调 `syncNow`，避免连续编辑时打爆 iCloud。
