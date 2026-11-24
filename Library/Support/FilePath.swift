@@ -83,11 +83,32 @@ public enum FilePath {
         guard let data = try? Data(contentsOf: marker),
               let raw = String(data: data, encoding: .utf8)
         else { return nil }
-        let path = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !path.isEmpty, FileManager.default.fileExists(atPath: path) else {
-            return nil
+        return resolvedActiveLogPath(
+            storedPath: raw.trimmingCharacters(in: .whitespacesAndNewlines),
+            logsDirectory: logsDirectory
+        )
+    }
+
+    /// Resolve the path stored in an extension-written marker.
+    ///
+    /// App container UUIDs change when the app is reinstalled or updated,
+    /// while the extension's marker file can survive with its old
+    /// absolute path. Prefer the stored path when it still exists, then
+    /// fall back to the same filename inside the current logs directory.
+    nonisolated static func resolvedActiveLogPath(
+        storedPath: String,
+        logsDirectory: URL,
+        fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) -> String? {
+        guard !storedPath.isEmpty else { return nil }
+        if fileExists(storedPath) {
+            return storedPath
         }
-        return path
+
+        let name = URL(fileURLWithPath: storedPath).lastPathComponent
+        guard !name.isEmpty, name != "/" else { return nil }
+        let candidate = logsDirectory.appendingPathComponent(name).path
+        return fileExists(candidate) ? candidate : nil
     }
 
     /// Path of the Unix-domain command socket. Both the Network
