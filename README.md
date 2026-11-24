@@ -11,21 +11,39 @@
 > [!NOTE]
 > **TestFlight 公测即将开放 / TestFlight beta coming very soon** — 公开邀请链接将很快在此 README 发布，敬请关注本仓库。
 
+## 功能
+
+- **配置管理**：本地 YAML、订阅 URL、粘贴导入，导入/保存前用 mihomo 解析校验；支持分享、重命名与左滑编辑 MITM 子配置。
+- **仪表盘**：连接状态、实时上下行、累计流量、扩展内存预算与活动连接数。
+- **原生 Proxies / Connections**：代理组选择、延迟测试、连接列表与逐条关闭，全部走 App Group 私有 Unix socket。
+- **日志**：等级过滤、搜索高亮、暂停/复制；按会话保存 mihomo 与 ProxyCat 日志，标记正在写入的 LIVE 文件并支持保留策略。
+- **MITM**：每个 profile 独立的域名 / 端口 / ECH 策略 / 重写规则编辑器，配合本地根 CA 安装与信任检测。
+- **自动化与统计**：Auto Connect（SSID / 蜂窝 / 默认动作）、7 / 14 / 30 天流量统计、iCloud 备份。
+- **本地化**：English（源语言）、简体中文、日本語、Русский。
+- **构建**：`python3 build.py` 统一管理 mihomo xcframework、xcodegen、资源下载、模拟器/真机构建与诊断。
+
 ## 截图
 
-| Dashboard | Profiles | Logs | Settings |
-|:---:|:---:|:---:|:---:|
-| <img src="assets/dashboard.png" width="200"> | <img src="assets/profiles.png" width="200"> | <img src="assets/logs.png" width="200"> | <img src="assets/settings.png" width="200"> |
-| 状态 / 流量 / 内存预算 / 活动连接 | YAML 配置管理 | 等级筛选 + 搜索 + 复制 | Auto Connect / 统计 / iCloud 备份 / 存储 / MITM 证书 |
+截图使用简体中文界面。
 
-| Auto Connect | MITM Certificate | Diagnostics |
-|:---:|:---:|:---:|
-| <img src="assets/auto-connect.png" width="200"> | <img src="assets/mitm-certificate.png" width="200"> | <img src="assets/diagnostics.png" width="200"> |
-| SSID / 蜂窝 / 默认动作 | 本地根证书安装与信任 | App Group / 内核版本 / 构建标签 |
+| Dashboard | Profiles | Statistics | Settings |
+|:---:|:---:|:---:|:---:|
+| <img src="assets/dashboard.png" width="200" alt="Dashboard"> | <img src="assets/profiles.png" width="200" alt="Profiles"> | <img src="assets/statistics.png" width="200" alt="Statistics"> | <img src="assets/settings.png" width="200" alt="Settings"> |
+| 状态 / 流量 / 内存预算 / 活动连接 | 配置列表与 active 标记 | 7 / 14 / 30 天上下行统计 | 隐私 / 日志 / 存储 / MITM / 高级 |
+
+| Profile Editor | MITM Config | Saved Logs | Auto Connect |
+|:---:|:---:|:---:|:---:|
+| <img src="assets/profile-editor.png" width="200" alt="Profile Editor"> | <img src="assets/mitm-config.png" width="200" alt="MITM Config"> | <img src="assets/saved-logs.png" width="200" alt="Saved Logs"> | <img src="assets/auto-connect.png" width="200" alt="Auto Connect"> |
+| YAML 编辑与 mihomo 校验 | 域名 / 端口 / 重写规则 | 会话日志 / 实时标记 / 保留策略 | SSID / 蜂窝 / 默认动作 |
+
+| MITM Certificate | Diagnostics |
+|:---:|:---:|
+| <img src="assets/mitm-certificate.png" width="200" alt="MITM Certificate"> | <img src="assets/diagnostics.png" width="200" alt="Diagnostics"> |
+| 本地根证书安装与信任 | App Group / 内核版本 / 构建标识 |
 
 ## 本地化文案风格
 
-ProxyCat 的简体中文、日文与俄文本地化采用统一的产品文案风格：
+ProxyCat 以英文为源语言，提供简体中文、日文与俄文翻译，并采用统一的产品文案风格：
 
 - **语气**：简洁、中性、偏 iOS 系统设置风格；按钮和菜单使用短动词（如“保存”“取消”“重置”），提示语直接说明结果或前置条件。
 - **术语**：`profile` 统一译为“配置”，`Dashboard` 统一译为“仪表盘”，`Statistics` 译为“统计”，`Saved Logs` 译为“已保存日志”，`Web UI` 保留英文写法。
@@ -253,7 +271,7 @@ mihomo 自身的 REST 控制器（`external-controller`）同时绑定两条监�
 
 - `libmihomo/log_persist.go` 在 `startTunnel` 期间订阅 `log.Subscribe()`，把每条事件以 `时间戳 [LEVEL] payload` 行格式写进新开的 `mihomo-YYYYMMDD-HHMMSS.log`。会话结束写一条 “session ended” 标记并 `Sync()`。等级标签 `strings.ToUpper`，与 Swift 端的写法一致（`[INFO]/[DEBUG]/…`）。
 - `Library/Services/ProxyCatLogPersistence.swift` 同样在 `PacketTunnelProvider.startTunnel` 里开 `proxycat-YYYYMMDD-HHMMSS.log`，承接 Swift 侧 `ProxyCatLogger` 的输出（`os.Logger` 也会照样收到）；行格式为 `时间戳 [LEVEL] [CATEGORY] message`。
-- 这两份会话日志放在同一个 `Logs/` 目录里，用 hidden marker 文件（`.active-log-path` / `.active-proxycat-log-path`）标出当前正在写入的路径，宿主据此避免删除/裁剪 LIVE 文件。
+- 这两份会话日志放在同一个 `Logs/` 目录里，用 hidden marker 文件（`.active-log-path` / `.active-proxycat-log-path`）标出当前正在写入的路径，宿主据此避免删除/裁剪 LIVE 文件。marker 里保存的是扩展进程视角的绝对路径；App 更新或重装后容器 UUID 可能变化，宿主会再按文件名在当前 `Logs/` 目录里解析一次，避免 LIVE 标记和保留保护失效。
 
 实时流路径（`ApplicationLibrary/Logs/LogView.swift`）：
 
@@ -264,7 +282,7 @@ mihomo 自身的 REST 控制器（`external-controller`）同时绑定两条监�
 - 复制全部：把当前 `stream.visible`（已经按等级 + 搜索过滤）一次写入 `UIPasteboard.general`，alert 报告行数。
 - Pause/Resume 冻结一份 `pausedSnapshot`，避免自动滚动；Clear 清空 `client.logs` + 当前 visible。
 
-`SavedLogsView` 按 **会话开始时间** 列出历史 `mihomo-*.log` 和 `proxycat-*.log` 文件——`SavedLogFileInfo.parse` 从文件名 `(mihomo|proxycat)-YYYYMMDD-HHMMSS[-N].log` 里抽出 `startedAt`，行标题用它而不是文件 mtime；写入中的 LIVE 文件 mtime 每行一变，拿来当标题会让用户感觉条目在“跳动”。每行旁边一个浅色的 `mihomo` / `ProxyCat` kind 徽标点出归属；点按后进入内置的 UTF-8 文本查看器（`Library/Models/SavedLogFile.swift`）：在后台线程内存映射文件、剥离 BOM、对非法字节用 `U+FFFD` 替换，再按行号惰性渲染，避免把 MB 级日志一次性塞进 SwiftUI 文本视图。当前会话用红色 `LIVE` 徽标标注；行菜单提供 Share File；列表支持下拉刷新和滑动删除。Settings → Logs → Retention 提供 `Forever / 10 / 50 / 100` 四档保留策略（默认 Forever，存于 `host_settings.json`），在设置变更、应用进入前台、以及打开 Saved Logs 列表三处由 `StorageMaintenance.pruneSavedLogs` 按 `startedAt` 排序清理；当前正在写入的会话文件始终保留。
+`SavedLogsView` 按 **会话开始时间** 列出历史 `mihomo-*.log` 和 `proxycat-*.log` 文件——`SavedLogFileInfo.parse` 从文件名 `(mihomo|proxycat)-YYYYMMDD-HHMMSS[-N].log` 里抽出 `startedAt`，行标题用它而不是文件 mtime；写入中的 LIVE 文件 mtime 每行一变，拿来当标题会让用户感觉条目在“跳动”。每行旁边一个浅色的 `mihomo` / `ProxyCat` kind 徽标点出归属；点按后进入内置的 UTF-8 文本查看器（`Library/Models/SavedLogFile.swift`）：在后台线程内存映射文件、剥离 BOM、对非法字节用 `U+FFFD` 替换，再按行号惰性渲染，避免把 MB 级日志一次性塞进 SwiftUI 文本视图。当前会话用红色 `LIVE` 徽标标注（简体中文界面显示「实时」）；行菜单提供 Share File；列表支持下拉刷新和滑动删除。Settings → Logs → Retention 提供 `Forever / 10 / 50 / 100` 四档保留策略（默认 Forever，存于 `host_settings.json`），在设置变更、应用进入前台、以及打开 Saved Logs 列表三处由 `StorageMaintenance.pruneSavedLogs` 按 `startedAt` 排序清理；当前正在写入的会话文件始终保留。
 
 ## 每日流量统计
 
@@ -292,9 +310,10 @@ Settings → iCloud Backup 把 profiles（含每份 YAML 原文）、active prof
 ProxyCat 直接消费 mihomo 标准 YAML。Profiles 标签页支持：
 
 - 通过文档选择器或系统 Share / Open With 导入 `.yaml` / `.yml`；
-- 在内置编辑器粘贴 / 编辑 YAML；
+- 在内置编辑器中粘贴 / 编辑 YAML，保存时先用 mihomo 校验；
 - 从订阅 URL 下载远程 profile，并支持下拉刷新逐条重新拉取；
-- 滑动删除。
+- 左滑打开 MITM 配置编辑器，结构化编辑域名、端口、ECH 策略与重写规则；
+- 分享 profile，或滑动删除。
 
 所有写入路径（导入、编辑器保存、远程下载与刷新）在 `ProfileStore` 中统一调用 `LibmihomoValidate` 校验，畸形 YAML 不会落盘，也不会把原本可用的远程订阅覆盖成解析不出的内容。
 
@@ -311,7 +330,7 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 
 ### MITM HTTPS 重写
 
-ProxyCat 已接入 mihomo 的 `mitm` 配置块。它默认关闭，只有当前 profile 显式写入 `mitm.enable: true`，并且目标端口命中 `mitm.ports` 时，TCP 流量才会进入 MITM 处理。若配置了 `mitm.domain`，还会先用 TLS SNI / HTTP Host 做域名预筛选；不配置 `domain` 时仅按端口判断。常见配置形态：
+ProxyCat 已接入 mihomo 的 `mitm` 配置块。它默认关闭，只有当前 profile 显式写入 `mitm.enable: true`，并且目标端口命中 `mitm.ports` 时，TCP 流量才会进入 MITM 处理。除了直接编辑 YAML，也可以从 Profiles 左滑进入 **MITM 配置** 编辑器；保存时只替换 `mitm:` 块，其余配置内容保持不变。若配置了 `mitm.domain`，还会先用 TLS SNI / HTTP Host 做域名预筛选；不配置 `domain` 时仅按端口判断。常见配置形态：
 
 ```yaml
 mitm:
