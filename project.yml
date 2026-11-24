@@ -1,6 +1,7 @@
 # XcodeGen spec. ProxyCat.xcodeproj is generated and intentionally ignored.
-# Use `make project` or any build target in the Makefile instead of running
-# xcodegen directly so these environment-backed values are always populated:
+# Use `python3 build.py project` (or `python3 build.py all` / `sim` / `build`)
+# instead of running xcodegen directly so these environment-backed values are
+# always populated:
 #
 #   PROXYCAT_MARKETING_VERSION  from VERSION, unless overridden
 #   PROXYCAT_BUILD_NUMBER       from git rev-list --count HEAD, unless overridden

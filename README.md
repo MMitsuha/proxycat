@@ -50,8 +50,9 @@ proxycat/
 │   ├── oom.go              移植自 sing-box 的 OOM 守护，应对 NE jetsam
 │   ├── proto/command/      gRPC 协议定义（Status / Log）
 │   └── tools.go            固定 golang.org/x/mobile/bind 依赖（gobind 需要）
-├── scripts/
-│   └── build-libmihomo.sh  gomobile bind → Frameworks/Libmihomo.xcframework
+├── build.py                 Python 构建入口（替代原 Makefile + shell 脚本）
+├── tools/proxycat_build/    构建实现：mihomo / xcodegen / assets / xcodebuild / doctor
+├── tools/tests/             构建工具单元测试
 ├── Library/                共享 Swift framework：
 │   ├── Models/             纯值类型（Profile / Connections / MitmProfileConfig /
 │   │                       ICloudBackup / DailyUsage / AutoConnect / HostSettings /
@@ -88,11 +89,14 @@ proxycat/
 │                           ByteFormatter / LogEntry / Profile codable / MihomoController，
 │                           运行: `xcodebuild test -scheme Library`
 ├── project.yml             XcodeGen 描述文件 — 用于（重新）生成 ProxyCat.xcodeproj
-├── Makefile                构建编排
 └── sample-profile.yaml     最小可用的 mihomo 配置示例
 ```
 
 ## 环境要求
+
+- Python 3.10+（运行 `python3 build.py`，仅使用标准库；`app-icon` 子命令需要 Pillow）
+- Xcode 26 / xcodegen
+- Go + gomobile（构建 `Libmihomo.xcframework`）
 
 ```bash
 brew install xcodegen
@@ -101,31 +105,33 @@ go install golang.org/x/mobile/cmd/gobind@latest
 gomobile init
 ```
 
+运行 `python3 build.py doctor` 可以检查上述工具、mihomo submodule 与生成产物的状态。
+
 mihomo 源码以 git submodule 形式 vendored 在 `proxycat/mihomo/`，跟踪上游 `Meta` 分支。`libmihomo/go.mod` 中的 `replace` 指向该子模块。
 
 ```bash
 git clone --recurse-submodules <proxycat repo>
 # 或者已经 clone 过：
-make mihomo-init        # 等价于 git submodule update --init --recursive mihomo
+python3 build.py mihomo-init    # 等价于 git submodule update --init --recursive mihomo
 ```
 
 升级到最新 Meta tip 并重建 xcframework：
 
 ```bash
-make mihomo-upgrade     # checkout origin/Meta + ./scripts/build-libmihomo.sh
+python3 build.py mihomo-upgrade  # checkout origin/Meta + 重建 xcframework
 git add mihomo && git commit -m "Bump mihomo to <sha>"
 ```
 
 或者钉到指定的 tag / commit / 分支（不跟踪 Meta tip）：
 
 ```bash
-make mihomo-checkout REF=v1.19.5         # 锁定到一个稳定 tag
-make mihomo-checkout REF=35d5d4e44d7a    # 锁定到具体 commit
-make mihomo-checkout REF=Meta            # 等效于 mihomo-upgrade（取 origin/Meta 当前 tip）
+python3 build.py mihomo-checkout v1.19.5         # 锁定到一个稳定 tag
+python3 build.py mihomo-checkout 35d5d4e44d7a    # 锁定到具体 commit
+python3 build.py mihomo-checkout Meta            # 等效于 mihomo-upgrade（取 origin/Meta 当前 tip）
 git add mihomo && git commit -m "Pin mihomo to <sha> (<ref>)"
 ```
 
-`mihomo-upgrade` / `mihomo-checkout` 会先 `git fetch --tags origin`，再以 detached HEAD 方式 checkout 给定的 ref，最后调用 `./scripts/build-libmihomo.sh` 重建 xcframework。
+`mihomo-upgrade` / `mihomo-checkout` 会先 `git fetch --tags origin`，再以 detached HEAD 方式 checkout 给定的 ref，最后调用 Python 构建器重建 xcframework。
 
 `libmihomo/tools.go` 显式 import 了 `golang.org/x/mobile/bind`。没有这个文件 `gomobile bind` 会报错 `unable to import bind: no Go package in golang.org/x/mobile/bind`，因为 `go mod tidy` 会把没有源码引用的依赖剪掉，而 `gobind` 只在临时目录里 import 它。
 
@@ -134,30 +140,41 @@ git add mihomo && git commit -m "Pin mihomo to <sha> (<ref>)"
 ```bash
 cd proxycat
 export XCODE_DEVELOPMENT_TEAM=ABCDE12345  # your Apple Team ID
-make assets       # 下载 GeoIP / GeoSite / mmdb 与 metacubexd（仓库只跟踪 .gitkeep）
-make all          # 构建 xcframework + 生成 xcodeproj
+python3 build.py assets  # 下载 GeoIP / GeoSite / mmdb 与 metacubexd（仓库只跟踪 .gitkeep）
+python3 build.py all     # 构建 xcframework + 生成 xcodeproj
 open ProxyCat.xcodeproj
 ```
 
-`make project` / `make all` 会从 `XCODE_DEVELOPMENT_TEAM` 自动填入 `DEVELOPMENT_TEAM`。未设置时生成的项目不会写入开发者团队；真机构建或 Archive 前需要设置该环境变量，或临时在 Xcode 中选择 Team。`make sim` 会先重新生成项目并关闭签名；`make build` 会先检查 `XCODE_DEVELOPMENT_TEAM`，再重新生成项目和执行真机构建。
+`python3 build.py project` / `python3 build.py all` 会从 `XCODE_DEVELOPMENT_TEAM` 自动填入 `DEVELOPMENT_TEAM`。未设置时生成的项目不会写入开发者团队；真机构建或 Archive 前需要设置该环境变量，或临时在 Xcode 中选择 Team。`python3 build.py sim` 会先重新生成项目并关闭签名；`python3 build.py build` 会先检查 `XCODE_DEVELOPMENT_TEAM`，再重新生成项目和执行真机构建。
 
-常用 Make target：
+常用命令：
 
-| target            | 说明                                                   |
-|-------------------|--------------------------------------------------------|
-| `make libmihomo`      | 仅重建 `Frameworks/Libmihomo.xcframework`              |
-| `make project`        | 运行 `xcodegen` 并自动注入版本号与 `XCODE_DEVELOPMENT_TEAM`（见下） |
-| `make version`        | 打印下一次 `make project` 会写入的版本/编号            |
-| `make all`            | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
-| `make all-obf`        | `mihomo-init` + obfuscated `libmihomo` + `project`，用于提交前构建 |
-| `make mihomo-init`    | 初始化或刷新 `mihomo/` submodule                       |
-| `make mihomo-upgrade` | 拉取最新 Meta tip 并重建 xcframework                   |
-| `make mihomo-checkout REF=<ref>` | 钉到指定 tag / commit / 分支并重建 xcframework |
-| `make assets`         | 下载 geo 资源与 metacubexd 到 `BundledAssets/`         |
-| `make geo-assets` / `ui-assets` / `clean-assets` | 仅刷新 / 清空对应子集 |
-| `make sim`            | 不签名地为 iOS 模拟器构建                              |
-| `make build`          | 真机构建（需要签名）                                   |
-| `make clean`          | 清理生成产物                                           |
+| 命令 | 说明 |
+|------|------|
+| `python3 build.py libmihomo` | 仅重建 `Frameworks/Libmihomo.xcframework`；`--target sim` 只构建模拟器 slice |
+| `python3 build.py libmihomo-obf` | 通过 garble 构建混淆版 xcframework |
+| `python3 build.py project` | 运行 `xcodegen` 并自动注入版本号与 `XCODE_DEVELOPMENT_TEAM`（见下） |
+| `python3 build.py version` | 打印下一次 `project` 会写入的版本/编号 |
+| `python3 build.py all` | `mihomo-init` + `libmihomo` + `project`，首次 clone 后跑一次 |
+| `python3 build.py all-obf` | `mihomo-init` + obfuscated `libmihomo` + `project`，用于提交前构建 |
+| `python3 build.py mihomo-init` | 初始化或刷新 `mihomo/` submodule |
+| `python3 build.py mihomo-upgrade` | 拉取最新 Meta tip 并重建 xcframework |
+| `python3 build.py mihomo-checkout <ref>` | 钉到指定 tag / commit / 分支并重建 xcframework |
+| `python3 build.py assets [geo\|ui]` | 下载 geo 资源与 metacubexd 到 `BundledAssets/` |
+| `python3 build.py clean-assets` | 清空 `BundledAssets/{geo,ui}`（保留 `.gitkeep`） |
+| `python3 build.py sim` | 不签名地为 iOS 模拟器构建 |
+| `python3 build.py build --team <id>` | 真机构建（需要签名） |
+| `python3 build.py clean` | 清理生成产物 |
+| `python3 build.py doctor` | 检查工具链、submodule 与生成产物 |
+| `python3 build.py app-icon` | 重新渲染 1024×1024 应用图标（需要 Pillow） |
+
+> `app-icon` 需要 Pillow；推荐 `uv run --with pillow build.py app-icon`，或在 Python 环境中安装 Pillow。
+
+构建工具自身的单元测试：
+
+```bash
+python3 -m unittest discover -s tools/tests -t . -v
+```
 
 ## 版本与显示信息
 
@@ -170,12 +187,12 @@ open ProxyCat.xcodeproj
 | Display Name          | `INFOPLIST_KEY_CFBundleDisplayName`（`project.yml`）       | Display Name                 |
 | App Category          | `INFOPLIST_KEY_LSApplicationCategoryType`                  | Category                     |
 
-调用链：`make project` → `scripts/generate-project.sh` 读取 `VERSION` 与 git，导出 `PROXYCAT_MARKETING_VERSION` / `PROXYCAT_BUILD_NUMBER`，并透传 `XCODE_DEVELOPMENT_TEAM`，由 `project.yml` 的 `${...}` 占位符插入。
+调用链：`python3 build.py project` → `tools/proxycat_build/project.py` 读取 `VERSION` 与 git，导出 `PROXYCAT_MARKETING_VERSION` / `PROXYCAT_BUILD_NUMBER`，并透传 `XCODE_DEVELOPMENT_TEAM`，由 `project.yml` 的 `${...}` 占位符插入。
 
-要发布新版只需 `echo 1.0.0 > VERSION && make project`；build number 会随 commit 自动递增，无需手动维护。需要临时覆盖时（例如手工 archive 至 TestFlight）可：
+要发布新版只需 `echo 1.0.0 > VERSION && python3 build.py project`；build number 会随 commit 自动递增，无需手动维护。需要临时覆盖时（例如手工 archive 至 TestFlight）可：
 
 ```bash
-XCODE_DEVELOPMENT_TEAM=ABCDE12345 PROXYCAT_BUILD_NUMBER=4242 make project
+XCODE_DEVELOPMENT_TEAM=ABCDE12345 PROXYCAT_BUILD_NUMBER=4242 python3 build.py project
 ```
 
 `Pcat/Info.plist` 与 `PcatExtension/Info.plist` 现在只保留 `INFOPLIST_KEY_*` 不能表达的条目（YAML profile 的 UTI、Network Extension 的 `NSExtension` 字典）。其他都从 `project.yml` 的 build settings 流入，避免一处版本三处改。
@@ -328,7 +345,7 @@ Proxies 标签页里组头部的秒表按钮调用 mihomo 的 `/group/{name}/del
 
 ## 构建标识与诊断
 
-`scripts/build-libmihomo.sh` 通过 `go build -ldflags -X` 注入构建期信息：
+`tools/proxycat_build/mihomo.py` 通过 `go build -ldflags -X` 注入构建期信息：
 
 - `mihomo` 版本字符串（沿用 mihomo 自身 `Makefile` 的约定：tag 命中即 `v1.19.24`，Alpha/Beta 通道分别为 `alpha-<short>` / `beta-<short>`，否则回退 `git describe --tags --always`；不读取 `constant/version.go` 里上游从未维护的 `1.10.0` 占位符）
 - mihomo 上游 commit 短哈希（来自 `git -C mihomo rev-parse`）
@@ -342,14 +359,14 @@ Settings → Diagnostics 页面展示 `Libmihomo.Version()` 返回的 `VersionIn
 - `with_gvisor`：保留 sing-tun 的 gVisor netstack（NE 必需）；
 - `with_low_memory`：把 mihomo 每连接中继缓冲减半（TCP 32→16KB，UDP 16→8KB），并打开 `features.WithLowMemory`。100 个并发连接约可省 2.4MB。
 
-构建脚本最后还会对 xcframework 各 slice 执行 `strip -x`，进一步压缩 NE 进程的二进制体积。
+构建器最后还会对 xcframework 各 slice 执行 `strip -x`，进一步压缩 NE 进程的二进制体积。
 
 ## 故障排查
 
 | 现象 | 可能原因 |
 |---|---|
-| `No such module 'Libmihomo'` | 忘了跑 `make libmihomo` |
+| `No such module 'Libmihomo'` | 忘了跑 `python3 build.py libmihomo` |
 | 连上 5 秒就掉线 | 触发 jetsam — 在 Console.app 检查是否有 `PcatExtension` 的 `EXC_RESOURCE` |
-| `could not obtain TUN file descriptor` | 跨版本 iOS 的 KVC 路径变了 — 见 `PacketTunnelProvider.packetFlowFileDescriptor()` |
+| `could not obtain TUN file descriptor` | 跨版本 iOS 的 KVC 路径变了 — 见 `TunnelFileDescriptor.locate(in:logger:)` |
 | 连接成功但所有流量直连 / 全黑 | 检查 YAML 的 `external-controller` 是否可达，并查 Logs 标签页 |
 | Dashboard 上 `Memory` 一直为 0 | 扩展尚未起来，`CommandClient` 还在重连退避中 |

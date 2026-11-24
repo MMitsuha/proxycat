@@ -1,19 +1,7 @@
-#!/usr/bin/env -S uv run --with pillow --script
-# /// script
-# requires-python = ">=3.10"
-# dependencies = ["pillow"]
-# ///
-"""
-Renders the 1024x1024 App Store icon for ProxyCat.
+"""Render the 1024x1024 App Store icon with Pillow.
 
-Concept: a clean, line-based cat mark with a proxy route running through it.
-Pure Pillow drawing, no fonts, no external assets.
-
-Run it from the repo root:
-
-    ./scripts/generate-app-icon.py
-
-Output: Pcat/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+Concept: a clean, line-based cat mark with a proxy route running through
+it. Pure Pillow drawing; no fonts or external assets.
 """
 
 from __future__ import annotations
@@ -21,12 +9,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
-from PIL import Image, ImageDraw
+from .config import ROOT, BuildError
 
 SIZE = 1024
 SCALE = 4
 CANVAS = SIZE * SCALE
-OUT = Path(__file__).resolve().parent.parent / "Pcat" / "Assets.xcassets" / "AppIcon.appiconset" / "AppIcon-1024.png"
+OUT = ROOT / "Pcat" / "Assets.xcassets" / "AppIcon.appiconset" / "AppIcon-1024.png"
 
 BACKGROUND = (247, 250, 252)
 INK = (17, 30, 48)
@@ -36,6 +24,18 @@ WHITE = (255, 255, 255)
 
 Point = tuple[float, float]
 Color = tuple[int, int, int]
+
+
+def _pillow():
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError as error:  # pragma: no cover - exercised on demand
+        raise BuildError(
+            "Pillow is required for app-icon\n"
+            "  run: uv run --with pillow build.py app-icon\n"
+            "  or:  python3 -m pip install pillow"
+        ) from error
+    return Image, ImageDraw
 
 
 def scale(value: float) -> int:
@@ -78,7 +78,7 @@ def merge_segments(segments: Iterable[list[Point]]) -> list[Point]:
     return points
 
 
-def stroke(draw: ImageDraw.ImageDraw, points: list[Point], color: Color, width: int, *, caps: bool = True) -> None:
+def stroke(draw, points: list[Point], color: Color, width: int, *, caps: bool = True) -> None:
     scaled = [scaled_point(point) for point in points]
     draw.line(scaled, fill=color, width=scale(width), joint="curve")
     if caps and scaled:
@@ -88,7 +88,7 @@ def stroke(draw: ImageDraw.ImageDraw, points: list[Point], color: Color, width: 
 
 
 def dot(
-    draw: ImageDraw.ImageDraw,
+    draw,
     center: Point,
     radius: int,
     fill: Color,
@@ -99,10 +99,13 @@ def dot(
     cx, cy = center
     draw.ellipse(scaled_box(cx, cy, radius), fill=fill)
     if outline and outline_width:
-        draw.ellipse(scaled_box(cx, cy, radius), outline=outline, width=scale(outline_width))
+        draw.ellipse(
+            scaled_box(cx, cy, radius), outline=outline, width=scale(outline_width)
+        )
 
 
-def render() -> Image.Image:
+def render():
+    Image, ImageDraw = _pillow()
     img = Image.new("RGB", (CANVAS, CANVAS), BACKGROUND)
     draw = ImageDraw.Draw(img)
 
@@ -156,12 +159,13 @@ def render() -> Image.Image:
     return img.resize((SIZE, SIZE), Image.Resampling.LANCZOS)
 
 
-def main() -> None:
-    OUT.parent.mkdir(parents=True, exist_ok=True)
+def write(output: Path = OUT) -> Path:
     img = render()
-    img.save(OUT, "PNG", optimize=True)
-    print(f"wrote {OUT.relative_to(Path.cwd())} ({SIZE}x{SIZE})")
-
-
-if __name__ == "__main__":
-    main()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output, "PNG", optimize=True)
+    try:
+        display: Path | str = output.relative_to(ROOT)
+    except ValueError:
+        display = output
+    print(f"wrote {display} ({SIZE}x{SIZE})", flush=True)
+    return output

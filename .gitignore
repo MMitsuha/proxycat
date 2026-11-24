@@ -10,10 +10,10 @@ build/
 # XcodeGen output (regenerable from project.yml)
 ProxyCat.xcodeproj/
 
-# gomobile output (regenerable from libmihomo/ via scripts/build-libmihomo.sh)
+# gomobile output (regenerable via `python3 build.py libmihomo`)
 Frameworks/
 
-# Compile-time bundled assets (regenerable via `make assets`). The
+# Compile-time bundled assets (regenerable via `python3 build.py assets`). The
 # directory layout is tracked via .gitkeep so xcodegen sees the folder
 # reference; only the downloaded payload is excluded.
 BundledAssets/geo/*
@@ -31,6 +31,13 @@ coverage.txt
 
 # macOS
 .DS_Store
+
+# Python build tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # IDE
 .vscode/
