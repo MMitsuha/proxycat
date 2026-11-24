@@ -39,6 +39,7 @@ struct AdvancedSettingsView: View {
 
             bundledAssetsSection
         }
+        .proxyCatForm()
         .navigationTitle("Advanced")
     }
 

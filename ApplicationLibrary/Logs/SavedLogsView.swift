@@ -27,6 +27,7 @@ public struct SavedLogsView: View {
                         } label: {
                             row(for: entry)
                         }
+                        .accessibilityIdentifier("savedLogs.row.\(entry.id)")
                         .contextMenu {
                             ShareLink(item: entry.url) {
                                 Label("Share File", systemImage: "square.and.arrow.up")
@@ -38,6 +39,7 @@ public struct SavedLogsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .accessibilityIdentifier("savedLogs.list")
                 .refreshable { await model.reload() }
             }
         }
@@ -60,6 +62,7 @@ public struct SavedLogsView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .accessibilityLabel("Actions")
+                        .accessibilityIdentifier("savedLogs.actions")
                 }
             }
         }
@@ -112,10 +115,10 @@ public struct SavedLogsView: View {
     }
 
     private var emptyState: some View {
-        ContentUnavailableView(
-            localizedTitle: "No saved logs yet",
+        ProxyCatEmptyState(
+            title: "No saved logs yet",
             systemImage: "doc.text.magnifyingglass",
-            localizedDescription: "A new file is created each time the tunnel connects."
+            description: "A new file is created each time the tunnel connects."
         )
     }
 

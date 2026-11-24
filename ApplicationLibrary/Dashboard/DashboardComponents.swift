@@ -18,7 +18,7 @@ struct TrafficCard: View {
                 Spacer()
             }
             Text(ByteFormatter.rate(rate))
-                .font(.system(size: 22, weight: .semibold, design: .rounded).monospacedDigit())
+                .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
                 .foregroundStyle(live ? Color.primary : .secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -27,6 +27,7 @@ struct TrafficCard: View {
                 .foregroundStyle(.secondary)
         }
         .proxyCatCard()
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -47,6 +48,7 @@ struct MemoryBar: View {
                 .progressViewStyle(.linear)
                 .tint(tint)
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var displayValue: String {
@@ -69,11 +71,12 @@ struct StatusDot: View {
     let color: Color
     let pulsing: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var scale: CGFloat = 1
 
     var body: some View {
         ZStack {
-            if pulsing {
+            if pulsing, !reduceMotion {
                 Circle()
                     .fill(color.opacity(0.35))
                     .frame(width: 18, height: 18)
@@ -91,5 +94,6 @@ struct StatusDot: View {
                 .frame(width: 10, height: 10)
         }
         .frame(width: 18, height: 18)
+        .accessibilityHidden(true)
     }
 }

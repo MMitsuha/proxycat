@@ -31,6 +31,7 @@ struct StorageSettingsView: View {
                 Text("Removes the rule-provider cache, downloaded GeoIP / GeoSite databases, and the downloaded external UI. mihomo re-fetches them on next start. Bundled assets are preserved.")
             }
         }
+        .proxyCatForm()
         .navigationTitle("Storage")
         .task {
             await refreshCacheSize()

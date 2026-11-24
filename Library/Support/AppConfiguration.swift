@@ -19,6 +19,16 @@ public enum AppConfiguration {
     /// can toggle off.
     public static let controllerSocketName = "controller.sock"
 
+    /// Loopback port mihomo's HTTP controller binds when the user has not
+    /// disabled the Web Controller. Keep in sync with `applyControllerPolicy`
+    /// in libmihomo/binding.go.
+    public static let webControllerPort = 9090
+
+    /// In-app Web UI entry point served by the bundled metacubexd assets.
+    public static var webUIURL: URL? {
+        URL(string: "http://127.0.0.1:\(webControllerPort)/ui/")
+    }
+
     /// Filename of the shared runtime-settings JSON. Written by the host
     /// app whenever the user toggles a preference or switches the active
     /// profile; read directly by the Go core on every Start / Reload so

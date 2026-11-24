@@ -12,25 +12,40 @@ public struct SettingsView: View {
         @Bindable var hostSettings = hostSettings
         return Form {
             Section {
-                NavigationLink {
+                ProxyCatNavigationRow(
+                    title: "Auto Connect",
+                    systemImage: "wifi.circle",
+                    tint: .blue,
+                    accessibilityID: "settings.autoConnect"
+                ) {
                     AutoConnectSettingsView()
-                } label: {
-                    Label("Auto Connect", systemImage: "wifi.circle")
                 }
-                NavigationLink {
+                ProxyCatNavigationRow(
+                    title: "Statistics",
+                    systemImage: "chart.bar.xaxis",
+                    tint: .blue,
+                    accessibilityID: "settings.statistics"
+                ) {
                     StatisticsView()
-                } label: {
-                    Label("Statistics", systemImage: "chart.bar.xaxis")
                 }
-                NavigationLink {
+                ProxyCatNavigationRow(
+                    title: "iCloud Backup",
+                    systemImage: "icloud",
+                    tint: .blue,
+                    accessibilityID: "settings.iCloud"
+                ) {
                     ICloudBackupSettingsView()
-                } label: {
-                    Label("iCloud Backup", systemImage: "icloud")
                 }
             }
 
             Section {
-                Toggle("Disable Web Controller", isOn: $settings.disableExternalController)
+                Toggle(isOn: $settings.disableExternalController) {
+                    settingsRowLabel(
+                        title: "Disable Web Controller",
+                        systemImage: "hand.raised.fill",
+                        tint: .orange
+                    )
+                }
             } header: {
                 Text("Privacy")
             } footer: {
@@ -38,11 +53,17 @@ public struct SettingsView: View {
             }
 
             Section {
-                Picker("Retention", selection: $hostSettings.logRetention) {
+                Picker(selection: $hostSettings.logRetention) {
                     Text("Forever").tag(LogRetention.keepAll)
                     Text("Keep last 10 sessions").tag(LogRetention.last10)
                     Text("Keep last 50 sessions").tag(LogRetention.last50)
                     Text("Keep last 100 sessions").tag(LogRetention.last100)
+                } label: {
+                    settingsRowLabel(
+                        title: "Retention",
+                        systemImage: "archivebox.fill",
+                        tint: .teal
+                    )
                 }
             } header: {
                 Text("Logs")
@@ -51,20 +72,29 @@ public struct SettingsView: View {
             }
 
             Section {
-                NavigationLink {
+                ProxyCatNavigationRow(
+                    title: "Storage",
+                    systemImage: "internaldrive",
+                    tint: .indigo,
+                    accessibilityID: "settings.storage"
+                ) {
                     StorageSettingsView()
-                } label: {
-                    Label("Storage", systemImage: "internaldrive")
                 }
-                NavigationLink {
+                ProxyCatNavigationRow(
+                    title: "MITM Certificate",
+                    systemImage: "shield.lefthalf.filled",
+                    tint: .green,
+                    accessibilityID: "settings.mitmCertificate"
+                ) {
                     MitmCertificateSettingsView()
-                } label: {
-                    Label("MITM Certificate", systemImage: "shield.lefthalf.filled")
                 }
-                NavigationLink {
+                ProxyCatNavigationRow(
+                    title: "Advanced",
+                    systemImage: "wrench.and.screwdriver",
+                    tint: .gray,
+                    accessibilityID: "settings.advanced"
+                ) {
                     AdvancedSettingsView()
-                } label: {
-                    Label("Advanced", systemImage: "wrench.and.screwdriver")
                 }
             }
 
@@ -73,14 +103,31 @@ public struct SettingsView: View {
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                 }
                 if let proxyCatURL = SettingsLinks.proxyCat {
-                    Link("ProxyCat on GitHub", destination: proxyCatURL)
+                    Link(destination: proxyCatURL) {
+                        Label("ProxyCat on GitHub", systemImage: "link")
+                    }
                 }
                 if let mihomoURL = SettingsLinks.mihomo {
-                    Link("mihomo on GitHub", destination: mihomoURL)
+                    Link(destination: mihomoURL) {
+                        Label("mihomo on GitHub", systemImage: "link")
+                    }
                 }
             }
         }
+        .proxyCatForm()
         .navigationTitle("Settings")
+        .accessibilityIdentifier("screen.settings.root")
+    }
+
+    private func settingsRowLabel(
+        title: LocalizedStringKey,
+        systemImage: String,
+        tint: Color
+    ) -> some View {
+        HStack(spacing: 12) {
+            ProxyCatIconTile(systemImage: systemImage, tint: tint)
+            Text(title)
+        }
     }
 }
 

@@ -77,6 +77,7 @@ struct ICloudBackupSettingsView: View {
                 Text("Backs up profiles, the active profile, runtime preferences, Auto Connect, and log-retention settings to iCloud Drive. Logs, cache files, usage history, and MITM keys are not included.")
             }
         }
+        .proxyCatForm()
         .navigationTitle("iCloud Backup")
         .task {
             await iCloudBackupStore.refreshStatus()

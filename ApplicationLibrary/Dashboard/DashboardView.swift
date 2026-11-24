@@ -21,15 +21,15 @@ public struct DashboardView: View {
     public init() {}
 
     public var body: some View {
-        VStack(spacing: ProxyCatUI.pageSpacing) {
-            statusCard
-            trafficGrid
-            bottomCard
-            Spacer(minLength: 0)
+        ScrollView {
+            VStack(spacing: ProxyCatUI.pageSpacing) {
+                statusCard
+                trafficGrid
+                bottomCard
+            }
+            .proxyCatPage()
         }
-        .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
-        .padding(.top, ProxyCatUI.pageTopPadding)
-        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+        .background(ProxyCatUI.pageBackground.ignoresSafeArea())
         .navigationTitle("ProxyCat")
         .navigationBarTitleDisplayMode(.large)
         // Once OS status moves off `.disconnected`, hand the button-disabled
@@ -71,32 +71,35 @@ public struct DashboardView: View {
             .controlSize(.regular)
             .tint(profile.isConnected ? .red : .accentColor)
             .disabled(profileStore.active == nil || isInTransition || isStarting)
+            .accessibilityIdentifier("dashboard.connect")
 
             webUIRow
             proxiesRow
         }
         .proxyCatCard()
+        .accessibilityIdentifier("dashboard.status")
     }
 
     @ViewBuilder
     private var webUIRow: some View {
         let isAvailable = profile.isConnected && !settings.disableExternalController
-        if isAvailable, let url = URL(string: "http://127.0.0.1:9090/ui/") {
+        if isAvailable, let url = AppConfiguration.webUIURL {
             Link(destination: url) {
-                dashboardActionLabel(
+                ProxyCatActionRow(
                     title: "Open Web UI",
                     systemImage: "safari",
-                    trailingImage: "arrow.up.right",
-                    isAvailable: true
+                    trailingImage: "arrow.up.right"
                 )
             }
+            .accessibilityIdentifier("dashboard.webUI")
         } else {
-            dashboardActionLabel(
+            ProxyCatActionRow(
                 title: "Open Web UI",
                 systemImage: "safari",
                 trailingImage: "arrow.up.right",
-                isAvailable: false
+                isEnabled: false
             )
+            .accessibilityIdentifier("dashboard.webUI")
         }
     }
 
@@ -106,60 +109,43 @@ public struct DashboardView: View {
             NavigationLink {
                 ProxiesView(transport: commandClient)
             } label: {
-                dashboardActionLabel(
+                ProxyCatActionRow(
                     title: "Proxies",
-                    systemImage: "globe.asia.australia",
-                    trailingImage: "chevron.right",
-                    isAvailable: true
+                    systemImage: "globe.asia.australia"
                 )
             }
+            .accessibilityIdentifier("dashboard.proxies")
         } else {
-            dashboardActionLabel(
+            ProxyCatActionRow(
                 title: "Proxies",
                 systemImage: "globe.asia.australia",
-                trailingImage: "chevron.right",
-                isAvailable: false
+                isEnabled: false
             )
+            .accessibilityIdentifier("dashboard.proxies")
         }
-    }
-
-    private func dashboardActionLabel(
-        title: LocalizedStringKey,
-        systemImage: String,
-        trailingImage: String,
-        isAvailable: Bool
-    ) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-            Text(title)
-            Spacer()
-            Image(systemName: trailingImage)
-                .font(.caption)
-        }
-        .font(.subheadline)
-        .foregroundStyle(isAvailable ? Color.accentColor : Color.secondary)
-        .opacity(isAvailable ? 1 : 0.48)
-        .contentShape(Rectangle())
     }
 
     @ViewBuilder
     private var profilePill: some View {
         if let active = profileStore.active {
-            Label(active.name, systemImage: "doc.text")
-                .labelStyle(.titleAndIcon)
-                .font(.caption.weight(.medium))
-                .lineLimit(1)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.accentColor.opacity(0.12), in: Capsule())
-                .foregroundStyle(.tint)
+            ProxyCatBadge(
+                text: active.name,
+                tint: .accentColor,
+                systemImage: "doc.text",
+                font: .caption.weight(.medium),
+                horizontalPadding: 10,
+                verticalPadding: 5
+            )
+            .lineLimit(1)
         } else {
-            Label("No profile", systemImage: "doc.text")
-                .font(.caption.weight(.medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.gray.opacity(0.18), in: Capsule())
-                .foregroundStyle(.secondary)
+            ProxyCatBadge(
+                text: String(localized: "No profile", bundle: .main),
+                tint: .gray,
+                systemImage: "doc.text",
+                font: .caption.weight(.medium),
+                horizontalPadding: 10,
+                verticalPadding: 5
+            )
         }
     }
 
@@ -200,24 +186,35 @@ public struct DashboardView: View {
     // MARK: - Traffic
 
     private var trafficGrid: some View {
-        HStack(spacing: 12) {
-            TrafficCard(
-                title: "Upload",
-                symbol: "arrow.up.circle.fill",
-                color: .blue,
-                rate: commandClient.traffic.up,
-                total: commandClient.traffic.upTotal,
-                live: profile.isConnected
-            )
-            TrafficCard(
-                title: "Download",
-                symbol: "arrow.down.circle.fill",
-                color: .green,
-                rate: commandClient.traffic.down,
-                total: commandClient.traffic.downTotal,
-                live: profile.isConnected
-            )
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                trafficCards
+            }
+            VStack(spacing: 12) {
+                trafficCards
+            }
         }
+        .accessibilityIdentifier("dashboard.traffic")
+    }
+
+    @ViewBuilder
+    private var trafficCards: some View {
+        TrafficCard(
+            title: "Upload",
+            symbol: "arrow.up.circle.fill",
+            color: .blue,
+            rate: commandClient.traffic.up,
+            total: commandClient.traffic.upTotal,
+            live: profile.isConnected
+        )
+        TrafficCard(
+            title: "Download",
+            symbol: "arrow.down.circle.fill",
+            color: .green,
+            rate: commandClient.traffic.down,
+            total: commandClient.traffic.downTotal,
+            live: profile.isConnected
+        )
     }
 
     // MARK: - Memory + connections
@@ -229,6 +226,7 @@ public struct DashboardView: View {
             connectionsCell
         }
         .proxyCatCard()
+        .accessibilityIdentifier("dashboard.memory")
     }
 
     @ViewBuilder
@@ -241,8 +239,10 @@ public struct DashboardView: View {
                 connectionsLabel(isInteractive: true)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("dashboard.connections")
         } else {
             connectionsLabel(isInteractive: false)
+                .accessibilityIdentifier("dashboard.connections")
         }
     }
 

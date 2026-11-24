@@ -13,20 +13,13 @@ public struct ProfileListView: View {
 
     public var body: some View {
         List {
-            if profileStore.profiles.isEmpty {
-                ContentUnavailableView(
-                    localizedTitle: "No profiles",
-                    systemImage: "doc.text",
-                    localizedDescription: "Import a YAML config or paste one in."
-                )
-            }
-
             ForEach(profileStore.profiles) { profile in
                 profileRow(profile)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         profileStore.setActive(profile)
                     }
+                    .accessibilityIdentifier("profile.row.\(profile.id.uuidString)")
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
                         Button {
                             presentedSheet = .editing(profile)
@@ -64,6 +57,16 @@ public struct ProfileListView: View {
                     }
             }
         }
+        .overlay {
+            if profileStore.profiles.isEmpty {
+                ProxyCatEmptyState(
+                    title: "No profiles",
+                    systemImage: "doc.text",
+                    description: "Import a YAML config or paste one in."
+                )
+            }
+        }
+        .accessibilityIdentifier("profiles.list")
         .navigationTitle("Profiles")
         .refreshable { await refreshAllRemote() }
         .toolbar {
@@ -86,6 +89,8 @@ public struct ProfileListView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
+                        .accessibilityLabel(Text("Add"))
+                        .accessibilityIdentifier("profiles.add")
                 }
             }
         }
@@ -180,7 +185,12 @@ public struct ProfileListView: View {
 
     @ViewBuilder
     private func profileRow(_ profile: Profile) -> some View {
-        HStack {
+        let isActive = profileStore.activeProfileID == profile.id
+        HStack(spacing: 12) {
+            ProxyCatIconTile(
+                systemImage: profile.remoteURL == nil ? "doc.text" : "cloud",
+                tint: isActive ? .accentColor : .secondary
+            )
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile.name).foregroundStyle(.primary)
                 if let url = profile.remoteURL {
@@ -195,11 +205,13 @@ public struct ProfileListView: View {
                 }
             }
             Spacer()
-            if profileStore.activeProfileID == profile.id {
+            if isActive {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.tint)
+                    .accessibilityHidden(true)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     private enum EditorSheet: Identifiable {

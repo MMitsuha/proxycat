@@ -50,6 +50,7 @@ private struct SavedLogsLink: View {
         } label: {
             Image(systemName: "archivebox")
                 .accessibilityLabel("Saved Logs")
+                .accessibilityIdentifier("logs.saved")
         }
     }
 }
@@ -63,6 +64,7 @@ private struct LogPauseButton: View {
         } label: {
             Image(systemName: isPaused ? "play.circle" : "pause.circle")
                 .accessibilityLabel(isPaused ? "Resume" : "Pause")
+                .accessibilityIdentifier("logs.pause")
         }
     }
 }
@@ -81,6 +83,7 @@ private struct LogLevelMenu: View {
         } label: {
             Image(systemName: "line.3.horizontal.decrease.circle")
                 .accessibilityLabel("Log Level")
+                .accessibilityIdentifier("logs.level")
         }
     }
 }
@@ -100,6 +103,7 @@ private struct LogActionsMenu: View {
         } label: {
             Image(systemName: "ellipsis.circle")
                 .accessibilityLabel("Actions")
+                .accessibilityIdentifier("logs.actions")
         }
     }
 }
@@ -133,6 +137,7 @@ private struct LogStreamList: View {
                 }
             }
             .listStyle(.plain)
+            .accessibilityIdentifier("logs.list")
             .onChange(of: stream.visible.last?.id) { _, newID in
                 guard let id = newID, !isPaused else { return }
                 // Skipping the animation here: under a busy stream (every

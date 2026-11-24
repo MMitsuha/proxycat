@@ -113,6 +113,7 @@ struct MitmRewriteRuleEditor: View {
                 }
             }
         }
+        .proxyCatForm()
         .navigationTitle("Rewrite Rule")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -52,6 +52,7 @@ struct ProxyGroupHeader: View {
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(Text("Test latency"))
+            .accessibilityIdentifier("proxies.test.\(group.name)")
             .disabled(isTesting)
         }
         .textCase(nil)

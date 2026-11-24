@@ -15,26 +15,30 @@ public struct MainView: View {
             NavigationStack {
                 DashboardView()
             }
-            .tabItem { Label("Dashboard", systemImage: "speedometer") }
+            .tabItem { tabLabel(.dashboard) }
             .tag(Tab.dashboard)
+            .accessibilityIdentifier("screen.dashboard")
 
             NavigationStack {
                 ProfileListView()
             }
-            .tabItem { Label("Profiles", systemImage: "doc.text") }
+            .tabItem { tabLabel(.profiles) }
             .tag(Tab.profiles)
+            .accessibilityIdentifier("screen.profiles")
 
             NavigationStack {
                 LogView()
             }
-            .tabItem { Label("Logs", systemImage: "text.alignleft") }
+            .tabItem { tabLabel(.logs) }
             .tag(Tab.logs)
+            .accessibilityIdentifier("screen.logs")
 
             NavigationStack {
                 SettingsView()
             }
-            .tabItem { Label("Settings", systemImage: "gearshape") }
+            .tabItem { tabLabel(.settings) }
             .tag(Tab.settings)
+            .accessibilityIdentifier("screen.settings")
         }
         .environment(environment)
         .environment(environment.profile)
@@ -88,5 +92,43 @@ public struct MainView: View {
         }
     }
 
-    enum Tab: Hashable { case dashboard, profiles, logs, settings }
+    @ViewBuilder
+    private func tabLabel(_ tab: Tab) -> some View {
+        Label(tab.title, systemImage: tab.systemImage)
+            .accessibilityIdentifier(tab.accessibilityID)
+    }
+
+    enum Tab: Hashable {
+        case dashboard
+        case profiles
+        case logs
+        case settings
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .dashboard: return "Dashboard"
+            case .profiles: return "Profiles"
+            case .logs: return "Logs"
+            case .settings: return "Settings"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .dashboard: return "speedometer"
+            case .profiles: return "doc.text"
+            case .logs: return "text.alignleft"
+            case .settings: return "gearshape"
+            }
+        }
+
+        var accessibilityID: String {
+            switch self {
+            case .dashboard: return "tab.dashboard"
+            case .profiles: return "tab.profiles"
+            case .logs: return "tab.logs"
+            case .settings: return "tab.settings"
+            }
+        }
+    }
 }

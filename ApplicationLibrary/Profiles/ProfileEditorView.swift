@@ -48,15 +48,12 @@ public struct ProfileEditorView: View {
     public var body: some View {
         VStack(spacing: ProxyCatUI.pageSpacing) {
             if let loadError {
-                loadErrorBanner(loadError)
+                ProxyCatInlineErrorBanner(message: loadError)
             }
             nameCard
             editorCard
         }
-        .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
-        .padding(.top, ProxyCatUI.pageTopPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color(uiColor: .systemGroupedBackground))
+        .proxyCatPage(bottomPadding: 12)
         .safeAreaInset(edge: .bottom) {
             statusBar
         }
@@ -68,19 +65,6 @@ public struct ProfileEditorView: View {
     }
 
     // MARK: - Subviews
-
-    private func loadErrorBanner(_ message: String) -> some View {
-        Label(message, systemImage: "exclamationmark.triangle.fill")
-            .font(.caption)
-            .foregroundStyle(.red)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, ProxyCatUI.cardPadding)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: ProxyCatUI.cardCornerRadius, style: .continuous)
-                    .fill(Color.red.opacity(0.12))
-            )
-    }
 
     private var nameCard: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -94,6 +78,7 @@ public struct ProfileEditorView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .disabled(isWorking)
+                    .accessibilityIdentifier("profileEditor.name")
             }
         }
         .proxyCatCard()
@@ -122,6 +107,7 @@ public struct ProfileEditorView: View {
                     .onChange(of: yaml) { _, _ in
                         invalidateValidation()
                     }
+                    .accessibilityIdentifier("profileEditor.yaml")
 
                 Text("Paste or type YAML here…")
                     .font(.system(.caption, design: .monospaced))
@@ -142,7 +128,7 @@ public struct ProfileEditorView: View {
         .clipShape(RoundedRectangle(cornerRadius: ProxyCatUI.cardCornerRadius, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: ProxyCatUI.cardCornerRadius, style: .continuous)
-                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                .fill(ProxyCatUI.cardBackground)
         )
     }
 

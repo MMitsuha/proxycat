@@ -22,11 +22,9 @@ public struct StatisticsView: View {
                 listCard(model)
                 resetAction
             }
-            .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
-            .padding(.top, ProxyCatUI.pageTopPadding)
-            .padding(.bottom, 24)
+            .proxyCatPage(bottomPadding: 32)
         }
-        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+        .background(ProxyCatUI.pageBackground.ignoresSafeArea())
         .navigationTitle("Statistics")
         .navigationBarTitleDisplayMode(.inline)
         // .alert (modal) instead of .confirmationDialog: iOS 26 renders
@@ -53,6 +51,7 @@ public struct StatisticsView: View {
             }
         }
         .pickerStyle(.segmented)
+        .accessibilityIdentifier("statistics.range")
     }
 
     private func overviewCard(_ model: UsageModel) -> some View {
@@ -274,5 +273,6 @@ public struct StatisticsView: View {
         .buttonStyle(.plain)
         .disabled(dailyUsage.entries.isEmpty)
         .proxyCatCard()
+        .accessibilityIdentifier("statistics.reset")
     }
 }

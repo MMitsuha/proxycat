@@ -54,6 +54,7 @@ struct MitmProfileConfigView: View {
                 certificateSection
             }
         }
+        .proxyCatForm()
         .navigationTitle("MITM Config")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }

@@ -29,6 +29,7 @@ public struct AutoConnectSettingsView: View {
             }
             footerSection
         }
+        .proxyCatForm()
         .navigationTitle("Auto Connect")
         .alert("Add SSID", isPresented: $showAddSSID) {
             TextField("Network name", text: $newSSIDText)

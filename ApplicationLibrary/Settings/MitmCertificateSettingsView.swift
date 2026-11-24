@@ -45,6 +45,7 @@ struct MitmCertificateSettingsView: View {
                 Text(certificateStatus.footer)
             }
         }
+        .proxyCatForm()
         .navigationTitle("MITM Certificate")
         .task {
             await refreshCertificateStatus()

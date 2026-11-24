@@ -52,6 +52,7 @@ public struct ProfileDownloadView: View {
                 Text("Save downloads the profile, validates it with mihomo, then adds it. Nothing is written if validation fails.")
             }
         }
+        .proxyCatForm()
         .navigationTitle("Download Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

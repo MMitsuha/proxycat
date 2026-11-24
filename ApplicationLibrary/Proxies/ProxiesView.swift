@@ -64,7 +64,7 @@ public struct ProxiesView: View {
                 Task { await store.refresh() }
             }
         } else if store.groups.isEmpty {
-            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            ProxyCatLoadingView()
         } else {
             List {
                 ForEach(store.groups, id: \.name) { group in
@@ -103,6 +103,7 @@ public struct ProxiesView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .accessibilityIdentifier("proxies.list")
             .refreshable { await store.refresh() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -112,6 +113,8 @@ public struct ProxiesView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                     .disabled(store.isRefreshing)
+                    .accessibilityLabel(Text("Refresh"))
+                    .accessibilityIdentifier("proxies.refresh")
                 }
             }
         }

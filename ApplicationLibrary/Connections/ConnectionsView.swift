@@ -64,17 +64,12 @@ public struct ConnectionsView: View {
         VStack(spacing: 0) {
             summaryBar
             if let err = store.loadError, store.connections.isEmpty {
-                ContentUnavailableView {
-                    Label("Could not load", systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(err)
-                }
+                ProxyCatLoadFailureView(message: err)
             } else if store.connections.isEmpty {
                 if store.isStreaming {
                     ContentUnavailableView(localizedTitle: "No active connections", systemImage: "tray")
                 } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    ProxyCatLoadingView()
                 }
             } else {
                 List {
@@ -82,6 +77,7 @@ public struct ConnectionsView: View {
                         ConnectionRow(connection: conn)
                             .contentShape(Rectangle())
                             .onTapGesture { detail = conn }
+                            .accessibilityIdentifier("connections.row.\(conn.id)")
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     Task { await store.close(id: conn.id) }
@@ -92,6 +88,7 @@ public struct ConnectionsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .accessibilityIdentifier("connections.list")
                 .searchable(text: $store.searchQuery, placement: .navigationBarDrawer(displayMode: .always))
                 .overlay {
                     // The list branch is taken whenever there are
@@ -116,6 +113,8 @@ public struct ConnectionsView: View {
                     Image(systemName: "xmark.circle")
                 }
                 .disabled(store.connections.isEmpty)
+                .accessibilityLabel(Text("Close all connections?"))
+                .accessibilityIdentifier("connections.closeAll")
             }
         }
         .alert("Close all connections?", isPresented: $confirmCloseAll) {
@@ -146,8 +145,8 @@ public struct ConnectionsView: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, ProxyCatUI.pageHorizontalPadding)
         .padding(.vertical, 8)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .background(ProxyCatUI.cardBackground)
     }
 }
