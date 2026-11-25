@@ -46,6 +46,32 @@ import Testing
         #expect(decoded.content.hostSettings == host)
     }
 
+    @Test func defaultWebEditorIsOmittedFromEncodedHostSettings() throws {
+        let data = try ICloudBackupSnapshot.canonicalEncoder.encode(HostSettings.defaults)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        // Older builds hashed this exact shape; emitting an extra
+        // "webEditor" key would change every backup checksum.
+        #expect(object["webEditor"] == nil)
+        #expect(object["autoConnect"] != nil)
+        #expect(object["logRetention"] != nil)
+    }
+
+    @Test func enabledWebEditorIsPersistedInHostSettings() throws {
+        let settings = HostSettings(
+            autoConnect: .defaults,
+            webEditor: WebEditorSettings(isEnabled: true, port: 9_000)
+        )
+        let data = try ICloudBackupSnapshot.canonicalEncoder.encode(settings)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let webEditor = try #require(object["webEditor"] as? [String: Any])
+        #expect(webEditor["isEnabled"] as? Bool == true)
+        #expect(webEditor["port"] as? Int == 9_000)
+    }
+
     @Test func checksumTracksContentOnly() throws {
         let id = UUID()
         let profile = Profile(id: id, name: "Local", fileName: "\(id.uuidString).yaml")

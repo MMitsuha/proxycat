@@ -4,6 +4,7 @@ import Foundation
 enum WebConfigHTTPError: Error {
     case badRequest(String)
     case tooLarge
+    case timedOut
 }
 
 struct WebConfigHTTPRequest: Sendable {
@@ -46,7 +47,7 @@ struct WebConfigHTTPResponse: Sendable {
             status: 200,
             headers: [
                 "Content-Type": "text/html; charset=utf-8",
-                "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
+                "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'",
             ],
             body: Data(text.utf8)
         )
@@ -74,11 +75,16 @@ struct WebConfigHTTPResponse: Sendable {
 
     var serialized: Data {
         var allHeaders = headers
-        allHeaders["Content-Length"] = String(body.count)
+        // RFC 9110 forbids Content-Length on 204 No Content responses;
+        // strict clients may treat the response as malformed.
+        if status != 204 {
+            allHeaders["Content-Length"] = String(body.count)
+        }
         allHeaders["Connection"] = "close"
         allHeaders["Cache-Control"] = "no-store"
         allHeaders["Referrer-Policy"] = "no-referrer"
         allHeaders["X-Content-Type-Options"] = "nosniff"
+        allHeaders["X-Frame-Options"] = "DENY"
         let head = "HTTP/1.1 \(status) \(Self.reason(status))\r\n"
             + allHeaders.map { "\($0.key): \($0.value)" }.joined(separator: "\r\n")
             + "\r\n\r\n"
@@ -94,6 +100,7 @@ struct WebConfigHTTPResponse: Sendable {
         case 401: return "Unauthorized"
         case 404: return "Not Found"
         case 405: return "Method Not Allowed"
+        case 408: return "Request Timeout"
         case 413: return "Payload Too Large"
         case 500: return "Internal Server Error"
         case 503: return "Service Unavailable"
@@ -104,7 +111,9 @@ struct WebConfigHTTPResponse: Sendable {
 
 enum WebConfigHTTP {
     static func readRequest(from connection: NWConnection) async throws -> WebConfigHTTPRequest {
-        let headerLimit = 64 * 1024
+        let deadline = DispatchTime.now()
+            + .seconds(WebConfigHTTPServerLimits.requestTimeoutSeconds)
+        let headerLimit = WebConfigHTTPServerLimits.maxHeaderBytes
         var buffer = Data()
         var headerEnd: Range<Data.Index>?
 
@@ -112,7 +121,7 @@ enum WebConfigHTTP {
             guard buffer.count <= headerLimit else {
                 throw WebConfigHTTPError.tooLarge
             }
-            let chunk = try await receive(from: connection, maximum: 32 * 1024)
+            let chunk = try await receive(from: connection, maximum: 32 * 1024, deadline: deadline)
             guard !chunk.isEmpty else {
                 throw WebConfigHTTPError.badRequest("Connection closed before headers")
             }
@@ -156,7 +165,8 @@ enum WebConfigHTTP {
         while body.count < bodyLength {
             let chunk = try await receive(
                 from: connection,
-                maximum: min(64 * 1024, bodyLength - body.count)
+                maximum: min(64 * 1024, bodyLength - body.count),
+                deadline: deadline
             )
             guard !chunk.isEmpty else {
                 throw WebConfigHTTPError.badRequest("Connection closed before body")
@@ -202,23 +212,64 @@ enum WebConfigHTTP {
         }
     }
 
-    private static func receive(from connection: NWConnection, maximum: Int) async throws -> Data {
+    /// `NWConnection` has no receive timeout, so an idle or slowly-dripping
+    /// peer would otherwise park a handler forever. Each receive races the
+    /// connection callback against an absolute deadline; whichever resumes
+    /// first wins and the other is ignored.
+    private static func receive(
+        from connection: NWConnection,
+        maximum: Int,
+        deadline: DispatchTime
+    ) async throws -> Data {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
-            connection.receive(minimumIncompleteLength: 1, maximumLength: maximum) { data, _, isComplete, error in
+            let attempt = ReceiveAttempt(continuation)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: maximum) { data, _, _, error in
                 if let error {
-                    continuation.resume(throwing: error)
+                    attempt.finish(.failure(error))
                 } else if let data, !data.isEmpty {
-                    continuation.resume(returning: data)
-                } else if isComplete {
-                    continuation.resume(returning: Data())
+                    attempt.finish(.success(data))
                 } else {
-                    continuation.resume(returning: Data())
+                    attempt.finish(.success(Data()))
                 }
+            }
+
+            let now = DispatchTime.now()
+            guard deadline.uptimeNanoseconds > now.uptimeNanoseconds else {
+                attempt.finish(.failure(WebConfigHTTPError.timedOut))
+                return
+            }
+            let remaining = deadline.uptimeNanoseconds - now.uptimeNanoseconds
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(
+                deadline: .now() + .nanoseconds(Int(remaining))
+            ) {
+                attempt.finish(.failure(WebConfigHTTPError.timedOut))
             }
         }
     }
 }
 
+/// Resumes the checked continuation at most once, whichever of the
+/// connection callback and the deadline timer fires first.
+private final class ReceiveAttempt: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Data, Error>?
+
+    init(_ continuation: CheckedContinuation<Data, Error>) {
+        self.continuation = continuation
+    }
+
+    func finish(_ result: Result<Data, Error>) {
+        lock.lock()
+        let continuation = continuation
+        self.continuation = nil
+        lock.unlock()
+        continuation?.resume(with: result)
+    }
+}
+
 enum WebConfigHTTPServerLimits {
     static let maxBodyBytes = 2 * 1024 * 1024
+    static let maxHeaderBytes = 64 * 1024
+    static let maxConcurrentConnections = 8
+    static let requestTimeoutSeconds = 20
 }

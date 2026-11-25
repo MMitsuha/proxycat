@@ -11,7 +11,7 @@ public enum LocalNetworkAddress {
         }
         defer { freeifaddrs(interfaces) }
 
-        var fallback: String?
+        var best: (rank: Int, address: String)?
         for pointer in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let flags = Int32(pointer.pointee.ifa_flags)
             guard flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0 else { continue }
@@ -36,20 +36,27 @@ public enum LocalNetworkAddress {
                 as: UTF8.self
             )
             guard !ip.isEmpty, !ip.hasPrefix("169.254.") else { continue }
-            let name: String
-            if let rawName = pointer.pointee.ifa_name {
-                name = Self.string(fromCString: rawName)
-            } else {
-                name = ""
-            }
-            if name == "en0" {
-                return ip
-            }
-            if fallback == nil {
-                fallback = ip
+            guard let rawName = pointer.pointee.ifa_name else { continue }
+            let name = Self.string(fromCString: rawName)
+            guard let rank = interfaceRank(for: name) else { continue }
+            if best == nil || rank > best!.rank {
+                best = (rank, ip)
             }
         }
-        return fallback
+        return best?.address
+    }
+
+    /// Only real LAN interfaces are usable for the editor URL. VPN
+    /// (`utun`, `ipsec`), cellular (`pdp_ip`), and other virtual
+    /// interfaces produce addresses a browser on another device cannot
+    /// reach, so they rank below every concrete LAN interface and are
+    /// rejected entirely.
+    static func interfaceRank(for name: String) -> Int? {
+        if name == "en0" { return 4 }
+        if name.hasPrefix("en") { return 3 }
+        if name.hasPrefix("bridge") { return 2 }
+        if name.hasPrefix("ap") { return 1 }
+        return nil
     }
 
     private static func string(fromCString pointer: UnsafePointer<CChar>) -> String {

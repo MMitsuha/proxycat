@@ -32,6 +32,7 @@ public enum ProfileError: LocalizedError {
     case invalidURL
     case httpStatus(Int)
     case emptyResponse
+    case profileDeleted
 
     public var errorDescription: String? {
         switch self {
@@ -39,8 +40,22 @@ public enum ProfileError: LocalizedError {
         case .invalidURL: return String(localized: "URL is not valid", bundle: .main)
         case let .httpStatus(code): return String(localized: "Server returned HTTP \(code)", bundle: .main)
         case .emptyResponse: return String(localized: "Server returned an empty body", bundle: .main)
+        case .profileDeleted: return String(localized: "The profile was deleted while it was being saved.", bundle: .main)
         }
     }
+}
+
+/// A YAML document rejected by mihomo's parser. Kept as a distinct type
+/// so callers (notably the LAN web editor) can report bad input as a
+/// client error instead of blaming a storage failure.
+public struct ProfileValidationError: LocalizedError, Sendable {
+    public let message: String
+
+    public init(message: String) {
+        self.message = message
+    }
+
+    public var errorDescription: String? { message }
 }
 
 public enum ProfileRestoreError: LocalizedError, Equatable {

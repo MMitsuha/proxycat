@@ -115,14 +115,24 @@ public final class ProfileStore {
 
     public func updateContent(of profile: Profile, validatedYAML: ValidatedProfileYAML, name: String? = nil) async throws {
         let fileName = profile.fileName
-        try await Self.writeYAML(validatedYAML.content, fileName: fileName)
-        if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
-            profiles[idx].lastUpdated = .init()
-            if let name, !name.isEmpty, name != profiles[idx].name {
-                profiles[idx].name = name
-            }
-            try persist()
+        // Validation is asynchronous, so a concurrent DELETE can land
+        // before the write. Refuse to revive a profile that is gone.
+        guard profiles.contains(where: { $0.id == profile.id }) else {
+            throw ProfileError.profileDeleted
         }
+        try await Self.writeYAML(validatedYAML.content, fileName: fileName)
+        guard let idx = profiles.firstIndex(where: { $0.id == profile.id }) else {
+            // Deleted while the detached write was in flight. Remove the
+            // freshly written file so the index and Profiles/ can't drift
+            // apart (which would leave an orphan YAML on disk).
+            try? FileManager.default.removeItem(at: FilePath.profileURL(named: fileName))
+            throw ProfileError.profileDeleted
+        }
+        profiles[idx].lastUpdated = .init()
+        if let name, !name.isEmpty, name != profiles[idx].name {
+            profiles[idx].name = name
+        }
+        try persist()
         if profile.id == activeProfileID {
             NotificationCenter.default.post(name: Self.activeContentDidChange, object: self)
         }
@@ -229,7 +239,13 @@ public final class ProfileStore {
     }
 
     public nonisolated static func validateYAML(_ content: String) async throws -> ValidatedProfileYAML {
-        try await LibmihomoBridge.validateAsync(yaml: Data(content.utf8))
+        do {
+            try await LibmihomoBridge.validateAsync(yaml: Data(content.utf8))
+        } catch {
+            // Normalize mihomo's NSError so HTTP layers can map parser
+            // rejections to 400 while leaving I/O failures as 500.
+            throw ProfileValidationError(message: error.localizedDescription)
+        }
         return ValidatedProfileYAML(content: content)
     }
 

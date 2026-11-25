@@ -89,6 +89,39 @@ import Testing
         #expect(text.hasPrefix("HTTP/1.1 401 Unauthorized\r\n"))
         #expect(text.contains("{\"error\":\"Unauthorized\"}"))
     }
+
+    @Test func noContentResponseOmitsContentLength() throws {
+        let response = WebConfigHTTPResponse.empty(status: 204)
+        let text = try #require(String(data: response.serialized, encoding: .utf8))
+        #expect(text.hasPrefix("HTTP/1.1 204 No Content\r\n"))
+        #expect(!text.contains("Content-Length"))
+    }
+
+    @Test func htmlResponseCannotBeFramed() throws {
+        let response = WebConfigHTTPResponse.html("<html></html>")
+        let text = try #require(String(data: response.serialized, encoding: .utf8))
+        #expect(text.contains("frame-ancestors 'none'"))
+        #expect(text.contains("X-Frame-Options: DENY"))
+    }
+
+    @Test func timeoutResponseUses408() throws {
+        let response = WebConfigHTTPResponse.jsonError("Request timed out", status: 408)
+        let text = try #require(String(data: response.serialized, encoding: .utf8))
+        #expect(text.hasPrefix("HTTP/1.1 408 Request Timeout\r\n"))
+    }
+}
+
+@Suite struct LocalNetworkAddressRankTests {
+    @Test func ranksLANInterfacesAndRejectsVirtualOnes() {
+        #expect(LocalNetworkAddress.interfaceRank(for: "en0") == 4)
+        #expect(LocalNetworkAddress.interfaceRank(for: "en1") == 3)
+        #expect(LocalNetworkAddress.interfaceRank(for: "bridge100") == 2)
+        #expect(LocalNetworkAddress.interfaceRank(for: "ap1") == 1)
+        #expect(LocalNetworkAddress.interfaceRank(for: "utun3") == nil)
+        #expect(LocalNetworkAddress.interfaceRank(for: "ipsec0") == nil)
+        #expect(LocalNetworkAddress.interfaceRank(for: "pdp_ip0") == nil)
+        #expect(LocalNetworkAddress.interfaceRank(for: "awdl0") == nil)
+    }
 }
 
 @MainActor
@@ -166,5 +199,11 @@ import Testing
         let js = await router.respond(to: request("GET", "/app.js"), token: nil)
         #expect(css.status != 401)
         #expect(js.status != 401)
+    }
+
+    @Test func validationErrorsAreClientErrorsAndStorageErrorsAreServerErrors() {
+        #expect(WebConfigRouter.status(for: ProfileValidationError(message: "bad yaml")) == 400)
+        #expect(WebConfigRouter.status(for: CocoaError(.fileWriteNoPermission)) == 500)
+        #expect(WebConfigRouter.status(for: ProfileError.profileDeleted) == 404)
     }
 }

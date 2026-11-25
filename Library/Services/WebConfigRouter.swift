@@ -125,7 +125,7 @@ final class WebConfigRouter {
             let profile = try await ProfileStore.shared.importYAML(body.yaml, name: name)
             return .json(profileSummary(profile), status: 201)
         } catch {
-            return .jsonError(error.localizedDescription, status: 400)
+            return .jsonError(error.localizedDescription, status: Self.status(for: error))
         }
     }
 
@@ -145,8 +145,26 @@ final class WebConfigRouter {
             let updated = ProfileStore.shared.profiles.first(where: { $0.id == profile.id }) ?? profile
             return .json(profileSummary(updated))
         } catch {
-            return .jsonError(error.localizedDescription, status: 400)
+            return .jsonError(error.localizedDescription, status: Self.status(for: error))
         }
+    }
+
+    /// Invalid YAML and other caller mistakes are 400s; storage failures
+    /// (disk full, index write error) are server errors and must stay
+    /// retryable instead of masquerading as a bad request.
+    nonisolated static func status(for error: Error) -> Int {
+        if error is ProfileValidationError {
+            return 400
+        }
+        if let profileError = error as? ProfileError {
+            switch profileError {
+            case .profileDeleted:
+                return 404
+            default:
+                return 400
+            }
+        }
+        return 500
     }
 
     private func profileSummaries() -> [ProfileSummary] {
