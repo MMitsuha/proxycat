@@ -40,6 +40,10 @@ public final class WebConfigServer {
     )
     @ObservationIgnored private var listener: NWListener?
     @ObservationIgnored private var listenerID: UUID?
+    @ObservationIgnored private var pathMonitor: NWPathMonitor?
+    /// Connections currently being served. Tracked so `stop()` can tear
+    /// them down and so unauthenticated peers can't park unbounded sockets.
+    @ObservationIgnored private var connections: [UUID: NWConnection] = [:]
     @ObservationIgnored private var desired = WebEditorSettings.defaults
     @ObservationIgnored private var appIsActive = true
     /// Kept for the lifetime of the host process so backgrounding and
@@ -95,12 +99,38 @@ public final class WebConfigServer {
         start(port: desired.port)
     }
 
+    /// Recomputes the displayed URLs from the current LAN address. Called
+    /// when the listener becomes ready, when the network path changes, and
+    /// when the settings screen appears, so a DHCP change or a Wi-Fi that
+    /// finished connecting after startup doesn't leave a stale or loopback
+    /// address on screen.
+    public func refreshURLs() {
+        guard state.isRunning, let port, let token else { return }
+        let host = LocalNetworkAddress.ipv4() ?? "127.0.0.1"
+        let urls = Self.makeURLs(host: host, port: port, token: token)
+        baseURL = urls.base
+        accessURL = urls.access
+        localURL = urls.local
+    }
+
+    /// True when no usable LAN address was found and the displayed URL
+    /// only works on this device.
+    public var isLoopbackOnly: Bool {
+        baseURL?.host == "127.0.0.1"
+    }
+
     public func stop() {
         listener?.stateUpdateHandler = nil
         listener?.newConnectionHandler = nil
         listener?.cancel()
         listener = nil
         listenerID = nil
+        pathMonitor?.cancel()
+        pathMonitor = nil
+        for connection in connections.values {
+            connection.cancel()
+        }
+        connections.removeAll()
         port = nil
         token = nil
         baseURL = nil
@@ -140,11 +170,7 @@ public final class WebConfigServer {
             self.listenerID = listenerID
             listener.stateUpdateHandler = { [weak self] listenerState in
                 Task { @MainActor [weak self] in
-                    self?.handleListenerState(
-                        listenerState,
-                        listenerID: listenerID,
-                        port: port
-                    )
+                    self?.handleListenerState(listenerState, listenerID: listenerID)
                 }
             }
             listener.newConnectionHandler = { [weak self] connection in
@@ -153,6 +179,7 @@ public final class WebConfigServer {
                 }
             }
             listener.start(queue: queue)
+            startPathMonitor()
             logger.info("Web editor listening on port \(port)")
         } catch {
             listener = nil
@@ -169,20 +196,13 @@ public final class WebConfigServer {
 
     private func handleListenerState(
         _ listenerState: NWListener.State,
-        listenerID: UUID,
-        port: Int
+        listenerID: UUID
     ) {
         guard self.listenerID == listenerID else { return }
         switch listenerState {
         case .ready:
-            let host = LocalNetworkAddress.ipv4() ?? "127.0.0.1"
-            if let token {
-                let urls = Self.makeURLs(host: host, port: port, token: token)
-                baseURL = urls.base
-                accessURL = urls.access
-                localURL = urls.local
-            }
             state = .running
+            refreshURLs()
         case .failed(let error):
             state = .failed(error.localizedDescription)
             cleanupFailedStart()
@@ -198,6 +218,8 @@ public final class WebConfigServer {
         listener?.cancel()
         listener = nil
         listenerID = nil
+        pathMonitor?.cancel()
+        pathMonitor = nil
         port = nil
         token = nil
         baseURL = nil
@@ -205,11 +227,33 @@ public final class WebConfigServer {
         localURL = nil
     }
 
+    private func startPathMonitor() {
+        guard pathMonitor == nil else { return }
+        let monitor = NWPathMonitor()
+        pathMonitor = monitor
+        monitor.pathUpdateHandler = { [weak self] _ in
+            Task { @MainActor [weak self] in
+                // Wi-Fi can finish connecting after the listener turns
+                // ready, and DHCP/VPN changes can move the LAN address.
+                self?.refreshURLs()
+            }
+        }
+        monitor.start(queue: queue)
+    }
+
     private func accept(_ connection: NWConnection, listenerID: UUID) {
         guard self.listenerID == listenerID, state.isRunning else {
             connection.cancel()
             return
         }
+        guard connections.count < WebConfigHTTPServerLimits.maxConcurrentConnections else {
+            logger.info("Web editor connection limit reached; rejecting connection")
+            connection.cancel()
+            return
+        }
+
+        let connectionID = UUID()
+        connections[connectionID] = connection
         connection.start(queue: queue)
 
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -228,13 +272,20 @@ public final class WebConfigServer {
                     response = .jsonError("Request body is too large", status: 413)
                 case .badRequest(let message):
                     response = .jsonError(message, status: 400)
+                case .timedOut:
+                    response = .jsonError("Request timed out", status: 408)
                 }
             } catch {
                 response = .jsonError("Connection failed", status: 400)
             }
             try? await WebConfigHTTP.send(response, to: connection)
             connection.cancel()
+            await self.releaseConnection(connectionID)
         }
+    }
+
+    private func releaseConnection(_ id: UUID) {
+        connections.removeValue(forKey: id)
     }
 
     private static func generateToken() -> String {

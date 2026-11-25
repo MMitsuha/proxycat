@@ -7,6 +7,12 @@
   let profiles = [];
   let current = null; // {id, name, yaml}
   let dirty = false;
+  // Counts overlapping async operations (save, profile load, delete).
+  // While nonzero, editable controls and profile navigation are locked so
+  // keystrokes can't be discarded by a response that reloads the editor.
+  let busyCount = 0;
+  let profileRequestId = 0;
+  let profilesRequestId = 0;
 
   const $ = (id) => document.getElementById(id);
   const statusDot = $("statusDot");
@@ -20,6 +26,8 @@
   const saveBtn = $("saveBtn");
   const activateBtn = $("activateBtn");
   const deleteBtn = $("deleteBtn");
+  const newBtn = $("newBtn");
+  const refreshBtn = $("refreshBtn");
   const toast = $("toast");
 
   function setStatus(text, ok) {
@@ -57,6 +65,23 @@
     editorPane.hidden = false;
   }
 
+  function updateButtons() {
+    const busy = busyCount > 0;
+    activateBtn.disabled = busy || !current;
+    deleteBtn.disabled = busy || !current;
+    saveBtn.disabled = busy || !nameInput.value.trim() || !yamlInput.value.trim();
+  }
+
+  function setBusy(delta) {
+    busyCount = Math.max(0, busyCount + delta);
+    const busy = busyCount > 0;
+    nameInput.disabled = busy;
+    yamlInput.disabled = busy;
+    newBtn.disabled = busy;
+    refreshBtn.disabled = busy;
+    updateButtons();
+  }
+
   async function api(path, options = {}) {
     if (!token) {
       showAuth();
@@ -89,7 +114,10 @@
       const item = document.createElement("li");
       item.className = profile.isActive ? "active" : "";
       item.dataset.id = profile.id;
-      item.addEventListener("click", () => loadProfile(profile.id));
+      item.addEventListener("click", () => {
+        if (busyCount > 0) return;
+        loadProfile(profile.id).catch((error) => showToast(error.message, true));
+      });
 
       const name = document.createElement("span");
       name.className = "profile-name";
@@ -107,51 +135,69 @@
   }
 
   async function loadProfiles(selectId) {
-    profiles = await api("/api/profiles");
+    const requestId = ++profilesRequestId;
+    const loaded = await api("/api/profiles");
+    // A newer refresh already rendered; never let a slow older response
+    // overwrite it.
+    if (requestId !== profilesRequestId) return;
+    profiles = loaded;
     renderProfiles();
     setStatus(
       profiles.length ? profiles.length + " profile" + (profiles.length === 1 ? "" : "s") : "No profiles",
       true
     );
-    const wanted = selectId || (current && current.id) || (profiles.find((p) => p.isActive) || profiles[0] || {}).id;
+    const candidates = [
+      selectId,
+      current && current.id,
+      (profiles.find((p) => p.isActive) || profiles[0] || {}).id,
+    ];
+    const wanted = candidates.find((id) => id && profiles.some((p) => p.id === id));
     if (wanted) {
-      const exists = profiles.some((p) => p.id === wanted);
-      if (exists) await loadProfile(wanted);
+      await loadProfile(wanted);
     } else {
       current = null;
       editorPane.hidden = true;
       emptyState.hidden = false;
+      // A successful API call means the token is valid, so the login
+      // prompt must not linger next to the empty state.
+      authPane.hidden = true;
+      updateButtons();
     }
   }
 
   async function loadProfile(id) {
     if (dirty && !confirm("Discard unsaved changes?")) return;
-    const detail = await api("/api/profiles/" + encodeURIComponent(id));
-    current = detail;
-    nameInput.value = detail.name;
-    yamlInput.value = detail.yaml;
-    setDirty(false);
-    updateButtons();
-    renderProfiles();
-    showEditor();
-    setStatus("Editing " + detail.name, true);
-  }
-
-  function updateButtons() {
-    activateBtn.disabled = !current;
-    deleteBtn.disabled = !current;
-    saveBtn.disabled = !nameInput.value.trim() || !yamlInput.value.trim();
+    const requestId = ++profileRequestId;
+    setBusy(1);
+    try {
+      const detail = await api("/api/profiles/" + encodeURIComponent(id));
+      // A later click (or New/Delete) superseded this read; drop it
+      // instead of replacing the newer selection.
+      if (requestId !== profileRequestId) return;
+      current = detail;
+      nameInput.value = detail.name;
+      yamlInput.value = detail.yaml;
+      setDirty(false);
+      renderProfiles();
+      showEditor();
+      setStatus("Editing " + detail.name, true);
+    } finally {
+      setBusy(-1);
+    }
   }
 
   async function save() {
+    if (busyCount > 0) return;
     const name = nameInput.value.trim();
     const yaml = yamlInput.value;
     if (!name) { showToast("Profile name cannot be empty", true); return; }
     if (!yaml.trim()) { showToast("YAML cannot be empty", true); return; }
-    saveBtn.disabled = true;
+
+    const savedId = current && current.id ? current.id : null;
+    setBusy(1);
     try {
-      if (current && current.id) {
-        current = await api("/api/profiles/" + encodeURIComponent(current.id), {
+      if (savedId) {
+        current = await api("/api/profiles/" + encodeURIComponent(savedId), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, yaml })
@@ -163,57 +209,84 @@
           body: JSON.stringify({ name, yaml })
         });
       }
-      setDirty(false);
-      showToast("Saved");
-      await loadProfiles(current.id);
+      const targetId = savedId || current.id;
+      // The fields are locked while the request is in flight, but verify
+      // anyway: if anything changed the text, reloading from the server
+      // would silently throw those edits away.
+      if (nameInput.value.trim() === name && yamlInput.value === yaml) {
+        setDirty(false);
+        showToast("Saved");
+        await loadProfiles(targetId);
+      } else {
+        showToast("Saved; newer edits are kept");
+      }
     } catch (error) {
       showToast(error.message, true);
     } finally {
-      saveBtn.disabled = false;
-      updateButtons();
+      setBusy(-1);
     }
   }
 
   async function activate() {
-    if (!current) return;
+    if (busyCount > 0 || !current) return;
+    const id = current.id;
+    setBusy(1);
     try {
-      await api("/api/profiles/" + encodeURIComponent(current.id) + "/activate", { method: "POST" });
+      await api("/api/profiles/" + encodeURIComponent(id) + "/activate", { method: "POST" });
       showToast("Activated");
-      await loadProfiles(current.id);
+      await loadProfiles(id);
     } catch (error) {
       showToast(error.message, true);
+    } finally {
+      setBusy(-1);
     }
   }
 
   async function remove() {
-    if (!current) return;
+    if (busyCount > 0 || !current) return;
     if (!confirm("Delete profile \"" + current.name + "\"?")) return;
+    const id = current.id;
+    setBusy(1);
     try {
-      await api("/api/profiles/" + encodeURIComponent(current.id), { method: "DELETE" });
+      await api("/api/profiles/" + encodeURIComponent(id), { method: "DELETE" });
       current = null;
+      profileRequestId += 1; // ignore any detail read still in flight
       setDirty(false);
       showToast("Deleted");
       await loadProfiles();
     } catch (error) {
       showToast(error.message, true);
+    } finally {
+      setBusy(-1);
     }
   }
 
   async function createNew() {
+    if (busyCount > 0) return;
     if (dirty && !confirm("Discard unsaved changes?")) return;
+    setBusy(1);
     try {
       const template = await api("/api/default-profile");
+      profileRequestId += 1; // ignore any detail read still in flight
       current = null;
       nameInput.value = "New Profile";
       yamlInput.value = template.yaml;
       setDirty(true);
-      updateButtons();
       editorPane.hidden = false;
       emptyState.hidden = true;
       authPane.hidden = true;
-      activateBtn.disabled = true;
-      deleteBtn.disabled = true;
       setStatus("New profile", true);
+    } catch (error) {
+      showToast(error.message, true);
+    } finally {
+      setBusy(-1);
+    }
+  }
+
+  async function refresh() {
+    if (busyCount > 0) return;
+    try {
+      await loadProfiles();
     } catch (error) {
       showToast(error.message, true);
     }
@@ -235,7 +308,8 @@
     }
   }
 
-  $("newBtn").addEventListener("click", createNew);
+  newBtn.addEventListener("click", createNew);
+  refreshBtn.addEventListener("click", refresh);
   saveBtn.addEventListener("click", save);
   activateBtn.addEventListener("click", activate);
   deleteBtn.addEventListener("click", remove);

@@ -1,4 +1,5 @@
 import Library
+import SafariServices
 import SwiftUI
 import UIKit
 
@@ -9,6 +10,8 @@ struct WebEditorSettingsView: View {
     @State private var portText = ""
     @State private var portError: String?
     @State private var justCopied = false
+    @State private var showingSafari = false
+    @FocusState private var portFieldFocused: Bool
 
     var body: some View {
         Form {
@@ -21,11 +24,30 @@ struct WebEditorSettingsView: View {
         .accessibilityIdentifier("screen.webEditor")
         .onAppear {
             portText = String(hostSettings.webEditor.port)
+            // The host may have moved to a different Wi-Fi network (or
+            // finished connecting) since the listener started.
+            environment.webConfig.refreshURLs()
         }
         .onChange(of: hostSettings.webEditor.port) { _, newPort in
             let updated = String(newPort)
             if portText != updated {
                 portText = updated
+            }
+        }
+        .onChange(of: portFieldFocused) { _, focused in
+            if !focused {
+                commitPort(restoreOnFailure: true)
+            }
+        }
+        .onDisappear {
+            // Don't lose a valid port typed just before navigating away;
+            // the debounce may not have fired yet.
+            commitPort(restoreOnFailure: false)
+        }
+        .sheet(isPresented: $showingSafari) {
+            if let url = environment.webConfig.localURL ?? environment.webConfig.accessURL {
+                SafariView(url: url)
+                    .ignoresSafeArea()
             }
         }
         .alert("Copied", isPresented: $justCopied) {
@@ -112,10 +134,22 @@ struct WebEditorSettingsView: View {
                     Text("The token is hidden. Copy Link opens the editor with the token included, or copy the token and paste it into the page.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if environment.webConfig.isLoopbackOnly {
+                        Text("No LAN address was found. This URL only works on this device; connect to Wi-Fi and reopen this screen to share it.")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                 }
                 .padding(.vertical, 4)
 
-                Link(destination: accessURL) {
+                // Opening the system Safari app backgrounds ProxyCat, which
+                // stops the listener before the page can load. Present the
+                // in-app browser instead; the scene stays active and
+                // loopback works on this device.
+                Button {
+                    showingSafari = true
+                } label: {
                     Label("Open in Safari", systemImage: "safari")
                 }
             }
@@ -129,6 +163,7 @@ struct WebEditorSettingsView: View {
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .font(.body.monospacedDigit())
+                    .focused($portFieldFocused)
                     .accessibilityIdentifier("webEditor.port")
             }
             if let portError {
@@ -137,10 +172,19 @@ struct WebEditorSettingsView: View {
                     .foregroundStyle(.red)
             }
         } footer: {
-            Text("Choose a port from 1024 to 65535. Changes apply immediately; changing the port while the editor is running restarts it with the same token.")
+            Text("Choose a port from 1024 to 65535. Changes apply automatically; changing the port while the editor is running restarts it with the same token.")
         }
-        .onChange(of: portText) { _, _ in
-            applyPortFromText()
+        .task(id: portText) {
+            // Debounce commits so a transiently parseable prefix of a
+            // larger value ("9999" on the way to "99999") never gets
+            // persisted and restarts the listener on the wrong port.
+            guard !portText.isEmpty else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(800))
+            } catch {
+                return
+            }
+            commitPort(restoreOnFailure: false)
         }
     }
 
@@ -186,16 +230,23 @@ struct WebEditorSettingsView: View {
         )
     }
 
-    /// Applies valid ports as soon as the field changes. Invalid or empty
-    /// intermediate text keeps the previous persisted port untouched.
-    private func applyPortFromText() {
+    /// Persists a valid port and never commits an invalid or empty value.
+    /// On focus loss the field is restored to the persisted port so the
+    /// text on screen can't disagree with the running listener.
+    private func commitPort(restoreOnFailure: Bool) {
         let trimmed = portText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             portError = nil
+            if restoreOnFailure {
+                portText = String(hostSettings.webEditor.port)
+            }
             return
         }
         guard let port = WebEditorSettings.parsePort(trimmed) else {
             portError = String(localized: "Port must be between 1024 and 65535.", bundle: .main)
+            if restoreOnFailure {
+                portText = String(hostSettings.webEditor.port)
+            }
             return
         }
         portError = nil
@@ -210,4 +261,16 @@ struct WebEditorSettingsView: View {
         UIPasteboard.general.string = value
         justCopied = true
     }
+}
+
+/// In-app Safari keeps ProxyCat's scene active, unlike opening the Safari
+/// app. Loopback (`127.0.0.1`) URLs need no Local Network permission.
+private struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
 }

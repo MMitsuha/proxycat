@@ -7329,25 +7329,48 @@
         }
       }
     },
-    "Choose a port from 1024 to 65535. Changes apply immediately; changing the port while the editor is running restarts it with the same token." : {
+    "Choose a port from 1024 to 65535. Changes apply automatically; changing the port while the editor is running restarts it with the same token." : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ポートは 1024〜65535 の範囲で指定します。変更はすぐに反映され、実行中に変更すると同じトークンで再起動します。"
+            "value" : "ポートは 1024〜65535 の範囲で指定します。変更は自動的に反映され、実行中に変更すると同じトークンで再起動します。"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Выберите порт от 1024 до 65535. Изменения применяются сразу; изменение порта во время работы перезапустит редактор с тем же токеном."
+            "value" : "Выберите порт от 1024 до 65535. Изменения применяются автоматически; изменение порта во время работы перезапустит редактор с тем же токеном."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请选择 1024 到 65535 之间的端口。修改会立即生效；运行中修改端口会用同一令牌重启编辑器。"
+            "value" : "请选择 1024 到 65535 之间的端口。修改会自动生效；运行中修改端口会用同一令牌重启编辑器。"
+          }
+        }
+      }
+    },
+    "No LAN address was found. This URL only works on this device; connect to Wi-Fi and reopen this screen to share it." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LAN アドレスが見つかりませんでした。この URL はこのデバイスでのみ機能します。Wi-Fi に接続してからこの画面を開き直すと、他のデバイスから利用できます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адрес в локальной сети не найден. Этот URL работает только на этом устройстве; подключитесь к Wi-Fi и откройте этот экран снова, чтобы использовать его с других устройств."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到局域网地址。此 URL 仅在本设备上有效；请连接 Wi-Fi 后重新打开此页面，以便在其他设备上使用。"
           }
         }
       }

@@ -366,9 +366,13 @@ public final class ICloudBackupStore {
         await Task.detached(priority: .utility) {
             let fm = FileManager.default
             var dates: [Date] = []
+            // host_settings.json is intentionally excluded: it also holds
+            // the device-local web editor toggle and port, which are never
+            // backed up. Without this, toggling the editor would rewrite
+            // the file's mtime and make untouched local profiles look newer
+            // than an existing cloud snapshot in the tie-break below.
             let fileURLs = [
                 URL(fileURLWithPath: FilePath.runtimeSettingsFilePath),
-                URL(fileURLWithPath: FilePath.hostSettingsFilePath),
                 URL(fileURLWithPath: FilePath.profileIndexFilePath),
             ]
             for url in fileURLs {

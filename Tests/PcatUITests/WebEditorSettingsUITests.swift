@@ -7,19 +7,37 @@ final class WebEditorSettingsUITests: XCTestCase {
         app.launchEnvironment["PROXYCAT_WEB_TOKEN"] = "ui-test-token"
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
-        sleep(2)
 
-        app.tabBars.buttons.element(boundBy: 3).tap()
-        sleep(1)
-        app.buttons["settings.webEditor"].tap()
-        sleep(2)
+        let settingsTab = app.tabBars.buttons.element(boundBy: 3)
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 20))
+        settingsTab.tap()
 
-        let toggle = app.switches["webEditor.enable"].exists
-            ? app.switches["webEditor.enable"]
-            : app.switches["启用网页编辑器"]
-        if toggle.exists, (toggle.value as? String) == "0" {
-            toggle.tap()
+        let webEditorRow = app.buttons["settings.webEditor"]
+        XCTAssertTrue(webEditorRow.waitForExistence(timeout: 10))
+        webEditorRow.tap()
+
+        // Wait for the screen to mount instead of relying on a fixed sleep;
+        // querying `exists` too early silently skipped the toggle tap and
+        // produced a misleading "no access URL" failure.
+        let toggle = app.switches["webEditor.enable"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10), "Web editor toggle did not appear")
+        if (toggle.value as? String) == "0" {
+            // The identifier lands on the accessibility wrapper for the
+            // whole Form row; tapping its center hits the label and, on
+            // iOS 26, does not flip the switch. Tap the actual control.
+            let control = toggle.switches.firstMatch
+            if control.exists {
+                control.tap()
+            } else {
+                toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+            }
         }
+        let turnedOn = expectation(
+            for: NSPredicate(format: "value == '1'"),
+            evaluatedWith: toggle
+        )
+        wait(for: [turnedOn], timeout: 10)
+
         let accessURL = app.staticTexts["webEditor.accessURL"]
         XCTAssertTrue(accessURL.waitForExistence(timeout: 10))
 
@@ -33,29 +51,21 @@ final class WebEditorSettingsUITests: XCTestCase {
         )
         XCTAssertEqual(tokenLike.count, 0)
 
-        // Editing the port applies immediately; there is no Save button.
+        // Editing the port applies automatically; there is no Save button.
         let portField = app.textFields["webEditor.port"]
         XCTAssertTrue(portField.waitForExistence(timeout: 5))
         portField.tap()
-        sleep(1)
-        portField.press(forDuration: 1.0)
-        sleep(1)
-        if app.menuItems["全选"].exists {
-            app.menuItems["全选"].tap()
-        } else if app.menuItems["Select All"].exists {
-            app.menuItems["Select All"].tap()
-        }
+        let existingPort = (portField.value as? String) ?? ""
+        portField.typeText(
+            String(repeating: XCUIKeyboardKey.delete.rawValue, count: existingPort.count)
+        )
         portField.typeText("47899")
 
-        var sawUpdatedURL = false
-        for _ in 0..<10 {
-            if accessURL.label.contains(":47899/") {
-                sawUpdatedURL = true
-                break
-            }
-            sleep(1)
-        }
-        XCTAssertTrue(sawUpdatedURL)
+        let updatedURL = expectation(
+            for: NSPredicate(format: "label CONTAINS %@", ":47899/"),
+            evaluatedWith: accessURL
+        )
+        wait(for: [updatedURL], timeout: 10)
         XCTAssertFalse(app.buttons["保存"].exists)
     }
 }

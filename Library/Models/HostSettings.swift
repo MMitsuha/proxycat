@@ -87,4 +87,22 @@ public struct HostSettings: Codable, Equatable, Sendable {
         logRetention = try container.decodeIfPresent(LogRetention.self, forKey: .logRetention) ?? .keepAll
         webEditor = try container.decodeIfPresent(WebEditorSettings.self, forKey: .webEditor) ?? .defaults
     }
+
+    /// Omits `webEditor` from the encoded JSON while it holds defaults.
+    ///
+    /// `ICloudBackupSnapshot.checksum(for:)` hashes the canonical JSON of
+    /// the backup content, so an added-but-defaulted key would change
+    /// every checksum and make builds that predate the web editor see a
+    /// spurious conflict against their persisted `lastSyncedChecksum` on
+    /// first launch after upgrading. Encoding exactly what older builds
+    /// encoded (the key is absent) keeps the checksum stable; a non-default
+    /// web editor still round-trips through `host_settings.json`.
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(autoConnect, forKey: .autoConnect)
+        try container.encode(logRetention, forKey: .logRetention)
+        if webEditor != .defaults {
+            try container.encode(webEditor, forKey: .webEditor)
+        }
+    }
 }
