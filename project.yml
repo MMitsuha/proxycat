@@ -101,6 +101,9 @@ targets:
         embed: true
         codeSign: true
       - sdk: libresolv.tbd
+    scheme:
+      testTargets:
+        - PcatUITests
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: Pcat/Pcat.entitlements
@@ -145,6 +148,19 @@ targets:
         # Swift 5 mode until the SDK boundary is cleanly expressible.
         SWIFT_STRICT_CONCURRENCY: minimal
         SWIFT_VERSION: "5"
+
+  PcatUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/PcatUITests
+    dependencies:
+      - target: Pcat
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: io.proxycat.PcatUITests
+        TEST_TARGET_NAME: Pcat
 
   LibraryTests:
     type: bundle.unit-test

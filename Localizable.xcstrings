@@ -7237,52 +7237,6 @@
         }
       }
     },
-    "Choose a port from 1024 to 65535. Changing the port while the editor is running restarts it with the same token." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ポートは 1024〜65535 の範囲で指定します。実行中に変更すると同じトークンで再起動します。"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Выберите порт от 1024 до 65535. Изменение порта во время работы перезапустит редактор с тем же токеном."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请选择 1024 到 65535 之间的端口。运行中修改端口会用同一令牌重启编辑器。"
-          }
-        }
-      }
-    },
-    "Open a small editor from another device on the same network. It is only available while ProxyCat is in the foreground and requires the token shown below." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "同じネットワーク上の別のデバイスから小さなエディタを開けます。ProxyCat が前面にある間のみ利用でき、下に表示されるトークンが必要です。"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Откройте небольшой редактор с другого устройства в той же сети. Он доступен, только пока ProxyCat открыт, и требует токен, показанный ниже."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在同一网络中的其他设备上打开小型编辑器。仅在 ProxyCat 处于前台时可用，并且需要下方显示的令牌。"
-          }
-        }
-      }
-    },
     "Only use the web editor on a trusted local network. It uses unencrypted HTTP; keep the access token private." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7325,6 +7279,75 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果浏览器无法连接，请在 iOS 设置 → 隐私与安全性 → 本地网络 中允许 ProxyCat，并确认两台设备连接的是同一个 Wi-Fi。"
+          }
+        }
+      }
+    },
+    "The token is hidden. Copy Link opens the editor with the token included, or copy the token and paste it into the page." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークンは非表示です。「リンクをコピー」でトークン付きのエディタを開けます。トークンをコピーしてページに貼り付けることもできます。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Токен скрыт. «Копировать ссылку» открывает редактор вместе с токеном; можно также скопировать токен и вставить его на странице."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "令牌已隐藏。复制链接会连同令牌一起打开编辑器；也可以复制令牌后在网页中粘贴。"
+          }
+        }
+      }
+    },
+    "Open a small editor from another device on the same network. It is only available while ProxyCat is in the foreground and requires the access token." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じネットワーク上の別のデバイスから小さなエディタを開けます。ProxyCat が前面にある間のみ利用でき、アクセストークンが必要です。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Откройте небольшой редактор с другого устройства в той же сети. Он доступен, только пока ProxyCat открыт, и требует токен доступа."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在同一网络中的其他设备上打开小型编辑器。仅在 ProxyCat 处于前台时可用，并且需要访问令牌。"
+          }
+        }
+      }
+    },
+    "Choose a port from 1024 to 65535. Changes apply immediately; changing the port while the editor is running restarts it with the same token." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポートは 1024〜65535 の範囲で指定します。変更はすぐに反映され、実行中に変更すると同じトークンで再起動します。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите порт от 1024 до 65535. Изменения применяются сразу; изменение порта во время работы перезапустит редактор с тем же токеном."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择 1024 到 65535 之间的端口。修改会立即生效；运行中修改端口会用同一令牌重启编辑器。"
           }
         }
       }

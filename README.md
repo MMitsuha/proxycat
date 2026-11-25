@@ -106,8 +106,10 @@ proxycat/
 ├── docs/                   ProxyCat 专属文档（MITM 证书与 YAML 配置等）
 ├── Tests/LibraryTests/     Swift Testing 套件 — ExponentialBackoff / RetryLoop / JSONFileStore /
 │                           AutoConnect / DailyUsage / MemoryStats / TrafficSnapshot /
-│                           ByteFormatter / LogEntry / Profile codable / MihomoController，
-│                           运行: `xcodebuild test -scheme Library`
+│                           ByteFormatter / LogEntry / Profile codable / MihomoController /
+│                           WebConfig，运行: `xcodebuild test -scheme Library`
+├── Tests/PcatUITests/      XCUITest — Web Editor 令牌隐藏与端口自动保存，
+│                           运行: `xcodebuild test -scheme Pcat -destination '<simulator>'`
 ├── project.yml             XcodeGen 描述文件 — 用于（重新）生成 ProxyCat.xcodeproj
 └── sample-profile.yaml     最小可用的 mihomo 配置示例
 ```
@@ -370,8 +372,8 @@ ProxyCat 内置一个可选的局域网 Web 编辑器，方便在电脑上粘贴
 </p>
 
 1. 打开 Settings → Web Editor，启用开关。
-2. 默认端口 `8787`，可改为 `1024...65535` 之间的任意端口；修改端口会重启服务。
-3. 将手机和电脑连接到同一网络，在电脑浏览器中打开页面显示的 **Access URL**（URL 已包含访问令牌）。
+2. 默认端口 `8787`，可改为 `1024...65535` 之间的任意端口；修改会立即生效并重启服务。
+3. 将手机和电脑连接到同一网络，在电脑浏览器中打开页面显示的地址；点 **Copy Link** 可复制带令牌的一键登录链接，或点 **Copy Token** 后在网页中输入令牌。页面上只显示不带令牌的地址，完整令牌不会直接展示在屏幕上。
 4. 浏览器中可以切换 profile、激活、新建、删除，并编辑 YAML 后保存。
 
 实现要点：

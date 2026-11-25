@@ -23,7 +23,10 @@ struct WebEditorSettingsView: View {
             portText = String(hostSettings.webEditor.port)
         }
         .onChange(of: hostSettings.webEditor.port) { _, newPort in
-            portText = String(newPort)
+            let updated = String(newPort)
+            if portText != updated {
+                portText = updated
+            }
         }
         .alert("Copied", isPresented: $justCopied) {
             Button("OK", role: .cancel) {}
@@ -38,9 +41,10 @@ struct WebEditorSettingsView: View {
                     Text("Enable Web Editor")
                 }
             }
+            .accessibilityIdentifier("webEditor.enable")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Open a small editor from another device on the same network. It is only available while ProxyCat is in the foreground and requires the token shown below.")
+                Text("Open a small editor from another device on the same network. It is only available while ProxyCat is in the foreground and requires the access token.")
                 Text("Only use the web editor on a trusted local network. It uses unencrypted HTTP; keep the access token private.")
                 Text("If the browser cannot connect, allow Local Network for ProxyCat in iOS Settings → Privacy & Security → Local Network, and make sure both devices are on the same Wi-Fi.")
             }
@@ -62,34 +66,56 @@ struct WebEditorSettingsView: View {
                 }
             }
 
-            if let url = environment.webConfig.accessURL,
+            if let baseURL = environment.webConfig.baseURL,
+               let accessURL = environment.webConfig.accessURL,
                let token = environment.webConfig.token {
-                LabeledContent("Access URL") {
-                    Text(url.absoluteString)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    ProxyCatMetricHeader(
+                        title: "Access URL",
+                        systemImage: "network",
+                        tint: .cyan
+                    )
+                    Text(baseURL.absoluteString)
+                        .font(.system(.callout, design: .monospaced))
                         .textSelection(.enabled)
-                        .multilineTextAlignment(.trailing)
-                }
-                LabeledContent("Token") {
-                    Text(token)
-                        .font(.caption.monospaced())
+                        .accessibilityIdentifier("webEditor.accessURL")
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 9)
+                        .background(
+                            ProxyCatUI.pageBackground,
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        )
+
+                    HStack(spacing: 8) {
+                        Button {
+                            copy(accessURL.absoluteString)
+                        } label: {
+                            Label("Copy Link", systemImage: "link")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("webEditor.copyLink")
+
+                        Button {
+                            copy(token)
+                        } label: {
+                            Label("Copy Token", systemImage: "key")
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("webEditor.copyToken")
+
+                        Spacer(minLength: 0)
+                    }
+                    .controlSize(.small)
+
+                    Text("The token is hidden. Copy Link opens the editor with the token included, or copy the token and paste it into the page.")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.trailing)
                 }
-                Button {
-                    copy(url.absoluteString)
-                } label: {
-                    Label("Copy Link", systemImage: "link")
-                }
-                Button {
-                    copy(token)
-                } label: {
-                    Label("Copy Token", systemImage: "key")
-                }
-                Link(destination: url) {
+                .padding(.vertical, 4)
+
+                Link(destination: accessURL) {
                     Label("Open in Safari", systemImage: "safari")
                 }
             }
@@ -103,20 +129,18 @@ struct WebEditorSettingsView: View {
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .font(.body.monospacedDigit())
+                    .accessibilityIdentifier("webEditor.port")
             }
-            Button {
-                applyPort()
-            } label: {
-                Label("Save", systemImage: "checkmark.circle")
-            }
-            .disabled(portText == String(hostSettings.webEditor.port))
             if let portError {
                 Text(portError)
                     .font(.caption)
                     .foregroundStyle(.red)
             }
         } footer: {
-            Text("Choose a port from 1024 to 65535. Changing the port while the editor is running restarts it with the same token.")
+            Text("Choose a port from 1024 to 65535. Changes apply immediately; changing the port while the editor is running restarts it with the same token.")
+        }
+        .onChange(of: portText) { _, _ in
+            applyPortFromText()
         }
     }
 
@@ -162,12 +186,20 @@ struct WebEditorSettingsView: View {
         )
     }
 
-    private func applyPort() {
-        guard let port = Int(portText), WebEditorSettings.portRange.contains(port) else {
+    /// Applies valid ports as soon as the field changes. Invalid or empty
+    /// intermediate text keeps the previous persisted port untouched.
+    private func applyPortFromText() {
+        let trimmed = portText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            portError = nil
+            return
+        }
+        guard let port = WebEditorSettings.parsePort(trimmed) else {
             portError = String(localized: "Port must be between 1024 and 65535.", bundle: .main)
             return
         }
         portError = nil
+        guard port != hostSettings.webEditor.port else { return }
         var settings = hostSettings.webEditor
         settings.port = port
         hostSettings.webEditor = settings

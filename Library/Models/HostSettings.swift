@@ -28,6 +28,17 @@ public struct WebEditorSettings: Codable, Equatable, Sendable {
     public var hasValidPort: Bool {
         Self.portRange.contains(port)
     }
+
+    /// Parses user-entered port text. Whitespace is ignored; invalid or
+    /// out-of-range values return nil so the caller can keep the previous
+    /// persisted port.
+    public static func parsePort(_ text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let port = Int(trimmed), portRange.contains(port) else {
+            return nil
+        }
+        return port
+    }
 }
 
 /// Umbrella container for everything persisted in `host_settings.json`.
@@ -49,6 +60,15 @@ public struct HostSettings: Codable, Equatable, Sendable {
     }
 
     public static let defaults = HostSettings(autoConnect: .defaults)
+
+    /// Copy safe to upload to iCloud. The web editor is a device-local
+    /// security surface: never restore an open LAN port from cloud data,
+    /// and keep toggling it from perturbing the backup checksum.
+    public var backupCopy: HostSettings {
+        var copy = self
+        copy.webEditor = .defaults
+        return copy
+    }
 
     // Backwards-compatible decode for host_settings.json files written
     // before newer fields existed. Without this, an absent key would

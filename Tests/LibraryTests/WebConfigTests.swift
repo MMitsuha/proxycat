@@ -18,6 +18,29 @@ import Testing
         #expect(!WebEditorSettings(port: 65_536).hasValidPort)
     }
 
+    @Test func parsePortAcceptsWhitespaceAndRejectsInvalidText() {
+        #expect(WebEditorSettings.parsePort("8787") == 8_787)
+        #expect(WebEditorSettings.parsePort(" 1024 \n") == 1_024)
+        #expect(WebEditorSettings.parsePort("") == nil)
+        #expect(WebEditorSettings.parsePort("   ") == nil)
+        #expect(WebEditorSettings.parsePort("8080abc") == nil)
+        #expect(WebEditorSettings.parsePort("1023") == nil)
+        #expect(WebEditorSettings.parsePort("65536") == nil)
+    }
+
+    @Test func backupCopyDropsWebEditorButKeepsOtherSettings() {
+        let settings = HostSettings(
+            autoConnect: .defaults,
+            logRetention: .last50,
+            webEditor: WebEditorSettings(isEnabled: true, port: 9_000)
+        )
+        let backup = settings.backupCopy
+        #expect(backup.webEditor == .defaults)
+        #expect(backup.logRetention == .last50)
+        #expect(settings.webEditor.isEnabled)
+        #expect(settings.webEditor.port == 9_000)
+    }
+
     @Test func hostSettingsRoundTripsWebEditor() throws {
         let settings = HostSettings(
             autoConnect: .defaults,
@@ -65,5 +88,83 @@ import Testing
         let text = try #require(String(data: response.serialized, encoding: .utf8))
         #expect(text.hasPrefix("HTTP/1.1 401 Unauthorized\r\n"))
         #expect(text.contains("{\"error\":\"Unauthorized\"}"))
+    }
+}
+
+@MainActor
+@Suite struct WebConfigURLTests {
+    @Test func baseURLDoesNotExposeToken() throws {
+        let urls = WebConfigServer.makeURLs(
+            host: "192.0.2.10",
+            port: 8_787,
+            token: "secret-token"
+        )
+        let base = try #require(urls.base)
+        #expect(base.absoluteString == "http://192.0.2.10:8787/")
+        #expect(base.query == nil)
+        #expect(!base.absoluteString.contains("secret-token"))
+    }
+
+    @Test func accessURLIncludesTokenAndLocalURLUsesLoopback() throws {
+        let urls = WebConfigServer.makeURLs(
+            host: "192.0.2.10",
+            port: 9_000,
+            token: "secret-token"
+        )
+        let access = try #require(urls.access)
+        let local = try #require(urls.local)
+        let accessComponents = try #require(URLComponents(url: access, resolvingAgainstBaseURL: false))
+        let localComponents = try #require(URLComponents(url: local, resolvingAgainstBaseURL: false))
+
+        #expect(accessComponents.queryItems == [URLQueryItem(name: "token", value: "secret-token")])
+        #expect(accessComponents.host == "192.0.2.10")
+        #expect(accessComponents.port == 9_000)
+        #expect(localComponents.host == "127.0.0.1")
+        #expect(localComponents.port == 9_000)
+        #expect(localComponents.queryItems == [URLQueryItem(name: "token", value: "secret-token")])
+    }
+}
+
+@MainActor
+@Suite struct WebConfigRouterTests {
+    private let router = WebConfigRouter()
+
+    private func request(_ method: String, _ path: String) -> WebConfigHTTPRequest {
+        WebConfigHTTPRequest(
+            method: method,
+            path: path,
+            query: [:],
+            headers: [:],
+            body: Data()
+        )
+    }
+
+    @Test func apiRequiresToken() async {
+        let response = await router.respond(to: request("GET", "/api/profiles"), token: nil)
+        #expect(response.status == 401)
+    }
+
+    @Test func unknownPathRequiresToken() async {
+        let response = await router.respond(to: request("GET", "/not-a-route"), token: nil)
+        #expect(response.status == 401)
+    }
+
+    @Test func faviconIsPublic() async {
+        let response = await router.respond(to: request("GET", "/favicon.ico"), token: nil)
+        #expect(response.status == 204)
+    }
+
+    @Test func rootDoesNotRequireToken() async {
+        // With bundled assets available this is 200; in a source-only test
+        // harness it is 500. Either way it must not be the API 401.
+        let response = await router.respond(to: request("GET", "/"), token: nil)
+        #expect(response.status != 401)
+    }
+
+    @Test func staticAssetsArePublic() async {
+        let css = await router.respond(to: request("GET", "/app.css"), token: nil)
+        let js = await router.respond(to: request("GET", "/app.js"), token: nil)
+        #expect(css.status != 401)
+        #expect(js.status != 401)
     }
 }

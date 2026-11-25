@@ -213,8 +213,7 @@ public final class ICloudBackupStore {
         // The web editor is a device-local security surface: never
         // restore an open LAN port from cloud data, and keep toggling it
         // from perturbing the backup checksum.
-        var hostSettings = HostSettingsStore.shared.snapshot
-        hostSettings.webEditor = .defaults
+        let hostSettings = HostSettingsStore.shared.snapshot.backupCopy
         return ICloudBackupContent(
             runtimeSettings: RuntimeSettings.shared.snapshot,
             hostSettings: hostSettings,

@@ -22,6 +22,8 @@ public final class WebConfigServer {
     public private(set) var state: State = .stopped
     public private(set) var port: Int?
     public private(set) var token: String?
+    /// Address-only URL (no token) safe to display in the UI.
+    public private(set) var baseURL: URL?
     /// URL using the device's LAN IPv4 address when available, otherwise
     /// loopback. Includes the access token for one-click browser opening.
     public private(set) var accessURL: URL?
@@ -46,6 +48,31 @@ public final class WebConfigServer {
     @ObservationIgnored private let router = WebConfigRouter()
 
     public init() {}
+
+    struct URLs: Equatable, Sendable {
+        let base: URL?
+        let access: URL?
+        let local: URL?
+    }
+
+    /// Builds the display URL (no token) and the tokenized URLs used for
+    /// copy/open actions. Kept pure so tests can assert the token never
+    /// leaks into `base`.
+    nonisolated static func makeURLs(host: String, port: Int, token: String) -> URLs {
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = host
+        components.port = port
+        components.path = "/"
+        let base = components.url
+
+        components.queryItems = [URLQueryItem(name: "token", value: token)]
+        let access = components.url
+
+        components.host = "127.0.0.1"
+        let local = components.url
+        return URLs(base: base, access: access, local: local)
+    }
 
     public func apply(_ settings: WebEditorSettings) {
         desired = settings
@@ -76,6 +103,7 @@ public final class WebConfigServer {
         listenerID = nil
         port = nil
         token = nil
+        baseURL = nil
         accessURL = nil
         localURL = nil
         state = .stopped
@@ -131,6 +159,7 @@ public final class WebConfigServer {
             listenerID = nil
             self.port = nil
             self.token = nil
+            baseURL = nil
             accessURL = nil
             localURL = nil
             state = .failed(error.localizedDescription)
@@ -148,8 +177,10 @@ public final class WebConfigServer {
         case .ready:
             let host = LocalNetworkAddress.ipv4() ?? "127.0.0.1"
             if let token {
-                accessURL = URL(string: "http://\(host):\(port)/?token=\(token)")
-                localURL = URL(string: "http://127.0.0.1:\(port)/?token=\(token)")
+                let urls = Self.makeURLs(host: host, port: port, token: token)
+                baseURL = urls.base
+                accessURL = urls.access
+                localURL = urls.local
             }
             state = .running
         case .failed(let error):
@@ -169,6 +200,7 @@ public final class WebConfigServer {
         listenerID = nil
         port = nil
         token = nil
+        baseURL = nil
         accessURL = nil
         localURL = nil
     }
