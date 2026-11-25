@@ -6960,6 +6960,374 @@
           }
         }
       }
+    },
+    "Web Editor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウェブエディタ"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Веб-редактор"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网页编辑器"
+          }
+        }
+      }
+    },
+    "Enable Web Editor" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウェブエディタを有効にする"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить веб-редактор"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用网页编辑器"
+          }
+        }
+      }
+    },
+    "Access URL" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクセス URL"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Адрес доступа"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "访问地址"
+          }
+        }
+      }
+    },
+    "Token" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークン"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Токен"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "令牌"
+          }
+        }
+      }
+    },
+    "Copy Link" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンクをコピー"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Копировать ссылку"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制链接"
+          }
+        }
+      }
+    },
+    "Copy Token" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークンをコピー"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Копировать токен"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制令牌"
+          }
+        }
+      }
+    },
+    "Open in Safari" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safari で開く"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть в Safari"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Safari 中打开"
+          }
+        }
+      }
+    },
+    "Running" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行中"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Работает"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运行中"
+          }
+        }
+      }
+    },
+    "Starting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "起動中"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запуск"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在启动"
+          }
+        }
+      }
+    },
+    "Stopped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановлен"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止"
+          }
+        }
+      }
+    },
+    "Failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失敗"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ошибка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失败"
+          }
+        }
+      }
+    },
+    "Port must be between 1024 and 65535." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポートは 1024〜65535 の範囲で指定してください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Порт должен быть от 1024 до 65535."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端口必须在 1024 到 65535 之间。"
+          }
+        }
+      }
+    },
+    "Choose a port from 1024 to 65535. Changing the port while the editor is running restarts it with the same token." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポートは 1024〜65535 の範囲で指定します。実行中に変更すると同じトークンで再起動します。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите порт от 1024 до 65535. Изменение порта во время работы перезапустит редактор с тем же токеном."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择 1024 到 65535 之间的端口。运行中修改端口会用同一令牌重启编辑器。"
+          }
+        }
+      }
+    },
+    "Open a small editor from another device on the same network. It is only available while ProxyCat is in the foreground and requires the token shown below." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じネットワーク上の別のデバイスから小さなエディタを開けます。ProxyCat が前面にある間のみ利用でき、下に表示されるトークンが必要です。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Откройте небольшой редактор с другого устройства в той же сети. Он доступен, только пока ProxyCat открыт, и требует токен, показанный ниже."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在同一网络中的其他设备上打开小型编辑器。仅在 ProxyCat 处于前台时可用，并且需要下方显示的令牌。"
+          }
+        }
+      }
+    },
+    "Only use the web editor on a trusted local network. It uses unencrypted HTTP; keep the access token private." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウェブエディタは信頼できるローカルネットワークでのみ使用してください。暗号化されていない HTTP を使用するため、アクセストークンを他人に知られないようにしてください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используйте веб-редактор только в доверенной локальной сети. Он работает по незашифрованному HTTP; храните токен доступа в секрете."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅在可信的局域网中使用网页编辑器。它使用未加密的 HTTP，请妥善保管访问令牌。"
+          }
+        }
+      }
+    },
+    "If the browser cannot connect, allow Local Network for ProxyCat in iOS Settings → Privacy & Security → Local Network, and make sure both devices are on the same Wi-Fi." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブラウザから接続できない場合は、iOS の「設定」→「プライバシーとセキュリティ」→「ローカルネットワーク」で ProxyCat を許可し、両方のデバイスが同じ Wi-Fi に接続されていることを確認してください。"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Если браузер не подключается, разрешите ProxyCat доступ к локальной сети в iOS: Настройки → Конфиденциальность и безопасность → Локальная сеть, и убедитесь, что оба устройства находятся в одной сети Wi-Fi."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果浏览器无法连接，请在 iOS 设置 → 隐私与安全性 → 本地网络 中允许 ProxyCat，并确认两台设备连接的是同一个 Wi-Fi。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

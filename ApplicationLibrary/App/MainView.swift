@@ -1,5 +1,6 @@
 import Library
 import SwiftUI
+import UIKit
 
 public struct MainView: View {
     @State private var environment = ExtensionEnvironment()
@@ -10,7 +11,7 @@ public struct MainView: View {
     public init() {}
 
     public var body: some View {
-        @Bindable var environment = environment
+        @Bindable var bindableEnvironment = environment
         return TabView(selection: $selection) {
             NavigationStack {
                 DashboardView()
@@ -53,8 +54,16 @@ public struct MainView: View {
         .environment(ICloudBackupStore.shared)
         .task {
             environment.commandClient.setAppActive(scenePhase == .active)
+            environment.webConfig.setAppActive(scenePhase == .active)
             await environment.bootstrap()
             ICloudBackupStore.shared.startAutoSync()
+            UIApplication.shared.isIdleTimerDisabled = environment.webConfig.state.isRunning
+        }
+        // The LAN editor is only reachable while the host app is awake.
+        // Keep the screen on while the server is running so auto-lock does
+        // not silently tear the browser session down.
+        .onChange(of: environment.webConfig.state) { _, state in
+            UIApplication.shared.isIdleTimerDisabled = state.isRunning
         }
         .onOpenURL { url in
             Task { await handleIncomingFile(url) }
@@ -64,6 +73,7 @@ public struct MainView: View {
             // freezes or kills us. Other stores write synchronously on
             // mutation, so they don't need a flush hook.
             environment.commandClient.setAppActive(phase == .active)
+            environment.webConfig.setAppActive(phase == .active)
             if phase == .active {
                 ICloudBackupStore.shared.startAutoSync()
             } else {
@@ -75,7 +85,7 @@ public struct MainView: View {
         // Settings, Logs, or any other tab still surfaces — settings
         // changes go through SettingsChangeCoordinator regardless of
         // which tab the user is on.
-        .errorAlert($environment.reloadError, title: "Reload failed")
+        .errorAlert($bindableEnvironment.reloadError, title: "Reload failed")
     }
 
     /// Imports a YAML file delivered by the system (Share sheet, Open With,

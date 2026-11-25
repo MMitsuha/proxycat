@@ -16,6 +16,7 @@ import Observation
 public final class ExtensionEnvironment {
     public let profile: ExtensionProfile
     public let commandClient: CommandClient
+    public let webConfig = WebConfigServer()
 
     /// Persisted across log view appearances so the user's search term
     /// survives navigation. Mirrors sing-box-for-apple's logSearchText.
@@ -34,6 +35,7 @@ public final class ExtensionEnvironment {
     @ObservationIgnored private let traffic: TrafficCoordinator
 
     @ObservationIgnored private var memoryObserverToken: UUID?
+    @ObservationIgnored private var webConfigTask: Task<Void, Never>?
 
     public convenience init() {
         self.init(
@@ -53,6 +55,7 @@ public final class ExtensionEnvironment {
     }
 
     deinit {
+        webConfigTask?.cancel()
         if let token = memoryObserverToken {
             MemoryMonitor.shared.remove(token)
         }
@@ -108,6 +111,14 @@ public final class ExtensionEnvironment {
         // Wait for the geo databases above so the bundled default YAML
         // (which contains GEOIP rules) validates successfully.
         await ProfileStore.shared.seedDefaultProfileIfNeeded()
+
+        // Keep the LAN web editor in sync with the host-only preference.
+        webConfigTask?.cancel()
+        webConfigTask = Task { @MainActor [weak self] in
+            for await settings in Observed.values({ HostSettingsStore.shared.webEditor }) {
+                self?.webConfig.apply(settings)
+            }
+        }
     }
 
     // The host app process gets memory warnings from iOS too — not just

@@ -210,9 +210,14 @@ public final class ICloudBackupStore {
     private func currentContent() async throws -> ICloudBackupContent {
         let profiles = ProfileStore.shared.profiles
         let entries = try await Self.profileEntries(from: profiles)
+        // The web editor is a device-local security surface: never
+        // restore an open LAN port from cloud data, and keep toggling it
+        // from perturbing the backup checksum.
+        var hostSettings = HostSettingsStore.shared.snapshot
+        hostSettings.webEditor = .defaults
         return ICloudBackupContent(
             runtimeSettings: RuntimeSettings.shared.snapshot,
-            hostSettings: HostSettingsStore.shared.snapshot,
+            hostSettings: hostSettings,
             profiles: entries
         )
     }
@@ -233,7 +238,9 @@ public final class ICloudBackupStore {
             activeProfileID: repairedActiveProfileID
         )
         RuntimeSettings.shared.replace(with: runtimeSettings)
-        HostSettingsStore.shared.replace(with: snapshot.content.hostSettings)
+        var hostSettings = snapshot.content.hostSettings
+        hostSettings.webEditor = HostSettingsStore.shared.webEditor
+        HostSettingsStore.shared.replace(with: hostSettings)
     }
 
     private func updateSyncedState(snapshot: ICloudBackupSnapshot, checksum: String) throws {

@@ -31,6 +31,7 @@ public struct BundledAsset: Sendable, Hashable, Identifiable {
 ///   - `geo/<file>`  — single files copied to `<workingDir>/<file>`
 ///   - `ui/`         — entire directory copied to `<workingDir>/ui/`
 ///   - `default-profile.yaml` — template read directly by the profile editor
+///   - `web-editor/index.html` — page served by `WebConfigServer`
 /// Anything outside those roots is not installed by `installIfNeeded()` —
 /// extend `discover()` and `BundledAsset.Kind` for a new installable family.
 public enum BundledAssets {
@@ -72,6 +73,26 @@ public enum BundledAssets {
     /// by Clear Cache.
     public static var defaultProfileYAML: String? {
         guard let url = assetsRoot?.appendingPathComponent("default-profile.yaml") else {
+            return nil
+        }
+        return try? String(contentsOf: url, encoding: .utf8)
+    }
+
+    /// Static assets served by `WebConfigServer`.
+    public static var webEditorHTML: String? {
+        webEditorResource("index.html")
+    }
+
+    public static var webEditorCSS: String? {
+        webEditorResource("app.css")
+    }
+
+    public static var webEditorJS: String? {
+        webEditorResource("app.js")
+    }
+
+    private static func webEditorResource(_ name: String) -> String? {
+        guard let url = assetsRoot?.appendingPathComponent("web-editor/\(name)") else {
             return nil
         }
         return try? String(contentsOf: url, encoding: .utf8)

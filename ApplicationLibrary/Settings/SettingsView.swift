@@ -36,6 +36,14 @@ public struct SettingsView: View {
                 ) {
                     ICloudBackupSettingsView()
                 }
+                ProxyCatNavigationRow(
+                    title: "Web Editor",
+                    systemImage: "network",
+                    tint: .cyan,
+                    accessibilityID: "settings.webEditor"
+                ) {
+                    WebEditorSettingsView()
+                }
             }
 
             Section {

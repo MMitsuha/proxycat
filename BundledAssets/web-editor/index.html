@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ProxyCat Web Editor</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <div class="brand">ProxyCat <span>Web Editor</span></div>
+    <div class="status" id="status"><span class="dot" id="statusDot"></span><span id="statusText">Loading…</span></div>
+  </header>
+
+  <main>
+    <aside>
+      <div class="side-head">
+        <h2>Profiles</h2>
+        <div class="side-actions">
+          <button id="refreshBtn" type="button">Refresh</button>
+          <button id="newBtn" type="button" class="primary">New</button>
+        </div>
+      </div>
+      <ul id="profileList"></ul>
+    </aside>
+
+    <section>
+      <div class="banner">
+        Edits are validated by mihomo before saving. Keep ProxyCat in the
+        foreground on the device, and only use this editor on a trusted local
+        network.
+      </div>
+
+      <div class="empty" id="emptyState">
+        <strong>Select a profile</strong>
+        <span>Choose a profile from the sidebar, or create a new one.</span>
+      </div>
+
+      <div class="auth" id="authPane" hidden>
+        <strong>Access token required</strong>
+        <span>Paste the token shown in ProxyCat → Settings → Web Editor.</span>
+        <input id="tokenInput" type="password" autocomplete="off" placeholder="Access token">
+        <button id="tokenBtn" type="button" class="primary">Open editor</button>
+      </div>
+
+      <div id="editor" hidden>
+        <div class="toolbar">
+          <input id="nameInput" type="text" spellcheck="false" placeholder="Profile name">
+          <button id="saveBtn" type="button" class="primary">Save</button>
+          <button id="activateBtn" type="button" disabled>Activate</button>
+          <button id="deleteBtn" type="button" class="danger" disabled>Delete</button>
+        </div>
+        <textarea id="yamlInput" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+        <div class="hint" id="hint">Save validates the full YAML with mihomo.</div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

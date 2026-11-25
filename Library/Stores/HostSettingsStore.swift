@@ -28,9 +28,19 @@ public final class HostSettingsStore {
             StorageMaintenance.pruneSavedLogs(policy: logRetention)
         }
     }
+    public var webEditor: WebEditorSettings {
+        didSet {
+            guard !isReplacing else { return }
+            persistAndBroadcast()
+        }
+    }
 
     public var snapshot: HostSettings {
-        HostSettings(autoConnect: autoConnect, logRetention: logRetention)
+        HostSettings(
+            autoConnect: autoConnect,
+            logRetention: logRetention,
+            webEditor: webEditor
+        )
     }
 
     /// `didSet` doesn't fire during the constructor's stored-property
@@ -50,17 +60,18 @@ public final class HostSettingsStore {
         )
         self.autoConnect = stored.autoConnect
         self.logRetention = stored.logRetention
+        self.webEditor = stored.webEditor
         self.loaded = true
     }
 
     private func persistAndBroadcast() {
         guard loaded else { return }
-        let snapshot = HostSettings(autoConnect: autoConnect, logRetention: logRetention)
+        let settings = snapshot
         // Don't broadcast on failure: subscribers would re-apply from
         // in-memory state while the persisted file still holds the old
         // value, silently reverting on the next cold launch.
         guard JSONFileStore.saveOrLog(
-            snapshot,
+            settings,
             to: FilePath.hostSettingsFilePath,
             category: "HostSettingsStore"
         ) else { return }
@@ -70,11 +81,13 @@ public final class HostSettingsStore {
     public func replace(with snapshot: HostSettings) {
         let autoConnectChanged = autoConnect != snapshot.autoConnect
         let retentionChanged = logRetention != snapshot.logRetention
-        guard autoConnectChanged || retentionChanged else { return }
+        let webEditorChanged = webEditor != snapshot.webEditor
+        guard autoConnectChanged || retentionChanged || webEditorChanged else { return }
 
         isReplacing = true
         autoConnect = snapshot.autoConnect
         logRetention = snapshot.logRetention
+        webEditor = snapshot.webEditor
         isReplacing = false
 
         persistAndBroadcast()

@@ -18,6 +18,7 @@
 - **原生 Proxies / Connections**：代理组选择、延迟测试、连接列表与逐条关闭，全部走 App Group 私有 Unix socket。
 - **日志**：等级过滤、搜索高亮、暂停/复制；按会话保存 mihomo 与 ProxyCat 日志，标记正在写入的 LIVE 文件并支持保留策略。
 - **MITM**：每个 profile 独立的域名 / 端口 / ECH 策略 / 重写规则编辑器，配合本地根 CA 安装与信任检测。
+- **网页配置**：在电脑浏览器中通过局域网编辑 profile YAML；需要访问令牌，仅在 App 前台运行。
 - **自动化与统计**：Auto Connect（SSID / 蜂窝 / 默认动作）、7 / 14 / 30 天流量统计、iCloud 备份。
 - **本地化**：English（源语言）、简体中文、日本語、Русский。
 - **构建**：`python3 build.py` 统一管理 mihomo xcframework、xcodegen、资源下载、模拟器/真机构建与诊断。
@@ -71,7 +72,7 @@ proxycat/
 ├── build.py                 Python 构建入口（替代原 Makefile + shell 脚本）
 ├── tools/proxycat_build/    构建实现：mihomo / xcodegen / assets / xcodebuild / doctor
 ├── tools/tests/             构建工具单元测试
-├── BundledAssets/          编译期资源（geo DB / external UI / default-profile.yaml 模板）
+├── BundledAssets/          编译期资源（geo DB / external UI / default-profile.yaml / web-editor）
 ├── Library/                共享 Swift framework：
 │   ├── Models/             纯值类型（Profile / Connections / MitmProfileConfig /
 │   │                       ICloudBackup / DailyUsage / AutoConnect / HostSettings /
@@ -297,7 +298,7 @@ Settings → Statistics 展示最近 7 / 14 / 30 天的上下行用量（Swift C
 
 ## iCloud 备份
 
-Settings → iCloud Backup 把 profiles（含每份 YAML 原文）、active profile 指针、`runtime_settings.json` 和 `host_settings.json` 序列化为一份 schema-versioned 快照写到 iCloud Drive：容器 `iCloud.io.proxycat.Pcat`，路径 `Documents/ProxyCat/profile-settings-backup.json`。**日志、缓存、每日用量、MITM 私钥不会进入备份**——MITM CA 私钥按设计仅留在本机 App Group。
+Settings → iCloud Backup 把 profiles（含每份 YAML 原文）、active profile 指针、`runtime_settings.json` 和 `host_settings.json` 序列化为一份 schema-versioned 快照写到 iCloud Drive：容器 `iCloud.io.proxycat.Pcat`，路径 `Documents/ProxyCat/profile-settings-backup.json`。**日志、缓存、每日用量、MITM 私钥不会进入备份**——MITM CA 私钥按设计仅留在本机 App Group。Web 编辑器的启用状态与端口同样是设备本地安全设置，不会写入云端备份，也不会被 Restore 覆盖。
 
 - 实现在 `Library/Stores/ICloudBackupStore.swift` 的 `ICloudBackupStore`（`@MainActor @Observable` 单例）。本地侧状态写到 App Group 的 `icloud_sync_state.json`：保存 `deviceID`（首次启动随机生成，用于在快照里区分来源设备）、`lastSyncedAt`、`lastSyncedChecksum`、`lastCloudSnapshotID`。这个文件本身不上传 iCloud。
 - `syncNow()` 通过 `reconcile()` 比较 `(localChecksum, cloudChecksum, lastSyncedChecksum)`：完全一致或本地与云端一致时是 no-op；只云端变了（`local == lastSynced`）→ 拉取 cloud；只本地变了（`cloud == lastSynced`）→ 推送 local；两端相对上次都变了 → 进入 `conflict` 状态，由用户在 UI 上手动选择 `Back Up Now` 或 `Restore from iCloud`，不做静默覆盖。
@@ -359,6 +360,28 @@ HTTPS 重写前需要先在 Settings → MITM Certificate 中创建并安装本�
 `domain` 的匹配语法与 mihomo 的 `sniffer.force-domain`、`dns.fake-ip-filter` 等域名配置一致：`example.com` 只匹配自身，`+.example.com` 匹配自身和所有子域名，也支持 `*.example.com`、`.example.com`、`geosite:` 和 `rule-set:`。`encrypted-sni-policy` 控制检测到 ECH / Encrypted ClientHello 时的行为，可选 `skip`（默认，跳过 MITM）、`mitm`（仍然 MITM）和 `reject`（关闭连接）。
 
 支持的 `action` 包括 `reject`、`reject-200`、`reject-img`、`reject-dict`、`reject-array`、`302`、`307`、`request-header`、`request-body`、`response-header`、`response-body`。Header / body 重写使用 `old` 正则匹配和 `new` 替换，支持 `$1`、`$2` 等捕获组引用；body 重写仅适用于有明确 `Content-Length` 的文本类内容。更完整的说明见 [docs/mitm.md](docs/mitm.md)，`sample-profile.yaml` 也包含一份默认注释掉的 MITM 示例块。
+
+## 网页配置编辑器
+
+ProxyCat 内置一个可选的局域网 Web 编辑器，方便在电脑上粘贴、修改和校验 profile YAML，而不必在手机上操作长文本。它与 Dashboard 的 **Open Web UI**（metacubexd 运行时控制器面板）是两套不同的东西：Web Editor 只编辑本机 `Profiles/` 里的 YAML。
+
+<p align="center">
+  <img src="assets/web-editor.png" alt="ProxyCat Web Editor" width="720">
+</p>
+
+1. 打开 Settings → Web Editor，启用开关。
+2. 默认端口 `8787`，可改为 `1024...65535` 之间的任意端口；修改端口会重启服务。
+3. 将手机和电脑连接到同一网络，在电脑浏览器中打开页面显示的 **Access URL**（URL 已包含访问令牌）。
+4. 浏览器中可以切换 profile、激活、新建、删除，并编辑 YAML 后保存。
+
+实现要点：
+
+- 服务由宿主 App 的 `WebConfigServer` 提供，使用 Network.framework 监听 TCP；仅在 App 前台且开关开启时运行。运行期间会临时关闭系统自动锁屏，避免浏览器会话因休眠中断。
+- 所有 `/api/*` 请求都需要 `Authorization: Bearer <token>`；令牌在每次 App 进程启动时随机生成，不写入磁盘，也不进入 iCloud 备份。
+- 保存 / 新建都会先经过 mihomo 解析校验，再写入 `Profiles/`；成功后沿用正常的 `ProfileStore` 通知，让运行中的隧道 hot-reload。
+- 页面资源位于 `BundledAssets/web-editor/`（`index.html` / `app.css` / `app.js`），由 Library.framework 直接读取。
+- 服务启用时会通过 Bonjour（`_proxycat._tcp`）注册触发 iOS 局域网权限请求；首次使用请在弹窗中允许，或到 iOS 设置 → 隐私与安全性 → 本地网络 中开启 ProxyCat。
+- 这是明文 HTTP 的局域网工具：只在可信 Wi-Fi 上开启，并妥善保管页面中的令牌。
 
 ## 代理组延迟测试
 

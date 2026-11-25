@@ -34,6 +34,12 @@
          intent and silences the LSSupportsOpeningDocumentsInPlace warning. -->
     <key>LSSupportsOpeningDocumentsInPlace</key>
     <false/>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>ProxyCat uses the local network so you can edit profiles from a computer while the app is open.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_proxycat._tcp</string>
+    </array>
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
