@@ -43,6 +43,32 @@ import Testing
         #expect(!StorageMaintenance.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/other-20260511-120000.log")))
         #expect(!StorageMaintenance.isManagedSavedLogFile(URL(fileURLWithPath: "/tmp/proxycat-20260511-120000.txt")))
     }
+
+    @Test func loadsSmallFile() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("proxycat-log-\(UUID().uuidString).log")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data("first\nsecond\n".utf8).write(to: url)
+
+        let document = try SavedLogFileReader.load(path: url.path)
+
+        #expect(document.lines.map(\.text) == ["first", "second"])
+        #expect(document.size == 13)
+    }
+
+    @Test func rejectsFilesAboveViewLimit() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("proxycat-log-\(UUID().uuidString).log")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data(repeating: 0x41, count: 128).write(to: url)
+
+        do {
+            _ = try SavedLogFileReader.load(path: url.path, maxBytes: 16)
+            Issue.record("Expected an oversized-log error")
+        } catch let error as SavedLogFileReadError {
+            #expect(error == .fileTooLarge(128))
+        }
+    }
 }
 
 @Suite struct SavedLogFileInfoTests {

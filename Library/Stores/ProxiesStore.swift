@@ -25,6 +25,9 @@ public final class ProxiesStore {
     /// can't repopulate `groups` or surface a stale error against the
     /// new controller state.
     @ObservationIgnored private var generation: Int = 0
+    /// Bumped by every refresh. A slower older refresh must not publish
+    /// its (stale) snapshot over a newer one or clear the spinner early.
+    @ObservationIgnored private var refreshID: Int = 0
 
     /// In-flight group/node selections. Stored as a typed pair instead
     /// of a joined string so names containing "/" cannot collide
@@ -62,15 +65,17 @@ public final class ProxiesStore {
     /// run, which would shuffle on every refresh.
     public func refresh() async {
         let gen = generation
+        refreshID &+= 1
+        let requestID = refreshID
         isRefreshing = true
         defer {
-            // Only clear the spinner if our generation is still current —
-            // otherwise reset() (or a follow-up refresh) owns this flag.
-            if gen == generation { isRefreshing = false }
+            // Only clear the spinner if our generation and refresh are
+            // still current — otherwise reset() or a newer refresh owns it.
+            if gen == generation, requestID == refreshID { isRefreshing = false }
         }
         do {
             let proxies = try await controller.proxies()
-            guard gen == generation else { return }
+            guard gen == generation, requestID == refreshID else { return }
             let sortIndex = (proxies["GLOBAL"]?.all ?? []) + ["GLOBAL"]
             var sortOrder: [String: Int] = [:]
             sortOrder.reserveCapacity(sortIndex.count)
@@ -89,7 +94,7 @@ public final class ProxiesStore {
             self.nodeMap = proxies
             self.loadError = nil
         } catch {
-            guard gen == generation else { return }
+            guard gen == generation, requestID == refreshID else { return }
             self.loadError = error.localizedDescription
         }
     }

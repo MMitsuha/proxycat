@@ -46,14 +46,22 @@ struct MitmProfileConfigView: View {
                     }
                 }
             } else {
-                profileSection
-                mitmSection
-                portsSection
-                domainsSection
-                rulesSection
-                certificateSection
+                Group {
+                    profileSection
+                    mitmSection
+                    portsSection
+                    domainsSection
+                    rulesSection
+                    certificateSection
+                }
+                // The save path reads the YAML, validates it with mihomo,
+                // then writes; without this, edits made during that
+                // window would be discarded on dismiss even though the
+                // toolbar reports success.
+                .disabled(isSaving)
             }
         }
+        .interactiveDismissDisabled(isSaving)
         .proxyCatForm()
         .navigationTitle("MITM Config")
         .navigationBarTitleDisplayMode(.inline)
@@ -264,7 +272,7 @@ struct MitmProfileConfigView: View {
             let updatedYAML = try MitmProfileConfigYAML.replacingConfig(in: latestYAML, with: config)
 
             try await store.updateContent(of: profile, yaml: updatedYAML)
-            originalConfig = currentConfig
+            originalConfig = config
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

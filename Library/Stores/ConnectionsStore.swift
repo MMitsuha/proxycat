@@ -47,6 +47,9 @@ public final class ConnectionsStore {
     @ObservationIgnored private let controller: MihomoController
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var filterDebounceTask: Task<Void, Never>?
+    /// Bumped by stop(); a poll task that outlives its generation must
+    /// not apply a snapshot or clear `isStreaming` after a restart.
+    @ObservationIgnored private var generation = 0
 
     /// Reused across polls to avoid allocating a fresh ID→connection
     /// dictionary at 1 Hz. Never published to SwiftUI, so the buffer
@@ -91,16 +94,20 @@ public final class ConnectionsStore {
 
     public func start() {
         guard pollTask == nil else { return }
+        generation &+= 1
+        let generation = self.generation
         pollTask = Task { @MainActor [weak self] in
             await RetryLoop.run { [weak self] in
                 guard let self else { return true }
-                return await self.runPollLoop()
+                return await self.runPollLoop(generation: generation)
             }
-            self?.isStreaming = false
+            guard let self, generation == self.generation else { return }
+            self.isStreaming = false
         }
     }
 
     public func stop() {
+        generation &+= 1
         pollTask?.cancel()
         pollTask = nil
         filterDebounceTask?.cancel()
@@ -160,16 +167,18 @@ public final class ConnectionsStore {
     /// surfaced through `loadError` but still counts as progress: the
     /// stream is alive, so we keep the regular cadence instead of
     /// backing off.
-    private func runPollLoop() async -> Bool {
+    private func runPollLoop(generation: Int) async -> Bool {
         do {
             let snapshot = try await controller.connections()
             try Task.checkCancellation()
+            guard generation == self.generation else { return false }
             apply(snapshot)
             isStreaming = true
             loadError = nil
         } catch is CancellationError {
             return true
         } catch {
+            guard generation == self.generation else { return false }
             loadError = error.localizedDescription
             isStreaming = false
             return false

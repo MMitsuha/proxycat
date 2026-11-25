@@ -39,6 +39,14 @@ public final class DailyUsageStore {
     @ObservationIgnored private let persistInterval: TimeInterval = 5
 
     @ObservationIgnored private var flushTask: Task<Void, Never>?
+    /// Serial writer. Multiple overlapping flushes used to launch
+    /// independent detached writes, so an older snapshot could finish
+    /// last and overwrite newer totals (or a reset). A serial queue
+    /// guarantees on-disk order matches enqueue order.
+    @ObservationIgnored private let writeQueue = DispatchQueue(
+        label: "io.proxycat.dailyUsage.write",
+        qos: .utility
+    )
 
     private init() {
         let stored = JSONFileStore.load(
@@ -112,11 +120,10 @@ public final class DailyUsageStore {
         dirty = false
         flushTask?.cancel()
         flushTask = nil
-        let snapshot = DailyUsageLog(entries: [], lastObservedUpTotal: nil, lastObservedDownTotal: nil)
-        JSONFileStore.saveOrLog(
-            snapshot,
-            to: FilePath.dailyUsageFilePath,
-            category: "DailyUsageStore"
+        // Queue behind any in-flight write so an older snapshot cannot
+        // land after the reset and resurrect the cleared totals.
+        enqueuePersist(
+            DailyUsageLog(entries: [], lastObservedUpTotal: nil, lastObservedDownTotal: nil)
         )
     }
 
@@ -150,17 +157,24 @@ public final class DailyUsageStore {
             lastObservedDownTotal: lastObservedDownTotal
         )
         // Optimistically clear `dirty`; any record() arriving while the
-        // detached write is in flight will set it back to true and the
-        // next scheduled flush will pick the new state up. On write
-        // failure we re-mark dirty so the data isn't silently lost.
+        // write is queued will set it back to true and the next scheduled
+        // flush will pick the new state up. On write failure we re-mark
+        // dirty so the data isn't silently lost.
         dirty = false
-        Task.detached(priority: .utility) { [weak self] in
+        enqueuePersist(snapshot)
+    }
+
+    private func enqueuePersist(_ snapshot: DailyUsageLog) {
+        writeQueue.async { [weak self] in
             let ok = JSONFileStore.saveOrLog(
                 snapshot,
                 to: FilePath.dailyUsageFilePath,
                 category: "DailyUsageStore"
             )
-            if !ok { await self?.markDirty() }
+            guard !ok else { return }
+            Task { @MainActor in
+                self?.markDirty()
+            }
         }
     }
 

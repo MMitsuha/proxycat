@@ -127,14 +127,46 @@ public struct SavedLogDocument: Equatable, Sendable {
     }
 }
 
+public enum SavedLogFileReadError: LocalizedError, Equatable {
+    case fileTooLarge(Int64)
+
+    public var errorDescription: String? {
+        switch self {
+        case let .fileTooLarge(bytes):
+            return String(
+                localized: "This log file is too large to open in the app (\(ByteFormatter.fileSize(bytes))). Share or export it instead.",
+                bundle: .main
+            )
+        }
+    }
+}
+
 public enum SavedLogFileReader {
-    public static func load(path: String) throws -> SavedLogDocument {
+    /// Opening a session log decodes the whole file into a String and an
+    /// array of line structs, so an unbounded file can exhaust the host
+    /// app's memory. Refuse anything above this size; the share sheet is
+    /// still available for exporting it.
+    public static let maxViewableBytes: Int64 = 20 * 1024 * 1024
+
+    public static func load(
+        path: String,
+        maxBytes: Int64 = SavedLogFileReader.maxViewableBytes
+    ) throws -> SavedLogDocument {
         let url = URL(fileURLWithPath: path)
         let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        let size = Int64(values.fileSize ?? 0)
+        if maxBytes > 0, size > maxBytes {
+            throw SavedLogFileReadError.fileTooLarge(size)
+        }
         let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+        // The file may have grown between the metadata check and the
+        // read — LIVE logs are written concurrently by the extension.
+        if maxBytes > 0, Int64(data.count) > maxBytes {
+            throw SavedLogFileReadError.fileTooLarge(Int64(data.count))
+        }
         let decoded = decodeUTF8(data)
         return SavedLogDocument(
-            size: Int64(values.fileSize ?? data.count),
+            size: size > 0 ? size : Int64(data.count),
             lines: makeLines(from: decoded.text),
             replacedInvalidUTF8: decoded.replacedInvalidUTF8
         )
