@@ -30,9 +30,9 @@ public struct BundledAsset: Sendable, Hashable, Identifiable {
 /// Layout inside the project's `BundledAssets/` folder reference:
 ///   - `geo/<file>`  — single files copied to `<workingDir>/<file>`
 ///   - `ui/`         — entire directory copied to `<workingDir>/ui/`
-/// Anything outside those two roots is silently skipped — extend
-/// `discover()` and `BundledAsset.Kind` if a new asset family is
-/// added.
+///   - `default-profile.yaml` — template read directly by the profile editor
+/// Anything outside those roots is not installed by `installIfNeeded()` —
+/// extend `discover()` and `BundledAsset.Kind` for a new installable family.
 public enum BundledAssets {
     private static let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "BundledAssets")
 
@@ -64,6 +64,17 @@ public enum BundledAssets {
     /// are also preserved.
     public static var protectedTopLevelNames: Set<String> {
         Set(all.map { ($0.id as NSString).pathComponents.first ?? $0.id })
+    }
+
+    /// YAML template used by the profile editor's "New / Paste YAML"
+    /// flow. This file is a framework resource (not a working-directory
+    /// asset), so it is read directly from the bundle and never pruned
+    /// by Clear Cache.
+    public static var defaultProfileYAML: String? {
+        guard let url = assetsRoot?.appendingPathComponent("default-profile.yaml") else {
+            return nil
+        }
+        return try? String(contentsOf: url, encoding: .utf8)
     }
 
     /// Copy missing or out-of-date bundled assets into the working

@@ -31,10 +31,11 @@ public struct ProfileEditorView: View {
         switch mode {
         case .create:
             let initialName = "New Profile"
+            let template = BundledAssets.defaultProfileYAML ?? ""
             _name = State(initialValue: initialName)
             _originalName = State(initialValue: initialName)
-            _yaml = State(initialValue: "")
-            _originalYAML = State(initialValue: "")
+            _yaml = State(initialValue: template)
+            _originalYAML = State(initialValue: template)
             _isLoading = State(initialValue: false)
         case let .edit(profile):
             _name = State(initialValue: profile.name)

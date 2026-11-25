@@ -104,6 +104,10 @@ public final class ExtensionEnvironment {
         // while the app was killed.
         await autoConnect.applyFromStore()
         _ = await assetInstall.value
+
+        // Wait for the geo databases above so the bundled default YAML
+        // (which contains GEOIP rules) validates successfully.
+        await ProfileStore.shared.seedDefaultProfileIfNeeded()
     }
 
     // The host app process gets memory warnings from iOS too — not just

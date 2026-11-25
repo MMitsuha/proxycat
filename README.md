@@ -71,6 +71,7 @@ proxycat/
 ├── build.py                 Python 构建入口（替代原 Makefile + shell 脚本）
 ├── tools/proxycat_build/    构建实现：mihomo / xcodegen / assets / xcodebuild / doctor
 ├── tools/tests/             构建工具单元测试
+├── BundledAssets/          编译期资源（geo DB / external UI / default-profile.yaml 模板）
 ├── Library/                共享 Swift framework：
 │   ├── Models/             纯值类型（Profile / Connections / MitmProfileConfig /
 │   │                       ICloudBackup / DailyUsage / AutoConnect / HostSettings /
@@ -310,7 +311,8 @@ Settings → iCloud Backup 把 profiles（含每份 YAML 原文）、active prof
 ProxyCat 直接消费 mihomo 标准 YAML。Profiles 标签页支持：
 
 - 通过文档选择器或系统 Share / Open With 导入 `.yaml` / `.yml`；
-- 在内置编辑器中粘贴 / 编辑 YAML，保存时先用 mihomo 校验；
+- 首次安装且尚未生成 `Profiles/index.json` 时，自动创建一个名为“默认”的 profile（内容来自 `BundledAssets/default-profile.yaml`）；用户主动删除所有 profile 后不会自动重建；
+- 在内置编辑器中粘贴 / 编辑 YAML，保存时先用 mihomo 校验；新建编辑器会预填同一份默认模板；
 - 从订阅 URL 下载远程 profile，并支持下拉刷新逐条重新拉取；
 - 左滑打开 MITM 配置编辑器，结构化编辑域名、端口、ECH 策略与重写规则；
 - 分享 profile，或滑动删除。
@@ -326,7 +328,7 @@ YAML 中需保留 `tun.enable: true`。但**不要**自己写 `tun.file-descript
 | `tun.inet4-address` / `inet6-address`   | `198.18.0.1/16` / `fd00:7f::1/64` | 必须与 `PacketTunnelProvider` 配置的虚拟地址一致 |
 | `general.interface` / `routing-mark`    | 空 / 0                 | iOS NE 已豁免扩展自身 socket，不要重复绑定                   |
 
-`sample-profile.yaml` 是最小可运行的范本。
+`sample-profile.yaml` 是最小可运行的范本。应用内置的 `BundledAssets/default-profile.yaml` 是同一个可校验模板，用于新建 profile 时的初始内容；两者都不包含真实代理服务器，需要用户自行补充。
 
 ### MITM HTTPS 重写
 

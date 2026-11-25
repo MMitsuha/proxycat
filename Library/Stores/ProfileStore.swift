@@ -128,6 +128,29 @@ public final class ProfileStore {
         }
     }
 
+    /// Seeds the bundled default profile on a truly fresh install.
+    ///
+    /// The check is intentionally "index file does not exist" rather than
+    /// "catalog is empty": an existing empty index means the user deleted
+    /// every profile, and we must not resurrect one behind their back.
+    /// Failures are logged and retried on the next launch because the
+    /// index is only written after a successful import.
+    public func seedDefaultProfileIfNeeded() async {
+        guard !FileManager.default.fileExists(atPath: indexURL.path) else { return }
+        guard let template = BundledAssets.defaultProfileYAML,
+              !template.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+
+        do {
+            _ = try await importYAML(
+                template,
+                name: String(localized: "Default", bundle: .main)
+            )
+        } catch {
+            logger.error("Could not seed default profile: \(error.localizedDescription)")
+        }
+    }
+
     /// Persists a new profile with the given YAML content. Validates with
     /// mihomo's parser before writing so file/URL/share-sheet ingress
     /// paths can't seed the catalog with unparseable YAML, regardless of
