@@ -39,6 +39,11 @@ public final class ProfileStore {
     }
 
     public func reload() {
+        // A crash between the two directory renames in
+        // `replaceProfileDirectory` can leave the live catalog missing
+        // while the last complete copy sits under `Profiles.previous-*`.
+        // Recover it before treating the empty directory as "no profiles".
+        ProfileStoreDirectoryRecovery.recover(root: FilePath.sharedDirectory)
         if FileManager.default.fileExists(atPath: indexURL.path) {
             // A present-but-undecodable index is a transient / corruption
             // problem, not "the user has no profiles". Treating it as an
@@ -352,6 +357,8 @@ public final class ProfileStore {
         profiles: [Profile],
         contentsByID: [UUID: String]
     ) async throws {
+        // See `ProfileStoreDirectoryRecovery` for the crash window this
+        // naming scheme creates; keep the prefixes in sync.
         try await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
             let root = FilePath.sharedDirectory
@@ -395,5 +402,116 @@ public final class ProfileStore {
                 throw error
             }
         }.value
+    }
+}
+
+/// Repairs the directory state left behind when the app is killed in the
+/// middle of `ProfileStore.replaceProfileDirectory`'s swap:
+///
+/// 1. write `Profiles.restore-<uuid>` with the new catalog;
+/// 2. rename `Profiles` → `Profiles.previous-<uuid>`;
+/// 3. rename the temp directory → `Profiles`;
+/// 4. delete the previous directory.
+///
+/// A crash between 2 and 3 leaves no live catalog (the app may recreate
+/// an empty `Profiles` directory on launch), so the newest previous
+/// directory is promoted back. Crash debris from step 1 is always
+/// discarded, and stale previous directories left after step 3 are
+/// removed.
+enum ProfileStoreDirectoryRecovery {
+    private static let logger = ProxyCatLogger(
+        subsystem: "io.proxycat.Library",
+        category: "ProfileStoreRecovery"
+    )
+
+    static func recover(root: URL, fileManager fm: FileManager = .default) {
+        let profilesURL = root.appendingPathComponent("Profiles", isDirectory: true)
+        let entries = (try? fm.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        let previous = directories(
+            in: entries,
+            prefix: "Profiles.previous-",
+            fileManager: fm
+        )
+        let temporary = directories(
+            in: entries,
+            prefix: "Profiles.restore-",
+            fileManager: fm
+        )
+
+        if !hasCatalog(profilesURL, fileManager: fm) {
+            guard !hasVisibleFile(profilesURL, fileManager: fm) else {
+                // Someone put non-catalog files in the managed directory.
+                // Don't delete them (or the backups) behind their back.
+                logger.error("Profiles directory has unexpected files; skipping recovery")
+                return
+            }
+            // The live catalog is missing or empty. Prefer the last
+            // complete pre-restore catalog; a fully written restore temp
+            // is the only remaining candidate if the crash happened even
+            // earlier.
+            if let candidate = previous.first ?? temporary.first {
+                try? fm.removeItem(at: profilesURL)
+                do {
+                    try fm.moveItem(at: candidate, to: profilesURL)
+                    logger.warning("recovered interrupted restore from \(candidate.lastPathComponent)")
+                } catch {
+                    logger.error("could not recover \(candidate.lastPathComponent): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // Anything still present is either stale (the swap completed) or
+        // an incomplete temp directory. Neither should accumulate.
+        for url in previous + temporary where fm.fileExists(atPath: url.path) {
+            try? fm.removeItem(at: url)
+        }
+    }
+
+    private static func directories(
+        in entries: [URL],
+        prefix: String,
+        fileManager fm: FileManager
+    ) -> [URL] {
+        entries
+            .filter { url in
+                url.lastPathComponent.hasPrefix(prefix)
+                    && (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+            }
+            .sorted { lhs, rhs in
+                modifiedAt(lhs, fileManager: fm) > modifiedAt(rhs, fileManager: fm)
+            }
+    }
+
+    private static func hasCatalog(_ url: URL, fileManager fm: FileManager) -> Bool {
+        guard let entries = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) else {
+            return false
+        }
+        return entries.contains { entry in
+            let name = entry.lastPathComponent
+            return name == AppConfiguration.profileIndexFileName
+                || name.hasSuffix(".yaml")
+                || name.hasSuffix(".yml")
+        }
+    }
+
+    private static func hasVisibleFile(_ url: URL, fileManager fm: FileManager) -> Bool {
+        guard let entries = try? fm.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return false }
+        return entries.contains {
+            (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+        }
+    }
+
+    private static func modifiedAt(_ url: URL, fileManager _: FileManager) -> Date {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+            ?? .distantPast
     }
 }

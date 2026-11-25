@@ -20,7 +20,13 @@ enum TunnelFileDescriptor {
         for keyPath in candidates {
             // KVC may surface the fd as either a boxed NSNumber or as a
             // raw Int32 depending on the iOS runtime; accept both.
-            let raw = packetFlow.value(forKeyPath: keyPath)
+            //
+            // Never call `value(forKeyPath:)` directly: a missing key
+            // raises an uncatchable NSUnknownKeyException, which would
+            // kill the extension before the fd-enumeration fallback can
+            // run. `SafeKVC` checks each segment first and returns nil
+            // for a key this iOS build doesn't expose.
+            let raw = SafeKVC.value(forKeyPath: keyPath, on: packetFlow)
             let fd = (raw as? NSNumber)?.int32Value ?? (raw as? Int32) ?? 0
             if fd > 0 {
                 logger.info("found tun fd via KVC \(keyPath) = \(fd)")

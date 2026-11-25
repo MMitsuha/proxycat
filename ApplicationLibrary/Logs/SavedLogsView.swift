@@ -166,8 +166,12 @@ private struct SavedLogFileView: View {
             if let document = model.document {
                 SavedLogTextList(document: document)
             } else if let error = model.loadError {
-                ProxyCatLoadFailureView(message: error) {
-                    Task { await model.load(path: entry.url.path, force: true) }
+                if model.loadErrorIsRetryable {
+                    ProxyCatLoadFailureView(message: error) {
+                        Task { await model.load(path: entry.url.path, force: true) }
+                    }
+                } else {
+                    ProxyCatLoadFailureView(message: error)
                 }
             } else {
                 ProgressView()

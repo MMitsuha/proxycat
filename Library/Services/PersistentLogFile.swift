@@ -32,8 +32,8 @@ final class PersistentLogFile: @unchecked Sendable {
         }
         self.handle = nil
         write("=== \(sessionName) session ended \(Self.rfc3339(date)) ===\n", to: handle)
-        handle.synchronizeFile()
-        handle.closeFile()
+        try? handle.synchronize()
+        try? handle.close()
         lock.unlock()
     }
 
@@ -43,14 +43,24 @@ final class PersistentLogFile: @unchecked Sendable {
 
     private func appendRaw(_ line: String) {
         lock.lock()
-        if let handle {
-            write(line, to: handle)
+        defer { lock.unlock() }
+        guard let handle else { return }
+        do {
+            try handle.write(contentsOf: Data(line.utf8))
+        } catch {
+            // Logging is best-effort. The non-throwing FileHandle API
+            // raises an uncatchable NSException on I/O failure (disk
+            // full, invalidated descriptor), which would kill the host
+            // or extension. Drop the rest of this session's lines
+            // instead and leave the in-memory log stream untouched.
+            self.handle = nil
+            try? handle.close()
         }
-        lock.unlock()
     }
 
+    /// Final marker write. Failure here is equally non-fatal.
     private func write(_ string: String, to handle: FileHandle) {
-        handle.write(Data(string.utf8))
+        try? handle.write(contentsOf: Data(string.utf8))
     }
 
     private struct OpenedFile {

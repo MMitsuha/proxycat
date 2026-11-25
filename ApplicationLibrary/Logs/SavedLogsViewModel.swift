@@ -8,18 +8,25 @@ import Observation
 final class SavedLogFileViewModel {
     var document: SavedLogDocument?
     var loadError: String?
+    /// False for errors that retrying cannot fix (e.g. the file exceeds
+    /// the in-app viewing limit).
+    var loadErrorIsRetryable = true
     var isLoading = false
 
     func load(path: String, force: Bool = false) async {
         guard force || document == nil else { return }
         isLoading = true
         loadError = nil
+        loadErrorIsRetryable = true
         do {
             let loaded = try await Task.detached(priority: .userInitiated) {
                 try SavedLogFileReader.load(path: path)
             }.value
             document = loaded
         } catch is CancellationError {
+        } catch let readError as SavedLogFileReadError {
+            loadErrorIsRetryable = false
+            loadError = readError.localizedDescription
         } catch {
             loadError = error.localizedDescription
         }

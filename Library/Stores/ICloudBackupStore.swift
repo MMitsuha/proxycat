@@ -10,11 +10,16 @@ public final class ICloudBackupStore {
             guard loaded, isEnabled != oldValue else { return }
             state.isEnabled = isEnabled
             persistState()
+            // Any in-flight sync checks this generation before every
+            // side effect, so turning sync off aborts it instead of
+            // letting a stale reconcile still upload or overwrite.
+            syncGeneration &+= 1
             if isEnabled {
                 installObserversIfNeeded()
                 Task { await syncNow() }
             } else {
                 scheduledSyncTask?.cancel()
+                needsSync = false
                 phase = .disabled
             }
         }
@@ -30,6 +35,18 @@ public final class ICloudBackupStore {
     @ObservationIgnored private var state: ICloudSyncState
     @ObservationIgnored private var observerTokens: [NSObjectProtocol] = []
     @ObservationIgnored private var scheduledSyncTask: Task<Void, Never>?
+    /// Set when a sync request arrives while another is running; the
+    /// active run folds it in with a follow-up reconcile instead of
+    /// dropping the change until some unrelated event triggers a sync.
+    @ObservationIgnored private var needsSync = false
+    /// Bumped whenever `isEnabled` flips so in-flight work can detect
+    /// that the user turned sync off (or off-and-on).
+    @ObservationIgnored private var syncGeneration = 0
+    @ObservationIgnored private var activeSyncGeneration: Int?
+
+    private enum SyncInterruption: Error {
+        case disabled
+    }
     @ObservationIgnored private let logger = ProxyCatLogger(subsystem: "io.proxycat.Library", category: "ICloudBackupStore")
 
     private init() {
@@ -99,14 +116,18 @@ public final class ICloudBackupStore {
             return
         }
         await runSync {
+            try self.ensureEnabled()
             let content = try await self.currentContent()
+            try self.ensureEnabled()
             let snapshot = ICloudBackupSnapshot(
                 sourceDeviceID: self.state.deviceID,
                 appVersion: Self.appVersion,
                 content: content
             )
             let url = try await Self.backupFileURL()
+            try self.ensureEnabled()
             try await Self.writeSnapshot(snapshot, to: url)
+            try self.ensureEnabled()
             try self.updateSyncedState(snapshot: snapshot, checksum: ICloudBackupSnapshot.checksum(for: content))
         }
     }
@@ -117,11 +138,14 @@ public final class ICloudBackupStore {
             return
         }
         await runSync {
+            try self.ensureEnabled()
             let url = try await Self.backupFileURL()
             guard let snapshot = try await Self.readSnapshotIfExists(at: url) else {
                 throw ICloudBackupError.missingBackup
             }
+            try self.ensureEnabled()
             try await self.apply(snapshot)
+            try self.ensureEnabled()
             try self.updateSyncedState(
                 snapshot: snapshot,
                 checksum: ICloudBackupSnapshot.checksum(for: snapshot.content)
@@ -130,9 +154,13 @@ public final class ICloudBackupStore {
     }
 
     private func reconcile() async throws {
+        try ensureEnabled()
         let localContent = try await currentContent()
+        try ensureEnabled()
+
         let localChecksum = try ICloudBackupSnapshot.checksum(for: localContent)
         let url = try await Self.backupFileURL()
+        try ensureEnabled()
 
         guard let cloudSnapshot = try await Self.readSnapshotIfExists(at: url) else {
             let snapshot = ICloudBackupSnapshot(
@@ -140,10 +168,13 @@ public final class ICloudBackupStore {
                 appVersion: Self.appVersion,
                 content: localContent
             )
+            try ensureEnabled()
             try await Self.writeSnapshot(snapshot, to: url)
+            try ensureEnabled()
             try updateSyncedState(snapshot: snapshot, checksum: localChecksum)
             return
         }
+        try ensureEnabled()
 
         let cloudChecksum = try ICloudBackupSnapshot.checksum(for: cloudSnapshot.content)
         if localChecksum == cloudChecksum {
@@ -153,7 +184,9 @@ public final class ICloudBackupStore {
 
         if let lastSyncedChecksum = state.lastSyncedChecksum {
             if localChecksum == lastSyncedChecksum {
+                try ensureEnabled()
                 try await apply(cloudSnapshot)
+                try ensureEnabled()
                 try updateSyncedState(snapshot: cloudSnapshot, checksum: cloudChecksum)
                 return
             }
@@ -163,7 +196,9 @@ public final class ICloudBackupStore {
                     appVersion: Self.appVersion,
                     content: localContent
                 )
+                try ensureEnabled()
                 try await Self.writeSnapshot(snapshot, to: url)
+                try ensureEnabled()
                 try updateSyncedState(snapshot: snapshot, checksum: localChecksum)
                 return
             }
@@ -171,14 +206,19 @@ public final class ICloudBackupStore {
         }
 
         if localContent.profiles.isEmpty, !cloudSnapshot.content.profiles.isEmpty {
+            try ensureEnabled()
             try await apply(cloudSnapshot)
+            try ensureEnabled()
             try updateSyncedState(snapshot: cloudSnapshot, checksum: cloudChecksum)
             return
         }
 
         let localModifiedAt = await Self.localModifiedDate()
+        try ensureEnabled()
         if let localModifiedAt, cloudSnapshot.createdAt > localModifiedAt {
+            try ensureEnabled()
             try await apply(cloudSnapshot)
+            try ensureEnabled()
             try updateSyncedState(snapshot: cloudSnapshot, checksum: cloudChecksum)
             return
         }
@@ -188,22 +228,78 @@ public final class ICloudBackupStore {
             appVersion: Self.appVersion,
             content: localContent
         )
+        try ensureEnabled()
         try await Self.writeSnapshot(snapshot, to: url)
+        try ensureEnabled()
         try updateSyncedState(snapshot: snapshot, checksum: localChecksum)
     }
 
     private func runSync(_ operation: @escaping () async throws -> Void) async {
-        guard !isSyncing else { return }
+        guard isEnabled else {
+            needsSync = false
+            phase = .disabled
+            return
+        }
+        guard !isSyncing else {
+            // Don't drop the request: fold it into a follow-up reconcile
+            // once the current attempt finishes.
+            needsSync = true
+            return
+        }
+
         isSyncing = true
         phase = .syncing
-        defer { isSyncing = false }
+        defer {
+            isSyncing = false
+            activeSyncGeneration = nil
+        }
 
-        do {
-            try await operation()
-            phase = .ready
-            lastError = nil
-        } catch {
-            setFailure(error)
+        var firstAttempt = true
+        while true {
+            needsSync = false
+            activeSyncGeneration = syncGeneration
+            var completed = false
+            do {
+                if firstAttempt {
+                    try await operation()
+                } else {
+                    // A request arrived while the original operation ran.
+                    // Reconcile instead of repeating a user-initiated
+                    // restore/backup against a newer local state.
+                    try await reconcile()
+                }
+                completed = true
+                firstAttempt = false
+            } catch is SyncInterruption {
+                // The user disabled sync (or toggled it off and on)
+                // while this attempt was in flight. Fall through so a
+                // re-enable can still pick up pending work.
+            } catch {
+                setFailure(error)
+                return
+            }
+
+            guard isEnabled else {
+                phase = .disabled
+                return
+            }
+            guard needsSync else {
+                phase = .ready
+                if completed {
+                    lastError = nil
+                }
+                return
+            }
+            // Loop again with a fresh generation check.
+        }
+    }
+
+    /// Throws when sync was disabled or re-toggled since the current
+    /// attempt began. Called after every await and before every cloud
+    /// read/write side effect.
+    private func ensureEnabled() throws {
+        guard isEnabled, activeSyncGeneration == syncGeneration else {
+            throw SyncInterruption.disabled
         }
     }
 
@@ -222,6 +318,7 @@ public final class ICloudBackupStore {
     }
 
     private func apply(_ snapshot: ICloudBackupSnapshot) async throws {
+        try ensureEnabled()
         try Self.validate(snapshot)
         let profiles = snapshot.content.profiles.map(\.profile)
         let contentsByID = Dictionary(uniqueKeysWithValues: snapshot.content.profiles.map { ($0.profile.id, $0.yaml) })

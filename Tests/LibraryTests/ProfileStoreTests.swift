@@ -69,3 +69,93 @@ import Testing
         #expect(repaired == nil)
     }
 }
+
+@Suite struct ProfileStoreDirectoryRecoveryTests {
+    private let fm = FileManager.default
+
+    private func makeRoot() throws -> URL {
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("proxycat-recovery-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+
+    private func makeCatalog(in directory: URL) throws {
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data("[]".utf8).write(
+            to: directory.appendingPathComponent(AppConfiguration.profileIndexFileName)
+        )
+        try Data("mixed-port: 7890\n".utf8).write(
+            to: directory.appendingPathComponent("profile.yaml")
+        )
+    }
+
+    private func hasCatalog(_ directory: URL) -> Bool {
+        fm.fileExists(
+            atPath: directory.appendingPathComponent(AppConfiguration.profileIndexFileName).path
+        ) && fm.fileExists(atPath: directory.appendingPathComponent("profile.yaml").path)
+    }
+
+    @Test func promotesPreviousCatalogWhenLiveDirectoryIsEmpty() throws {
+        // The app recreates an empty Profiles/ directory on launch, so
+        // existence alone can't distinguish a crash from a fresh install.
+        let root = try makeRoot()
+        defer { try? fm.removeItem(at: root) }
+        let previous = root.appendingPathComponent("Profiles.previous-\(UUID().uuidString)")
+        try makeCatalog(in: previous)
+        let live = root.appendingPathComponent("Profiles")
+        try fm.createDirectory(at: live, withIntermediateDirectories: true)
+
+        ProfileStoreDirectoryRecovery.recover(root: root, fileManager: fm)
+
+        #expect(hasCatalog(live))
+        #expect(!fm.fileExists(atPath: previous.path))
+    }
+
+    @Test func keepsPopulatedCatalogAndRemovesStaleBackup() throws {
+        let root = try makeRoot()
+        defer { try? fm.removeItem(at: root) }
+        let live = root.appendingPathComponent("Profiles")
+        try makeCatalog(in: live)
+        try Data("mixed-port: 1111\n".utf8).write(
+            to: live.appendingPathComponent("profile.yaml")
+        )
+        let previous = root.appendingPathComponent("Profiles.previous-\(UUID().uuidString)")
+        try makeCatalog(in: previous)
+
+        ProfileStoreDirectoryRecovery.recover(root: root, fileManager: fm)
+
+        let yaml = try String(
+            contentsOf: live.appendingPathComponent("profile.yaml"),
+            encoding: .utf8
+        )
+        #expect(yaml == "mixed-port: 1111\n")
+        #expect(!fm.fileExists(atPath: previous.path))
+    }
+
+    @Test func discardsIncompleteRestoreTempWhenLiveCatalogExists() throws {
+        let root = try makeRoot()
+        defer { try? fm.removeItem(at: root) }
+        let live = root.appendingPathComponent("Profiles")
+        try makeCatalog(in: live)
+        let temporary = root.appendingPathComponent("Profiles.restore-\(UUID().uuidString)")
+        try makeCatalog(in: temporary)
+
+        ProfileStoreDirectoryRecovery.recover(root: root, fileManager: fm)
+
+        #expect(hasCatalog(live))
+        #expect(!fm.fileExists(atPath: temporary.path))
+    }
+
+    @Test func promotesRestoreTempOnlyWhenNoPreviousExists() throws {
+        let root = try makeRoot()
+        defer { try? fm.removeItem(at: root) }
+        let temporary = root.appendingPathComponent("Profiles.restore-\(UUID().uuidString)")
+        try makeCatalog(in: temporary)
+
+        ProfileStoreDirectoryRecovery.recover(root: root, fileManager: fm)
+
+        #expect(hasCatalog(root.appendingPathComponent("Profiles")))
+        #expect(!fm.fileExists(atPath: temporary.path))
+    }
+}
